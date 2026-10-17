@@ -240,6 +240,21 @@ const DEFAULT_CONSUMER_CLUB_MILESTONES: ClubTierMilestoneConfig[] =
   }));
 
 const DEFAULT_BANNERS: PortalBannerItem[] = [
+  ...(["consumer", "high_volume"] as const).map((portal) => ({
+    id: `bnr-discover-${portal}`,
+    portal,
+    scope: "collective" as const,
+    badgeText: "برای ادامه تولید",
+    title: "قطعه مناسب، با انتخاب دقیق‌تر",
+    subtitle:
+      "کدها، سایزها و مشخصات قطعات را ببینید؛ برای انتخاب همراه شما هستیم.",
+    ctaText: "جستجو در محصولات",
+    ctaLinkOrTab: "/products",
+    theme: "industrial_orange" as const,
+    backgroundImage: "",
+    active: true,
+    createdAt: "",
+  })),
   {
     id: "bnr-consumer-1",
     portal: "consumer",
@@ -312,6 +327,18 @@ const DEFAULT_PORTAL_CONFIGS: Record<PortalTargetType, PortalLayoutConfig> = {
   consumer: {
     portal: "consumer",
     menus: [
+      {
+        id: "saved_products",
+        label: "محصولات نشان‌شده",
+        enabled: true,
+        order: 6,
+      },
+      {
+        id: "purchase_list",
+        label: "لیست خرید چندکدی",
+        enabled: true,
+        order: 7,
+      },
       { id: "overview", label: "پیشخوان کاربری", enabled: true, order: 1 },
       {
         id: "orders",
@@ -369,6 +396,18 @@ const DEFAULT_PORTAL_CONFIGS: Record<PortalTargetType, PortalLayoutConfig> = {
   high_volume: {
     portal: "high_volume",
     menus: [
+      {
+        id: "saved_products",
+        label: "محصولات نشان‌شده",
+        enabled: true,
+        order: 6,
+      },
+      {
+        id: "purchase_list",
+        label: "لیست خرید چندکدی",
+        enabled: true,
+        order: 7,
+      },
       {
         id: "overview",
         label: "پیشخوان و وضعیت حساب",
@@ -763,7 +802,14 @@ export const portalContentService = {
     const ov = this.getCustomerOverride(customerId, portal);
 
     const disabledSet = new Set(ov?.disabledMenuIds || []);
-    const menus = (ov?.menus || base.menus)
+    const configuredMenus = [...(ov?.menus || base.menus)];
+    for (const extra of DEFAULT_PORTAL_CONFIGS[portal].menus.filter((m) =>
+      ["saved_products", "purchase_list"].includes(m.id),
+    )) {
+      if (!configuredMenus.some((m) => m.id === extra.id))
+        configuredMenus.push(extra);
+    }
+    const menus = configuredMenus
       .map((m) => ({
         ...m,
         enabled: disabledSet.has(m.id) ? false : m.enabled,

@@ -1,3 +1,5 @@
+import { PortalRecentOrders } from "../components/portal/PortalRecentOrders";
+import { PortalTools } from "../components/portal/PortalTools";
 import { PortalShell } from "../components/portal/PortalShell";
 import { PortalClub } from "../components/portal/PortalClub";
 import React, { useState, useMemo, useEffect } from "react";
@@ -170,8 +172,14 @@ export const AccountPage: React.FC = () => {
   );
 
   const enabledMenus = useMemo(
-    () => resolvedConfig.menus.filter((m) => m.enabled),
-    [resolvedConfig.menus],
+    () =>
+      resolvedConfig.menus.filter(
+        (m) =>
+          m.enabled &&
+          (m.id !== "purchase_list" ||
+            resolvedConfig.permissions.allowQuickSkuOrder),
+      ),
+    [resolvedConfig.menus, resolvedConfig.permissions.allowQuickSkuOrder],
   );
 
   const [activeTab, setActiveTabState] = useState<string>("overview");
@@ -416,6 +424,7 @@ export const AccountPage: React.FC = () => {
         texts={resolvedConfig.uiTexts}
         labels={resolvedConfig.labels}
         appearance={resolvedConfig.appearance}
+        showDiscovery={resolvedConfig.permissions.showPromotionalBanners}
         discountRule={
           resolvedConfig.permissions.showPromotionalBanners
             ? resolvedConfig.customCartDiscountRule
@@ -453,8 +462,18 @@ export const AccountPage: React.FC = () => {
         {/* ===================================================================
             TAB 1: OVERVIEW (پیشخوان، نمودار میله‌ای باشگاه مشتریان، اطلاعیه‌ها و خلاصه سفارشات)
            =================================================================== */}
+        {["saved_products", "purchase_list"].includes(activeTab) && (
+          <PortalTools tab={activeTab} labels={resolvedConfig.labels} />
+        )}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {enabledMenus.some((m) => m.id === "orders_pricelist") && (
+              <PortalRecentOrders
+                title={resolvedConfig.uiTexts.ordersSectionTitle}
+                labels={resolvedConfig.labels}
+                onOrders={() => setActiveTab("orders_pricelist")}
+              />
+            )}
             {/* Active Announcements */}
             {resolvedConfig.permissions.showAnnouncements &&
               activeAnnouncements.length > 0 && (

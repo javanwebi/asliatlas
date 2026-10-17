@@ -1,3 +1,4 @@
+import { STORE_ASSETS } from "../../assets/images";
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -16,6 +17,8 @@ import {
   ShoppingBag,
   ShoppingCart,
   ChevronLeft,
+  Heart,
+  ClipboardList,
 } from "lucide-react";
 import type { Customer } from "../../types";
 import type {
@@ -28,6 +31,8 @@ import type {
 import "./portal.css";
 
 const icons: Record<string, typeof Home> = {
+  saved_products: Heart,
+  purchase_list: ClipboardList,
   overview: Home,
   orders: Package,
   orders_pricelist: Package,
@@ -46,6 +51,7 @@ interface Props {
   texts: PortalUiTextsConfig;
   appearance: PortalAppearanceConfig;
   discountRule?: CustomerIndividualOverride["customCartDiscountRule"];
+  showDiscovery: boolean;
   labels: Record<string, string>;
   metrics: { label: string; value: string; visible: boolean }[];
   banners: PortalBannerItem[];
@@ -62,11 +68,15 @@ export function PortalShell({
   appearance,
   labels,
   discountRule,
+  showDiscovery,
   metrics,
   banners,
   onBanner,
   children,
 }: Props) {
+  const bannerImage = (b: PortalBannerItem) =>
+    b.backgroundImage ||
+    (b.id.startsWith("bnr-discover-") ? STORE_ASSETS.categories.pulleys : "");
   const label = (s: string) => labels[s] ?? s;
   const [more, setMore] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -220,6 +230,51 @@ export function PortalShell({
                     </div>
                   ))}
               </div>
+              {showDiscovery && banners.length === 0 && (
+                <div className="portal-discovery-grid">
+                  <section className="portal-campaign portal-glass">
+                    <div>
+                      <span className="portal-eyebrow">
+                        {label("برای ادامه تولید")}
+                      </span>
+                      <h2>{label("قطعه مناسب، با انتخاب دقیق‌تر")}</h2>
+                      <p>
+                        {label(
+                          "کد، سایز و مشخصات قطعات را ببینید؛ برای انتخاب همراه شما هستیم.",
+                        )}
+                      </p>
+                      <Link to="/products" className="portal-primary">
+                        {label("جستجو در محصولات")}
+                        <ArrowUpLeft size={16} />
+                      </Link>
+                    </div>
+                    <img
+                      src={STORE_ASSETS.categories.pulleys}
+                      alt=""
+                      loading="lazy"
+                    />
+                  </section>
+                  <section className="portal-quick-actions portal-glass">
+                    <h2>{label("دسترسی‌های کاربردی")}</h2>
+                    {menus
+                      .filter((m) => m.id !== "overview")
+                      .slice(0, 3)
+                      .map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => select(m.id)}
+                        >
+                          {React.createElement(icons[m.id] || FileText, {
+                            size: 18,
+                          })}
+                          <span>{m.label}</span>
+                          <ArrowUpLeft size={15} />
+                        </button>
+                      ))}
+                  </section>
+                </div>
+              )}
               {banners.length > 0 && (
                 <section
                   className="portal-campaigns"
@@ -255,8 +310,8 @@ export function PortalShell({
                           <ArrowUpLeft size={16} />
                         </button>
                       </div>
-                      {b.backgroundImage && (
-                        <img src={b.backgroundImage} alt="" loading="lazy" />
+                      {bannerImage(b) && (
+                        <img src={bannerImage(b)} alt="" loading="lazy" />
                       )}
                     </article>
                   ))}
