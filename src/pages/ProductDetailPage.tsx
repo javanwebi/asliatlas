@@ -264,10 +264,13 @@ export const ProductDetailPage: React.FC = () => {
 
             {product.imageScope === 'family-example' && <p className="text-xs text-slate-500 leading-6">تصویر نمونهٔ این خانواده است؛ تصویر اختصاصی هر سایز و کد کالا هنوز ثبت نشده است.</p>}
             {/* Thumbnails */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 max-h-60 overflow-y-auto p-1" aria-label="گالری تصاویر محصول">
               {product.images.map((imgUrl, idx) => (
                 <button
                   key={idx}
+                  type="button"
+                  aria-label={`نمایش تصویر ${toPersianDigits(idx + 1)} از ${toPersianDigits(product.images.length)} ${product.name}`}
+                  aria-pressed={activeImageIndex === idx}
                   onClick={() => setActiveImageIndex(idx)}
                   className={`relative pt-[75%] rounded-xl border overflow-hidden transition-all cursor-pointer ${
                     activeImageIndex === idx
@@ -275,9 +278,10 @@ export const ProductDetailPage: React.FC = () => {
                       : 'border-slate-200/80 opacity-70 hover:opacity-100 hover:border-slate-300 bg-slate-50/60'
                   }`}
                 >
-                  <img
+                  <ProductImage
                     src={imgUrl}
                     alt=""
+                    loading="lazy"
                     className="absolute inset-0 w-full h-full object-contain p-2"
                   />
                 </button>

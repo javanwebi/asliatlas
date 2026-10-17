@@ -10,11 +10,21 @@ Source: `New Microsoft Excel Worksheet.xlsx`, Sheet1, rows 2–1384. The checksu
 
 ## Image review
 
-All 869 `e(N).png` assets in `javanweb/imagesatlas` were visually screened in nine indexed contact sheets. Only 25 conservative family-level matches are enabled in `catalogueImages.json`. Each whitelist entry identifies the family, filename and review scope. These are **family examples**, not verification of a specific size, manufacturer or catalogue part number; that distinction is displayed on the detail page. No match was inferred from the old product name or the image sequence number.
+All 869 `e(N).png` assets (including the requested first 864) were reviewed again individually in indexed sheets. The per-file visual observations, decision, source family, rationale and SHA-256 are in `docs/product-image-review.json`; a spreadsheet-friendly list is in `docs/product-image-review.csv`.
 
-The other 1,358 families have an empty images array. In particular, brand/profile-specific belts have no guessed photograph. Missing or failed images render a neutral empty-image state rather than another product's photo. Do not restore the old modulo/default-to-e(1) image fallback.
+466 images have a product-type match to 53 source families and are displayed in multi-image galleries. 403 images remain **unassigned** because their exact identity cannot be determined from an unlabelled photo. No image is shared across unrelated families. The previous incorrect green bearing-cover → bearing association was removed; the cover is now under `حفاظ یاتاقان`.
 
-To add a confirmed family image, update the explicit whitelist with the correct family ID and name. SKU-specific images require a separate SKU-level mapping; do not imply a family picture verifies all its dimensions.
+These matches verify visible product type and features, **not exact SKU, dimensions, material grade or manufacturer**. The original assets contain no readable part-number/dimension labels. Where the workbook distinguishes several near-identical names by dimensions, profile, brand or catalogue code, an exact SKU match requires the original numbered catalogue or owner confirmation. In particular, mixed belt/profile sample photos are not assigned to a specific belt profile or brand. No missing-product image is synthesized.
+
+`catalogueImages.json` stores the reviewed files per family. Its exact family-name guard prevents stale names from silently inheriting images. The detail gallery shows all matched images with lazy-loaded thumbnails, a bounded scroll area, accessible selection labels and the explicit non-SKU-specific notice. Unmatched products retain the neutral empty-image state.
+
+To reproduce the visual review records from the reviewed source assets:
+
+```sh
+python scripts/rebuild-image-review.py /path/to/imagesatlas
+```
+
+This script encodes human/visual review decisions; it is **not an automatic image classifier**. Adding a match requires inspecting the image and source name. Do not map by sequence number, old product name, or approximate text search. Exact-SKU image assignments are not supported by this evidence and must not be claimed.
 
 ## Reproduce and verify
 

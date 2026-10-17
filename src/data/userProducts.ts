@@ -4,9 +4,10 @@ import imageReview from './catalogueImages.json';
 import { getProductImageUrl } from '../assets/imagesproducts';
 
 // The workbook is authoritative. No synthetic prices, stock, ratings or technical claims.
-const reviewedImages = imageReview as Record<string, { file: string; familyName: string }>;
+const reviewedImages = imageReview as Record<string, { files: string[]; familyName: string }>;
 export const USER_PRODUCTS_RAW: Product[] = source.map(family => {
-  const image = reviewedImages[family.code];
+  const review = reviewedImages[family.code];
+  const images = review?.familyName === family.name ? review.files.map(getProductImageUrl) : [];
   const specs = [
     { key: 'نوع فنی', value: family.technicalType },
     { key: 'واحدهای فروش', value: family.unit },
@@ -21,9 +22,9 @@ export const USER_PRODUCTS_RAW: Product[] = source.map(family => {
     variants: family.variants, sourceRow: family.sourceRow,
     technicalSpecs: specs, prices: { base: 0, retail: 0, wholesale: 0, dealer: 0 },
     stock: 0, stockKnown: false, inquiryOnly: true,
-    images: image && image.familyName === family.name ? [getProductImageUrl(image.file)] : [],
-    hasCatalogueImage: Boolean(image && image.familyName === family.name),
-    imageScope: image ? 'family-example' as const : undefined,
+    images,
+    hasCatalogueImage: images.length > 0,
+    imageScope: images.length ? 'family-example' as const : undefined,
     unit: family.unit || 'عدد', tags: [family.submenu, family.technicalType, family.profiles || ''],
     description: `${family.name}؛ ${family.itemCount.toLocaleString('fa-IR')} کد کالا در این خانواده ثبت شده است. سایز و کد مورد نیاز را از فهرست زیر انتخاب کنید. قیمت و موجودی پس از استعلام اعلام می‌شود.`,
   };

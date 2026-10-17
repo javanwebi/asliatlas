@@ -12,6 +12,7 @@ import { CategoryNavigation } from '../src/components/catalog/CategoryNavigation
 import { ProductVariants } from '../src/components/product/ProductVariants.tsx';
 const source = JSON.parse(readFileSync(new URL('../src/data/catalogueSource.json', import.meta.url)));
 const reviewed = JSON.parse(readFileSync(new URL('../src/data/catalogueImages.json', import.meta.url)));
+const imageAudit = JSON.parse(readFileSync(new URL('../docs/product-image-review.json', import.meta.url)));
 assert.equal(USER_PRODUCTS.length, 1383);
 assert.equal(CATALOGUE_SKU_COUNT, 10435);
 assert.equal(CATEGORIES.length, 29);
@@ -33,7 +34,7 @@ for (const row of source) {
   assert.equal(product.inquiryOnly, true);
   assert.equal(product.prices.retail, 0);
   assert.equal(product.rating, undefined);
-  assert.equal(product.images.length, reviewed[product.code] ? 1 : 0);
+  assert.equal(product.images.length, reviewed[product.code]?.files.length || 0);
   for (const variant of product.variants) {
     assert(!allCodes.has(variant.code)); allCodes.add(variant.code);
     assert.equal(getProductByCode(variant.code).code, product.code);
@@ -42,6 +43,29 @@ for (const row of source) {
 }
 assert.equal(allCodes.size, 10435);
 assert.equal(USER_PRODUCTS.filter(p => p.images.length).length, Object.keys(reviewed).length);
+assert.equal(imageAudit.items.length, 869);
+assert.equal(new Set(imageAudit.items.map(i => i.file)).size, 869);
+const publicImages = new Set();
+for (const [familyCode, review] of Object.entries(reviewed)) {
+  assert.equal(getProductByCode(familyCode).name, review.familyName);
+  for (const file of review.files) {
+    assert(!publicImages.has(file), `Image assigned to multiple products: ${file}`);
+    publicImages.add(file);
+    const audit = imageAudit.items.find(i => i.file === file);
+    assert.equal(audit.status, 'matched-product-type');
+    assert.equal(audit.familyCode, familyCode);
+    assert.equal(audit.skuVerified, false);
+  }
+}
+for (let n = 1; n <= 869; n++) {
+  const audit = imageAudit.items.find(i => i.file === `e(${n}).png`);
+  assert(audit?.observed && audit.reason && /^[a-f0-9]{64}$/.test(audit.sha256));
+  assert.equal(publicImages.has(audit.file), audit.status === 'matched-product-type');
+}
+assert.equal(publicImages.size, imageAudit.matchedImages);
+// The green domed cover is not a bearing. Guard against the old misidentification.
+assert.equal(getProductByCode('FAM-32242').images.length, 0);
+assert(reviewed['FAM-41309'].files.includes('e(386).png'));
 assert.equal(USER_PRODUCTS.filter(p => p.categoryName === 'تسمه و انتقال نیرو' && p.images.length).length, 0);
 assert(getInstantSearchResults('۳۲۸۹۳').products.some(p => p.code === 'FAM-32893'));
 const empty = renderToStaticMarkup(React.createElement(ProductImage, { alt: 'تسمه' }));
