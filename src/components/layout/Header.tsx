@@ -552,11 +552,12 @@ export const Header: React.FC = () => {
                 onClick={() => openAuthModal(undefined, 'login')}
                 className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 px-2 sm:px-3.5 rounded-xl border border-[#CBD2D8] bg-white hover:border-[#E06518] hover:bg-orange-50/30 text-[#2B313A] hover:text-[#E06518] transition-all text-xs font-bold cursor-pointer shadow-2xs group shrink-0 active:scale-95"
                 title="ورود یا ثبت‌نام در سامانه صنعت پیش"
+                aria-label="ورود یا ثبت‌نام"
               >
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-orange-50 group-hover:bg-[#E06518]/15 text-[#E06518] flex items-center justify-center transition-colors shrink-0">
                   <User className="w-3.5 h-3.5" />
                 </div>
-                <div className="flex items-center gap-1 font-bold">
+                <div className="hidden sm:flex items-center gap-1 font-bold">
                   <span>ورود</span>
                   <span className="text-slate-300 font-light text-[11px]">|</span>
                   <span className="text-slate-700 group-hover:text-[#E06518] transition-colors">ثبت‌نام</span>
