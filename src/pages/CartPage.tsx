@@ -1,9 +1,9 @@
-import { ProductImage } from "../components/product/ProductImage";
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useCart, SHIPPING_METHODS } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
-import { toPersianDigits, formatPrice } from "../utils/formatters";
+import { ProductImage } from '../components/product/ProductImage';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart, SHIPPING_METHODS } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { toPersianDigits, formatPrice } from '../utils/formatters';
 import {
   Trash2,
   Bookmark,
@@ -19,8 +19,8 @@ import {
   Sparkles,
   Layers,
   ChevronLeft,
-} from "lucide-react";
-import { PriceTiers } from "../types";
+} from 'lucide-react';
+import { PriceTiers } from '../types';
 
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
@@ -56,29 +56,25 @@ export const CartPage: React.FC = () => {
     getProductStock,
   } = useCart();
 
-  const { currentUser, roleTitle, priceLayer, activeRole, openAuthModal } =
-    useAuth();
-  const [discountInput, setDiscountInput] = useState("");
+  const { currentUser, roleTitle, priceLayer, activeRole, openAuthModal } = useAuth();
+  const [discountInput, setDiscountInput] = useState('');
   const [useClubToggle, setUseClubToggle] = useState(false);
 
-  const isB2B =
-    activeRole === "wholesale" ||
-    activeRole === "dealer" ||
-    activeRole === "admin";
+  const isB2B = activeRole === 'wholesale' || activeRole === 'dealer' || activeRole === 'admin';
 
   const handleDiscountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (discountInput.trim()) {
       const ok = applyDiscountCode(discountInput);
-      if (ok) setDiscountInput("");
+      if (ok) setDiscountInput('');
     }
   };
 
   const handleCheckoutProceed = () => {
     if (!currentUser) {
-      openAuthModal("/checkout");
+      openAuthModal('/checkout');
     } else {
-      navigate("/checkout");
+      navigate('/checkout');
     }
   };
 
@@ -86,32 +82,27 @@ export const CartPage: React.FC = () => {
     setUseClubToggle(checked);
     if (checked && currentUser) {
       // Allow using up to all available club points, capped by half of subtotal
-      const maxPoints = Math.min(
-        currentUser.clubPoints,
-        Math.floor(subtotalAmount / 2000),
-      );
+      const maxPoints = Math.min(currentUser.clubPoints, Math.floor(subtotalAmount / 2000));
       setClubPointsUsage(maxPoints);
     } else {
       setClubPointsUsage(0);
     }
   };
 
-  const isEmpty =
-    cart.length === 0 && savedForLater.length === 0 && inquiries.length === 0;
+  const isEmpty = cart.length === 0 && savedForLater.length === 0 && inquiries.length === 0;
 
   if (isEmpty) {
     return (
-      <div className="cart-empty bg-white rounded-[12px] border border-[#CBD2D8] p-12 text-center space-y-4 max-w-xl mx-auto shadow-sm my-6">
+      <div className="bg-white rounded-[12px] border border-[#CBD2D8] p-12 text-center space-y-4 max-w-xl mx-auto shadow-sm my-6">
         <div className="w-16 h-16 bg-orange-50 text-[#E06518] rounded-full flex items-center justify-center mx-auto">
           <ShoppingBag className="w-8 h-8" />
         </div>
-        <h1>سبد خرید شما هنوز خالی است</h1>
+        <h2 className="text-lg font-bold text-[#55565A]">سبد سفارش شما خالی است</h2>
         <p className="text-xs text-[#777A7D] leading-relaxed">
-          می‌توانید از طریق منوی دسته‌بندی‌ها یا جستجوی فنی کدهای تسمه و غلتک،
-          اقلام مورد نیاز کارخانه یا واحد صنعتی خود را انتخاب نمایید.
+          می‌توانید از طریق منوی دسته‌بندی‌ها یا جستجوی فنی کدهای تسمه و غلتک، اقلام مورد نیاز کارخانه یا واحد صنعتی خود را انتخاب نمایید.
         </p>
         <Link
-          to="/products"
+          to="/"
           className="inline-flex px-6 py-2.5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
         >
           مشاهده کاتالوگ محصولات
@@ -121,18 +112,7 @@ export const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="cart-page space-y-6">
-      <div className="cart-steps" aria-label="مراحل خرید">
-        <span>
-          <b>۱</b>سبد خرید
-        </span>
-        <span>
-          <b>۲</b>آدرس و ارسال
-        </span>
-        <span>
-          <b>۳</b>تأیید سفارش
-        </span>
-      </div>
+    <div className="space-y-6">
       {/* Breadcrumb & Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#CBD2D8]">
         <div>
@@ -145,7 +125,7 @@ export const CartPage: React.FC = () => {
           </nav>
           <h1 className="text-xl font-black text-[#55565A] flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-[#E06518]" />
-            <span>سبد خرید شما</span>
+            <span>سبد سفارش صنعتی و پیش‌فاکتور</span>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-[#C95210]">
               {toPersianDigits(itemCount)} قلم کالا
             </span>
@@ -164,17 +144,16 @@ export const CartPage: React.FC = () => {
       </div>
 
       {/* B2B Layer Banner */}
-      <div className="cart-savings-info flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-3.5 rounded-xl bg-[#55565A] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
           <Award className="w-4 h-4 text-[#E06518] shrink-0" />
           <span>
-            قیمت‌های فعال حساب شما:{" "}
-            <strong className="text-[#A96536] font-bold">لیست قیمت من</strong>
+            لایه‌ی محاسبه قیمت در این سبد: <strong className="text-orange-300 font-bold">{roleTitle}</strong>
           </span>
         </div>
         {b2bSavings > 0 && (
           <div className="text-emerald-400 font-bold bg-emerald-950/80 px-3 py-1 rounded border border-emerald-800 self-start sm:self-auto">
-            صرفه‌جویی خرید: {formatPrice(b2bSavings)}
+            سود همکاری لایه اختصاصی B2B: {formatPrice(b2bSavings)}
           </div>
         )}
       </div>
@@ -189,21 +168,17 @@ export const CartPage: React.FC = () => {
                 اقلام آماده صدور فاکتور ({toPersianDigits(cart.length)})
               </h2>
 
-              {cart.map((item) => {
+              {cart.map(item => {
                 const stock = getProductStock(item.product);
                 const isOverStock = item.quantity > stock;
-                const unitPrice =
-                  item.product.prices[priceLayer as keyof PriceTiers] ||
-                  item.product.prices.retail;
+                const unitPrice = item.product.prices[priceLayer as keyof PriceTiers] || item.product.prices.retail;
                 const lineTotal = unitPrice * item.quantity;
 
                 return (
                   <div
                     key={item.product.code}
-                    className={`cart-item-card bg-white rounded-[12px] border ${
-                      isOverStock
-                        ? "border-amber-300 ring-1 ring-amber-100"
-                        : "border-[#CBD2D8]"
+                    className={`bg-white rounded-[12px] border ${
+                      isOverStock ? 'border-amber-300 ring-1 ring-amber-100' : 'border-[#CBD2D8]'
                     } p-4 shadow-sm space-y-3 transition-all`}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -226,12 +201,8 @@ export const CartPage: React.FC = () => {
                             <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-[#55565A]">
                               {item.product.code}
                             </span>
-                            <span className="text-[11px] font-semibold text-[#777A7D]">
-                              {item.product.brand}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              واحد: {item.product.unit}
-                            </span>
+                            <span className="text-[11px] font-semibold text-[#777A7D]">{item.product.brand}</span>
+                            <span className="text-[10px] text-slate-400">واحد: {item.product.unit}</span>
                           </div>
 
                           <Link
@@ -242,10 +213,7 @@ export const CartPage: React.FC = () => {
                           </Link>
 
                           <div className="text-[11px] text-[#777A7D]">
-                            قیمت واحد:{" "}
-                            <strong className="text-[#55565A]">
-                              {formatPrice(unitPrice)}
-                            </strong>
+                            قیمت واحد: <strong className="text-[#55565A]">{formatPrice(unitPrice)}</strong>
                           </div>
                         </div>
                       </div>
@@ -255,41 +223,27 @@ export const CartPage: React.FC = () => {
                         {/* Numerical input and +/- */}
                         <div className="flex items-center border border-[#CBD2D8] rounded-xl overflow-hidden bg-slate-50">
                           <button
-                            aria-label={`کاهش تعداد ${item.product.code}`}
-                            onClick={() =>
-                              updateQuantity(
-                                item.product.code,
-                                item.quantity - 1,
-                              )
-                            }
+                            onClick={() => updateQuantity(item.product.code, item.quantity - 1)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 text-[#55565A] font-bold text-sm cursor-pointer transition-colors"
+                            aria-label="کاهش تعداد"
                           >
                             -
                           </button>
                           <input
                             type="number"
-                            aria-label={`تعداد ${item.product.code}`}
                             min={1}
                             max={9999}
                             value={item.quantity}
-                            onChange={(e) => {
+                            onChange={e => {
                               const val = parseInt(e.target.value, 10);
-                              updateQuantity(
-                                item.product.code,
-                                isNaN(val) ? 1 : val,
-                              );
+                              updateQuantity(item.product.code, isNaN(val) ? 1 : val);
                             }}
                             className="w-12 h-8 text-center text-xs font-bold font-mono bg-white border-x border-[#CBD2D8] focus:outline-none"
                           />
                           <button
-                            aria-label={`افزایش تعداد ${item.product.code}`}
-                            onClick={() =>
-                              updateQuantity(
-                                item.product.code,
-                                item.quantity + 1,
-                              )
-                            }
+                            onClick={() => updateQuantity(item.product.code, item.quantity + 1)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 text-[#55565A] font-bold text-sm cursor-pointer transition-colors"
+                            aria-label="افزایش تعداد"
                           >
                             +
                           </button>
@@ -313,12 +267,9 @@ export const CartPage: React.FC = () => {
                         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                         <div>
                           <strong>هشدار موجودی: </strong>
-                          تعداد درخواستی شما ({toPersianDigits(item.quantity)})
-                          بیش از موجودی فوری انبار یزد ({toPersianDigits(stock)}{" "}
-                          {item.product.unit}) است.
+                          تعداد درخواستی شما ({toPersianDigits(item.quantity)}) بیش از موجودی فوری انبار یزد ({toPersianDigits(stock)} {item.product.unit}) است.
                           <span className="text-[11px] text-amber-700 block mt-0.5">
-                            تأمین مابقی تعداد کسری ظرف ۲۴ تا ۴۸ ساعت کاری از خط
-                            کارخانه انجام می‌پذیرد.
+                            تأمین مابقی تعداد کسری ظرف ۲۴ تا ۴۸ ساعت کاری از خط کارخانه انجام می‌پذیرد.
                           </span>
                         </div>
                       </div>
@@ -350,8 +301,7 @@ export const CartPage: React.FC = () => {
             </div>
           ) : (
             <div className="bg-slate-50 border border-dashed border-slate-300 rounded-[12px] p-6 text-center text-xs text-[#777A7D]">
-              سبد خرید جاری شما خالی است. اقلام زیر در وضعیت استعلام یا
-              ذخیره‌شده قرار دارند.
+              سبد خرید جاری شما خالی است. اقلام زیر در وضعیت استعلام یا ذخیره‌شده قرار دارند.
             </div>
           )}
 
@@ -361,47 +311,31 @@ export const CartPage: React.FC = () => {
               <div className="flex items-center justify-between border-b border-amber-100 pb-2.5">
                 <h3 className="font-bold text-xs sm:text-sm text-[#55565A] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#F59E0B]" />
-                  <span>
-                    اقلام دارای وضعیت «در انتظار استعلام قیمت» (
-                    {toPersianDigits(inquiries.length)})
-                  </span>
+                  <span>اقلام دارای وضعیت «در انتظار استعلام قیمت» ({toPersianDigits(inquiries.length)})</span>
                 </h3>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
                   در حال بررسی کارشناس
                 </span>
               </div>
               <p className="text-[11px] text-[#777A7D]">
-                این قطعات شامل تسمه‌ها یا قطعات خاص با سایزهای سفارشی هستند که
-                پس از تعیین قیمت در انبار اطلس، مستقیماً به سبد خرید شما اضافه
-                می‌شوند.
+                این قطعات شامل تسمه‌ها یا قطعات خاص با سایزهای سفارشی هستند که پس از تعیین قیمت در انبار اطلس، مستقیماً به سبد خرید شما اضافه می‌شوند.
               </p>
 
               <div className="divide-y divide-slate-100">
-                {inquiries.map((inq) => (
-                  <div
-                    key={inq.id}
-                    className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                  >
+                {inquiries.map(inq => (
+                  <div key={inq.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-[#55565A] bg-slate-100 px-1.5 py-0.5 rounded">
                           {inq.product.code}
                         </span>
-                        <span className="font-bold text-[#55565A]">
-                          {inq.product.name}
-                        </span>
+                        <span className="font-bold text-[#55565A]">{inq.product.name}</span>
                       </div>
                       <div className="text-[11px] text-[#777A7D] mt-1">
-                        تعداد درخواستی:{" "}
-                        <strong className="text-[#55565A]">
-                          {toPersianDigits(inq.quantity)}
-                        </strong>{" "}
-                        {inq.product.unit} | تاریخ: {inq.date}
+                        تعداد درخواستی: <strong className="text-[#55565A]">{toPersianDigits(inq.quantity)}</strong> {inq.product.unit} | تاریخ: {inq.date}
                       </div>
                       {inq.notes && (
-                        <div className="text-[10px] text-slate-500 italic mt-0.5">
-                          یادداشت فنی: {inq.notes}
-                        </div>
+                        <div className="text-[10px] text-slate-500 italic mt-0.5">یادداشت فنی: {inq.notes}</div>
                       )}
                     </div>
 
@@ -422,36 +356,24 @@ export const CartPage: React.FC = () => {
             <div className="bg-white rounded-[12px] border border-[#CBD2D8] p-5 shadow-sm space-y-3">
               <h3 className="font-bold text-xs sm:text-sm text-[#55565A] flex items-center gap-2 border-b border-[#CBD2D8] pb-2.5">
                 <Bookmark className="w-4 h-4 text-[#E06518]" />
-                <span>
-                  ذخیره شده برای بعد ({toPersianDigits(savedForLater.length)}{" "}
-                  کالا)
-                </span>
+                <span>ذخیره شده برای بعد ({toPersianDigits(savedForLater.length)} کالا)</span>
               </h3>
               <p className="text-[11px] text-[#777A7D]">
-                اقلامی که برای خریدهای آتی کنار گذاشته‌اید. هر زمان که مایل
-                باشید می‌توانید آن‌ها را به سبد خرید منتقل کنید.
+                اقلامی که برای خریدهای آتی کنار گذاشته‌اید. هر زمان که مایل باشید می‌توانید آن‌ها را به سبد خرید منتقل کنید.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                {savedForLater.map((product) => {
-                  const unitPrice =
-                    product.prices[priceLayer as keyof PriceTiers] ||
-                    product.prices.retail;
+                {savedForLater.map(product => {
+                  const unitPrice = product.prices[priceLayer as keyof PriceTiers] || product.prices.retail;
                   return (
                     <div
                       key={product.code}
                       className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3 text-xs"
                     >
                       <div className="space-y-1 flex-1 min-w-0">
-                        <div className="font-mono text-[10px] text-[#777A7D]">
-                          {product.code}
-                        </div>
-                        <div className="font-bold text-[#55565A] truncate">
-                          {product.name}
-                        </div>
-                        <div className="text-orange-600 font-bold">
-                          {formatPrice(unitPrice)}
-                        </div>
+                        <div className="font-mono text-[10px] text-[#777A7D]">{product.code}</div>
+                        <div className="font-bold text-[#55565A] truncate">{product.name}</div>
+                        <div className="text-orange-600 font-bold">{formatPrice(unitPrice)}</div>
                       </div>
 
                       <div className="flex flex-col gap-1.5 shrink-0">
@@ -480,7 +402,7 @@ export const CartPage: React.FC = () => {
         </div>
 
         {/* Sidebar Summary & Discount / Shipping */}
-        <div className="cart-summary-column lg:col-span-4 space-y-4">
+        <div className="lg:col-span-4 space-y-4">
           {/* Discount Code Box */}
           <div className="bg-white rounded-[12px] border border-[#CBD2D8] p-4 shadow-sm space-y-3">
             <h3 className="font-bold text-xs text-[#55565A] flex items-center gap-1.5">
@@ -496,8 +418,7 @@ export const CartPage: React.FC = () => {
                     <span>کد {appliedDiscount.code} اعمال شد</span>
                   </div>
                   <div className="text-[11px] text-emerald-700 mt-0.5">
-                    {appliedDiscount.discountPercent}٪ تخفیف (تا سقف{" "}
-                    {formatPrice(appliedDiscount.maxDiscount)})
+                    {appliedDiscount.discountPercent}٪ تخفیف (تا سقف {formatPrice(appliedDiscount.maxDiscount)})
                   </div>
                 </div>
                 <button
@@ -509,16 +430,13 @@ export const CartPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <form
-                onSubmit={handleDiscountSubmit}
-                className="cart-discount-form space-y-2"
-              >
+              <form onSubmit={handleDiscountSubmit} className="space-y-2">
                 <div className="flex gap-1.5">
                   <input
                     type="text"
                     dir="ltr"
                     value={discountInput}
-                    onChange={(e) => setDiscountInput(e.target.value)}
+                    onChange={e => setDiscountInput(e.target.value)}
                     placeholder="مثلاً ATLAS1366"
                     className="flex-1 h-9 px-3 text-xs font-mono border border-[#CBD2D8] rounded-lg focus:outline-none focus:border-[#E06518] bg-slate-50 focus:bg-white uppercase"
                   />
@@ -532,8 +450,8 @@ export const CartPage: React.FC = () => {
                 {discountError && (
                   <p className="text-[11px] text-red-600">{discountError}</p>
                 )}
-                <p className="cart-discount-hint">
-                  اگر کد تخفیف دارید، اینجا وارد کنید.
+                <p className="text-[10px] text-[#777A7D] leading-relaxed">
+                  کدهای نمونه فعال: <code className="text-[#55565A] font-bold">WELCOME10</code> (۱۰٪ خرید اول)، <code className="text-[#55565A] font-bold">COMEBACK15</code> (۱۵٪ بازگشت)، <code className="text-[#55565A] font-bold">ATLAS1366</code>
                 </p>
               </form>
             )}
@@ -545,7 +463,7 @@ export const CartPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 font-bold text-[#55565A]">
                   <Sparkles className="w-4 h-4 text-[#E06518]" />
-                  <span>استفاده از امتیاز باشگاه</span>
+                  <span>مصرف امتیاز باشگاه اطلس</span>
                 </div>
                 <span className="font-bold text-[#E06518]">
                   {toPersianDigits(currentUser.clubPoints)} امتیاز
@@ -556,15 +474,11 @@ export const CartPage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={useClubToggle}
-                  onChange={(e) => handleClubToggle(e.target.checked)}
+                  onChange={e => handleClubToggle(e.target.checked)}
                   className="rounded text-[#E06518]"
                 />
                 <span className="text-[11px] text-[#55565A]">
-                  تبدیل امتیاز به تخفیف نقدی فاکتور (
-                  {formatPrice(
-                    Math.min(currentUser.clubPoints * 1000, subtotalAmount / 2),
-                  )}{" "}
-                  تخفیف)
+                  تبدیل امتیاز به تخفیف نقدی فاکتور ({formatPrice(Math.min(currentUser.clubPoints * 1000, subtotalAmount / 2))} تخفیف)
                 </span>
               </label>
             </div>
@@ -576,13 +490,13 @@ export const CartPage: React.FC = () => {
               برآورد روش و هزینه ارسال
             </h3>
             <div className="space-y-2">
-              {SHIPPING_METHODS.map((m) => (
+              {SHIPPING_METHODS.map(m => (
                 <label
                   key={m.id}
                   className={`flex items-start justify-between p-2.5 rounded-lg border cursor-pointer transition-colors ${
                     selectedShippingId === m.id
-                      ? "border-[#E06518] bg-orange-50/40 text-[#55565A]"
-                      : "border-slate-200 hover:bg-slate-50 text-[#777A7D]"
+                      ? 'border-[#E06518] bg-orange-50/40 text-[#55565A]'
+                      : 'border-slate-200 hover:bg-slate-50 text-[#777A7D]'
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -595,13 +509,11 @@ export const CartPage: React.FC = () => {
                     />
                     <div>
                       <div className="font-bold text-[#55565A]">{m.name}</div>
-                      <div className="text-[10px] text-[#777A7D]">
-                        {m.estimatedTime}
-                      </div>
+                      <div className="text-[10px] text-[#777A7D]">{m.estimatedTime}</div>
                     </div>
                   </div>
                   <div className="text-left font-bold text-[#55565A] text-[11px]">
-                    {m.cost === 0 ? "پس‌کرایه" : formatPrice(m.cost)}
+                    {m.cost === 0 ? 'پس‌کرایه' : formatPrice(m.cost)}
                   </div>
                 </label>
               ))}
@@ -609,7 +521,7 @@ export const CartPage: React.FC = () => {
           </div>
 
           {/* Order Final Summary */}
-          <div className="cart-total-card bg-white rounded-[12px] border border-[#CBD2D8] p-5 space-y-4">
+          <div className="bg-white rounded-[12px] border border-[#CBD2D8] p-5 shadow-sm space-y-4">
             <h3 className="font-bold text-sm text-[#55565A] border-b border-[#CBD2D8] pb-2.5">
               خلاصه نهایی صورتحساب
             </h3>
@@ -617,23 +529,19 @@ export const CartPage: React.FC = () => {
             <div className="space-y-2.5 text-xs">
               <div className="flex items-center justify-between text-[#777A7D]">
                 <span>جمع اقلام سبد:</span>
-                <span className="font-bold text-[#55565A]">
-                  {formatPrice(subtotalAmount)}
-                </span>
+                <span className="font-bold text-[#55565A]">{formatPrice(subtotalAmount)}</span>
               </div>
 
               {isB2B && (
                 <div className="flex items-center justify-between text-[#777A7D]">
                   <span>مجموع طبق نرخ مصرف‌کننده:</span>
-                  <span className="font-mono line-through">
-                    {formatPrice(totalRetailAmount)}
-                  </span>
+                  <span className="font-mono line-through">{formatPrice(totalRetailAmount)}</span>
                 </div>
               )}
 
               {b2bSavings > 0 && (
                 <div className="flex items-center justify-between text-emerald-600 font-bold">
-                  <span>صرفه‌جویی خرید:</span>
+                  <span>سود همکاری لایه B2B:</span>
                   <span>- {formatPrice(b2bSavings)}</span>
                 </div>
               )}
@@ -647,9 +555,7 @@ export const CartPage: React.FC = () => {
 
               {tierDiscountAmount > 0 && (
                 <div className="flex items-center justify-between text-emerald-600 font-bold">
-                  <span>
-                    تخفیف سبد خرید ({toPersianDigits(tierDiscountPercent)}٪):
-                  </span>
+                  <span>تخفیف سبد خرید ({toPersianDigits(tierDiscountPercent)}٪):</span>
                   <span>- {formatPrice(tierDiscountAmount)}</span>
                 </div>
               )}
@@ -665,11 +571,9 @@ export const CartPage: React.FC = () => {
                 <span>هزینه حمل و ارسال:</span>
                 <span className="font-bold text-[#55565A]">
                   {isFreeShippingByTier ? (
-                    <span className="text-emerald-600 font-bold">
-                      رایگان (مزیت سطح طلایی باشگاه)
-                    </span>
+                    <span className="text-emerald-600 font-bold">رایگان (مزیت سطح طلایی باشگاه)</span>
                   ) : shippingCost === 0 ? (
-                    "پس‌کرایه به مقصد"
+                    'پس‌کرایه به مقصد'
                   ) : (
                     formatPrice(shippingCost)
                   )}
@@ -677,9 +581,7 @@ export const CartPage: React.FC = () => {
               </div>
 
               <div className="border-t border-[#CBD2D8] pt-3 flex items-baseline justify-between">
-                <span className="font-bold text-sm text-[#55565A]">
-                  مبلغ نهایی فاکتور:
-                </span>
+                <span className="font-bold text-sm text-[#55565A]">مبلغ نهایی فاکتور:</span>
                 <div className="text-xl font-black text-[#E06518]">
                   {formatPrice(finalTotalAmount)}
                 </div>
@@ -699,7 +601,7 @@ export const CartPage: React.FC = () => {
 
             {!currentUser && (
               <p className="text-center text-[10px] text-[#777A7D]">
-                کاربر مهمان گرامی، برای ادامه خرید، وارد حساب خود شوید.
+                کاربر مهمان گرامی، پیش از مرحله آدرس‌دهی به صفحه ورود پیامکی هدایت می‌شوید.
               </p>
             )}
 
@@ -708,26 +610,11 @@ export const CartPage: React.FC = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 <span>گارانتی اصالت و سلامت فیزیکی قطعات اطلس</span>
               </div>
-              <p>
-                تضمین تعویض تا ۷ روز در صورت مغایرت فنی یا مشخصات با دیتاشیت
-                رسمی کارخانه SWR و FORZA.
-              </p>
+              <p>تضمین تعویض تا ۷ روز در صورت مغایرت فنی یا مشخصات با دیتاشیت رسمی کارخانه SWR و FORZA.</p>
             </div>
           </div>
         </div>
       </div>
-      {cart.length > 0 && (
-        <div className="cart-mobile-total">
-          <div>
-            <small>جمع سبد خرید</small>
-            <strong>{formatPrice(finalTotalAmount)}</strong>
-          </div>
-          <button type="button" onClick={handleCheckoutProceed}>
-            ادامه خرید
-            <ArrowLeft size={15} className="inline mr-2" />
-          </button>
-        </div>
-      )}
     </div>
   );
 };

@@ -291,7 +291,7 @@ export const AiFloatingButton: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="store-assistant fixed bottom-20 lg:bottom-6 right-3 sm:right-6 z-40 select-none">
+    <div dir="rtl" className="fixed bottom-20 lg:bottom-6 right-3 sm:right-6 z-50 select-none">
       {/* ─────────────────────────────────────────────────────────────
           POPUP WINDOW (COMPACT ELEGANT AI CHAT PANEL)
       ────────────────────────────────────────────────────────────── */}

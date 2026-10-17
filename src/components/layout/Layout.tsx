@@ -51,7 +51,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   return (
-    <div className="storefront min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#FFFFFF] text-[#55565A] overflow-x-hidden">
       <Header />
       <main className={`flex-1 w-full pb-16 lg:pb-0 ${isHomePage ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6'}`}>
         {children}
@@ -63,7 +63,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         onOpenSearch={handleOpenSearch}
       />
       {/* Global AI Floating Quick Action Button */}
-      {!location.pathname.startsWith("/cart") && !location.pathname.startsWith("/checkout") && !location.pathname.startsWith("/product/") && <AiFloatingButton />}
+      <AiFloatingButton />
       {/* Global OTP Auth Modal */}
       <AuthModal />
     </div>

@@ -1,17 +1,17 @@
-import { ProductVariants } from "../components/product/ProductVariants";
-import { ProductImage } from "../components/product/ProductImage";
-import React, { useState, useEffect, useMemo } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { ProductVariants } from '../components/product/ProductVariants';
+import { ProductImage } from '../components/product/ProductImage';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import {
   getProductByCode,
   getSimilarProducts,
   buildDefaultGalleryImages,
   subscribeCatalogChanges,
-} from "../data/mockGenerator";
-import { useAuth } from "../context/AuthContext";
-import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext";
-import { toPersianDigits, getStockStatus } from "../utils/formatters";
+} from '../data/mockGenerator';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { toPersianDigits, getStockStatus } from '../utils/formatters';
 import {
   ChevronLeft,
   ShieldCheck,
@@ -35,17 +35,16 @@ import {
   Eye,
   Link2,
   Image as ImageIcon,
-} from "lucide-react";
-import { Modal } from "../components/ui/Modal";
-import { ProductCard } from "../components/product/ProductCard";
-import { pricingCreditService } from "../services/pricingCreditService";
-import { adminService } from "../services/adminService";
+} from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
+import { ProductCard } from '../components/product/ProductCard';
+import { pricingCreditService } from '../services/pricingCreditService';
+import { adminService } from '../services/adminService';
 
 export const ProductDetailPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const [searchParams] = useSearchParams();
-  const isPreviewMode =
-    searchParams.get("preview") === "1" || !!adminService.getCurrentAdmin();
+  const isPreviewMode = searchParams.get('preview') === '1' || !!adminService.getCurrentAdmin();
 
   const { currentUser, openAuthModal } = useAuth();
   const { addToCart, submitInquiry } = useCart();
@@ -53,16 +52,13 @@ export const ProductDetailPage: React.FC = () => {
 
   const [catalogTick, setCatalogTick] = useState(0);
   useEffect(() => {
-    return subscribeCatalogChanges(() => setCatalogTick((t) => t + 1));
+    return subscribeCatalogChanges(() => setCatalogTick(t => t + 1));
   }, []);
 
-  const decodedCode = code ? decodeURIComponent(code).trim() : "";
+  const decodedCode = code ? decodeURIComponent(code).trim() : '';
   const product = useMemo(
-    () =>
-      decodedCode
-        ? getProductByCode(decodedCode, { includeInactive: isPreviewMode })
-        : undefined,
-    [decodedCode, isPreviewMode, catalogTick],
+    () => (decodedCode ? getProductByCode(decodedCode, { includeInactive: isPreviewMode }) : undefined),
+    [decodedCode, isPreviewMode, catalogTick]
   );
 
   // Visible variants (filter out inactive unless in preview mode)
@@ -70,7 +66,7 @@ export const ProductDetailPage: React.FC = () => {
     if (!product?.variants) return [];
     return isPreviewMode
       ? product.variants
-      : product.variants.filter((v) => v.active !== false);
+      : product.variants.filter(v => v.active !== false);
   }, [product, isPreviewMode]);
 
   // Structured gallery images with scope ('family' vs 'variant') and variantCode
@@ -79,41 +75,36 @@ export const ProductDetailPage: React.FC = () => {
     const allImgs = buildDefaultGalleryImages(product);
     if (isPreviewMode) return allImgs;
     // Hide images belonging to inactive variants for public visitors
-    const activeCodes = new Set(visibleVariants.map((v) => v.code));
+    const activeCodes = new Set(visibleVariants.map(v => v.code));
     return allImgs.filter(
-      (img) =>
-        img.scope === "family" ||
-        !img.variantCode ||
-        activeCodes.has(img.variantCode),
+      img => img.scope === 'family' || !img.variantCode || activeCodes.has(img.variantCode)
     );
   }, [product, visibleVariants, isPreviewMode]);
 
-  const [selectedVariantCode, setSelectedVariantCode] = useState("");
+  const [selectedVariantCode, setSelectedVariantCode] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [inquiryNotes, setInquiryNotes] = useState("");
+  const [inquiryNotes, setInquiryNotes] = useState('');
   const [inquirySubmitted, setInquirySubmitted] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isInquiring, setIsInquiring] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "specs" | "catalogue" | "delivery"
-  >("specs");
+  const [activeTab, setActiveTab] = useState<'specs' | 'catalogue' | 'delivery'>('specs');
 
   // Initialize selected variant & matching image when URL code or family changes
   useEffect(() => {
     if (!product) return;
     const matchedFromUrl = visibleVariants.find(
-      (v) => v.code.toLowerCase() === decodedCode.toLowerCase(),
+      v => v.code.toLowerCase() === decodedCode.toLowerCase()
     );
-    const initialCode = matchedFromUrl?.code || visibleVariants[0]?.code || "";
+    const initialCode = matchedFromUrl?.code || visibleVariants[0]?.code || '';
     setSelectedVariantCode(initialCode);
 
     if (initialCode) {
       const variantImgIdx = galleryImages.findIndex(
-        (img) => img.scope === "variant" && img.variantCode === initialCode,
+        img => img.scope === 'variant' && img.variantCode === initialCode
       );
       setActiveImageIndex(variantImgIdx >= 0 ? variantImgIdx : 0);
     } else {
@@ -128,17 +119,13 @@ export const ProductDetailPage: React.FC = () => {
 
     const currentImg = galleryImages[activeImageIndex];
     // If current image is already linked to this exact SKU, keep it (do not jump)
-    if (
-      currentImg &&
-      currentImg.scope === "variant" &&
-      currentImg.variantCode === newVariantCode
-    ) {
+    if (currentImg && currentImg.scope === 'variant' && currentImg.variantCode === newVariantCode) {
       return;
     }
 
     // Find first image linked to this SKU
     const firstLinkedIdx = galleryImages.findIndex(
-      (img) => img.scope === "variant" && img.variantCode === newVariantCode,
+      img => img.scope === 'variant' && img.variantCode === newVariantCode
     );
     if (firstLinkedIdx >= 0) {
       setActiveImageIndex(firstLinkedIdx);
@@ -147,14 +134,8 @@ export const ProductDetailPage: React.FC = () => {
 
     // If this SKU has no dedicated image and current image belongs to another SKU,
     // switch to the first general family image so another SKU's photo isn't shown misleadingly
-    if (
-      currentImg &&
-      currentImg.scope === "variant" &&
-      currentImg.variantCode !== newVariantCode
-    ) {
-      const firstFamilyIdx = galleryImages.findIndex(
-        (img) => img.scope === "family",
-      );
+    if (currentImg && currentImg.scope === 'variant' && currentImg.variantCode !== newVariantCode) {
+      const firstFamilyIdx = galleryImages.findIndex(img => img.scope === 'family');
       if (firstFamilyIdx >= 0) {
         setActiveImageIndex(firstFamilyIdx);
       }
@@ -169,10 +150,8 @@ export const ProductDetailPage: React.FC = () => {
     const clickedImg = galleryImages[idx];
     if (!clickedImg) return;
 
-    if (clickedImg.scope === "variant" && clickedImg.variantCode) {
-      const targetExists = visibleVariants.some(
-        (v) => v.code === clickedImg.variantCode,
-      );
+    if (clickedImg.scope === 'variant' && clickedImg.variantCode) {
+      const targetExists = visibleVariants.some(v => v.code === clickedImg.variantCode);
       if (targetExists && selectedVariantCode !== clickedImg.variantCode) {
         setSelectedVariantCode(clickedImg.variantCode);
         setQuantity(1);
@@ -187,12 +166,9 @@ export const ProductDetailPage: React.FC = () => {
         <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-500">
           <AlertCircle className="w-7 h-7" />
         </div>
-        <h2 className="text-lg font-bold text-[#55565A]">
-          کالای مورد نظر یافت نشد
-        </h2>
+        <h2 className="text-lg font-bold text-[#55565A]">کالای مورد نظر یافت نشد</h2>
         <p className="text-xs text-slate-500 leading-relaxed">
-          کد کالای وارد شده در کاتالوگ جامع قطعات ثبت نشده است یا ممکن است
-          موقتاً غیرفعال شده باشد.
+          کد کالای وارد شده در کاتالوگ جامع قطعات ثبت نشده است یا ممکن است موقتاً غیرفعال شده باشد.
         </p>
         <Link
           to="/products"
@@ -204,14 +180,12 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const selectedVariant =
-    visibleVariants.find((v) => v.code === selectedVariantCode) ||
-    visibleVariants[0];
+  const selectedVariant = visibleVariants.find(v => v.code === selectedVariantCode) || visibleVariants[0];
 
   // SKU-owned pricing & stock resolution
   const activeUnitPrice = selectedVariant
-    ? (selectedVariant.price ?? selectedVariant.prices?.retail ?? 0)
-    : (product.prices?.retail ?? 0);
+    ? selectedVariant.price ?? selectedVariant.prices?.retail ?? 0
+    : product.prices?.retail ?? 0;
 
   const isSelectedInquiryOnly = selectedVariant
     ? selectedVariant.inquiryOnly !== undefined
@@ -222,29 +196,25 @@ export const ProductDetailPage: React.FC = () => {
   const isSelectedStockKnown = selectedVariant
     ? selectedVariant.stockKnown !== undefined
       ? selectedVariant.stockKnown
-      : typeof selectedVariant.stock === "number" && !isSelectedInquiryOnly
+      : typeof selectedVariant.stock === 'number' && !isSelectedInquiryOnly
     : product.stockKnown !== false;
 
   const activeStockCount = selectedVariant
-    ? (selectedVariant.stock ?? 0)
-    : (product.stock ?? 0);
+    ? selectedVariant.stock ?? 0
+    : product.stock ?? 0;
 
   const stockInfo = !isSelectedStockKnown
-    ? { text: "موجودی نیازمند استعلام", badgeBg: "#94a3b8" }
+    ? { text: 'موجودی نیازمند استعلام', badgeBg: '#94a3b8' }
     : getStockStatus(activeStockCount);
 
-  const activeBrand = selectedVariant?.brand || product.brand || "ثبت نشده";
-  const activeUnit = selectedVariant?.unit || product.unit || "عدد";
+  const activeBrand = selectedVariant?.brand || product.brand || 'ثبت نشده';
+  const activeUnit = selectedVariant?.unit || product.unit || 'عدد';
   const activeVariantSpecs = selectedVariant?.technicalSpecs || [];
 
   // Combined technical specs for cart/inquiry payload
   const combinedSpecs = [
-    ...(selectedVariant?.size
-      ? [{ key: "سایز انتخاب‌شده", value: selectedVariant.size }]
-      : []),
-    ...(selectedVariant?.model
-      ? [{ key: "مدل فنی", value: selectedVariant.model }]
-      : []),
+    ...(selectedVariant?.size ? [{ key: 'سایز انتخاب‌شده', value: selectedVariant.size }] : []),
+    ...(selectedVariant?.model ? [{ key: 'مدل فنی', value: selectedVariant.model }] : []),
     ...activeVariantSpecs,
     ...(product.technicalSpecs || []),
   ];
@@ -259,8 +229,7 @@ export const ProductDetailPage: React.FC = () => {
         prices: selectedVariant.prices || {
           base: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.8) : 0,
           retail: activeUnitPrice,
-          wholesale:
-            activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.9) : 0,
+          wholesale: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.9) : 0,
           dealer: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.84) : 0,
         },
         stock: activeStockCount,
@@ -275,14 +244,11 @@ export const ProductDetailPage: React.FC = () => {
 
   const isFavorited = isInWishlist(product.code);
   const similarProducts = getSimilarProducts(product, 4);
-  const currentGalleryImage =
-    galleryImages[activeImageIndex] || galleryImages[0];
+  const currentGalleryImage = galleryImages[activeImageIndex] || galleryImages[0];
 
   // Images connected to the currently selected variant
   const selectedVariantImagesCount = selectedVariant
-    ? galleryImages.filter(
-        (g) => g.scope === "variant" && g.variantCode === selectedVariant.code,
-      ).length
+    ? galleryImages.filter(g => g.scope === 'variant' && g.variantCode === selectedVariant.code).length
     : 0;
 
   const handleAddToCart = () => {
@@ -316,7 +282,7 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   const handleShare = async () => {
-    if (typeof navigator !== "undefined" && navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
           title: requestedProduct.name,
@@ -328,7 +294,7 @@ export const ProductDetailPage: React.FC = () => {
         // Fallback
       }
     }
-    if (typeof navigator !== "undefined") {
+    if (typeof navigator !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
@@ -340,24 +306,19 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   return (
-    <div
-      className="product-detail-page space-y-6 lg:space-y-8 pb-24 lg:pb-12 text-right"
-      dir="rtl"
-    >
+    <div className="space-y-6 lg:space-y-8 pb-24 lg:pb-12 text-right" dir="rtl">
       {/* Preview / Inactive Banner for Site Manager */}
-      {(product.active === false ||
-        selectedVariant?.active === false ||
-        searchParams.get("preview") === "1") && (
+      {(product.active === false || selectedVariant?.active === false || searchParams.get('preview') === '1') && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 px-5 flex items-center justify-between gap-3 flex-wrap text-xs text-amber-900">
           <div className="flex items-center gap-2 font-bold">
             <Eye className="w-4 h-4 text-amber-700 shrink-0" />
             <span>
               حالت پیش‌نمایش مدیر سایت:
               {product.active === false
-                ? " این خانواده محصول در حال حاضر «غیرفعال موقت» است و فقط برای شما نمایش داده می‌شود."
+                ? ' این خانواده محصول در حال حاضر «غیرفعال موقت» است و فقط برای شما نمایش داده می‌شود.'
                 : selectedVariant?.active === false
-                  ? ` کد کالای ${selectedVariant.code} «غیرفعال موقت» است.`
-                  : " در حال بررسی رابطهٔ دوطرفهٔ کد کالا، تصویر و قیمت پیش از انتشار نهایی هستید."}
+                ? ` کد کالای ${selectedVariant.code} «غیرفعال موقت» است.`
+                : ' در حال بررسی رابطهٔ دوطرفهٔ کد کالا، تصویر و قیمت پیش از انتشار نهایی هستید.'}
             </span>
           </div>
           <Link
@@ -372,17 +333,11 @@ export const ProductDetailPage: React.FC = () => {
       {/* 1. BREADCRUMB & UTILITY ACTIONS */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto no-scrollbar py-1">
-          <Link
-            to="/"
-            className="hover:text-[#E06518] transition-colors shrink-0"
-          >
+          <Link to="/" className="hover:text-[#E06518] transition-colors shrink-0">
             صفحه اصلی
           </Link>
           <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <Link
-            to="/products"
-            className="hover:text-[#E06518] transition-colors shrink-0"
-          >
+          <Link to="/products" className="hover:text-[#E06518] transition-colors shrink-0">
             محصولات
           </Link>
           <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -393,16 +348,11 @@ export const ProductDetailPage: React.FC = () => {
             {product.categoryName}
           </Link>
           <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="text-[#55565A] font-bold shrink-0">
-            {product.name}
-          </span>
+          <span className="text-[#55565A] font-bold shrink-0">{product.name}</span>
           {selectedVariant && (
             <>
               <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span
-                className="text-[#E06518] font-bold font-mono shrink-0"
-                dir="ltr"
-              >
+              <span className="text-[#E06518] font-bold font-mono shrink-0" dir="ltr">
                 {selectedVariant.code}
               </span>
             </>
@@ -418,9 +368,7 @@ export const ProductDetailPage: React.FC = () => {
             title="اشتراک‌گذاری قطعه"
           >
             <Share2 className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">
-              {copiedLink ? "پیوند کپی شد" : "اشتراک‌گذاری"}
-            </span>
+            <span className="hidden sm:inline">{copiedLink ? 'پیوند کپی شد' : 'اشتراک‌گذاری'}</span>
           </button>
 
           <button
@@ -436,11 +384,11 @@ export const ProductDetailPage: React.FC = () => {
       </div>
 
       {/* 2. MAIN PRODUCT DETAIL HERO CONTAINER */}
-      <div className="product-detail-main bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 lg:p-8">
-        <div className="product-detail-layout">
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 lg:p-8 shadow-xs">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-start">
           {/* Left: Gallery with Two-Way SKU Binding (Sticky on Desktop) */}
-          <div className="product-detail-gallery space-y-3.5">
-            <div className="product-detail-image relative w-full pt-[82%] bg-gradient-to-b from-slate-50/70 to-white border border-slate-200/90 rounded-2xl overflow-hidden group flex items-center justify-center">
+          <div className="lg:col-span-5 space-y-3.5 lg:sticky lg:top-24">
+            <div className="relative w-full pt-[82%] bg-gradient-to-b from-slate-50/70 to-white border border-slate-200/90 rounded-2xl overflow-hidden group flex items-center justify-center">
               <ProductImage
                 src={currentGalleryImage?.url || product.images[0]}
                 alt={currentGalleryImage?.title || requestedProduct.name}
@@ -450,11 +398,10 @@ export const ProductDetailPage: React.FC = () => {
               {/* Top Scope Badge on Main Image: Distinguishes SKU-Specific Image vs General Family Image */}
               {currentGalleryImage && (
                 <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2 pointer-events-none">
-                  {currentGalleryImage.scope === "variant" &&
-                  currentGalleryImage.variantCode ? (
+                  {currentGalleryImage.scope === 'variant' && currentGalleryImage.variantCode ? (
                     <span className="inline-flex items-center gap-1.5 bg-[#E06518] text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow-xs">
                       <Link2 className="w-3.5 h-3.5" />
-                      <span>تصویر کد {currentGalleryImage.variantCode}</span>
+                      <span>تصویر اختصاصی کد {currentGalleryImage.variantCode}</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 bg-slate-800/85 text-white text-[11px] font-medium px-3 py-1 rounded-lg shadow-xs">
@@ -465,8 +412,7 @@ export const ProductDetailPage: React.FC = () => {
 
                   {galleryImages.length > 1 && (
                     <span className="bg-white/90 border border-slate-200 text-slate-700 text-[10.5px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      {toPersianDigits(activeImageIndex + 1)} از{" "}
-                      {toPersianDigits(galleryImages.length)}
+                      {toPersianDigits(activeImageIndex + 1)} از {toPersianDigits(galleryImages.length)}
                     </span>
                   )}
                 </div>
@@ -477,8 +423,7 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="absolute bottom-3 right-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] px-3 py-1.5 rounded-xl font-medium shadow-xs flex items-center justify-between gap-2">
                   <span className="truncate">
                     {currentGalleryImage.title ||
-                      (currentGalleryImage.scope === "variant" &&
-                      currentGalleryImage.variantCode
+                      (currentGalleryImage.scope === 'variant' && currentGalleryImage.variantCode
                         ? `تصویر اختصاصی متصل به کد کالای ${currentGalleryImage.variantCode}`
                         : `تصویر عمومی خانواده ${product.name}`)}
                   </span>
@@ -487,25 +432,18 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             {/* Scope Notice */}
-            {currentGalleryImage?.scope === "family" ? (
+            {currentGalleryImage?.scope === 'family' ? (
               <p className="text-xs text-slate-500 leading-6 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2">
-                این یک <strong>تصویر عمومی خانوادهٔ محصول</strong> است؛ مشاهدهٔ
-                آن کد کالای انتخاب‌شده را تغییر نمی‌دهد.
+                این یک <strong>تصویر عمومی خانوادهٔ محصول</strong> است؛ مشاهدهٔ آن کد کالای انتخاب‌شده را تغییر نمی‌دهد.
               </p>
-            ) : currentGalleryImage?.scope === "variant" &&
-              currentGalleryImage.variantCode ? (
+            ) : currentGalleryImage?.scope === 'variant' && currentGalleryImage.variantCode ? (
               <p className="text-xs text-emerald-900 leading-6 bg-emerald-50/80 border border-emerald-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
                 <span>
-                  این تصویر مستقیماً به کد کالای{" "}
-                  <strong className="font-mono" dir="ltr">
-                    {currentGalleryImage.variantCode}
-                  </strong>{" "}
-                  متصل است.
+                  این تصویر مستقیماً به کد کالای <strong className="font-mono" dir="ltr">{currentGalleryImage.variantCode}</strong> متصل است.
                 </span>
                 {selectedVariantImagesCount > 1 && (
                   <span className="text-[11px] font-bold text-emerald-700 shrink-0">
-                    ({toPersianDigits(selectedVariantImagesCount)} تصویر برای
-                    این کد)
+                    ({toPersianDigits(selectedVariantImagesCount)} تصویر برای این کد)
                   </span>
                 )}
               </p>
@@ -515,17 +453,17 @@ export const ProductDetailPage: React.FC = () => {
             {galleryImages.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
-                  <span>تصویر هر کد را انتخاب کنید:</span>
+                  <span>با کلیک روی تصویر هر کد، همان کد کالا خودکار انتخاب می‌شود:</span>
                   <span>{toPersianDigits(galleryImages.length)} تصویر</span>
                 </div>
                 <div
-                  className="product-thumb-strip"
+                  className="grid grid-cols-4 gap-2 sm:gap-3 max-h-64 overflow-y-auto p-1"
                   aria-label="گالری تصاویر محصول"
                 >
                   {galleryImages.map((img, idx) => {
                     const isCurrentImg = activeImageIndex === idx;
                     const isBoundToSelectedSku =
-                      img.scope === "variant" &&
+                      img.scope === 'variant' &&
                       img.variantCode &&
                       img.variantCode === selectedVariant?.code;
 
@@ -534,7 +472,7 @@ export const ProductDetailPage: React.FC = () => {
                         key={img.id || idx}
                         type="button"
                         aria-label={
-                          img.scope === "variant" && img.variantCode
+                          img.scope === 'variant' && img.variantCode
                             ? `انتخاب تصویر کد ${img.variantCode} (${toPersianDigits(idx + 1)} از ${toPersianDigits(galleryImages.length)})`
                             : `نمایش تصویر عمومی خانواده ${toPersianDigits(idx + 1)} از ${toPersianDigits(galleryImages.length)}`
                         }
@@ -542,10 +480,10 @@ export const ProductDetailPage: React.FC = () => {
                         onClick={() => handleSelectImage(idx)}
                         className={`relative pt-[78%] rounded-xl border overflow-hidden transition-all cursor-pointer text-right ${
                           isCurrentImg
-                            ? "border-[#E06518] ring-2 ring-[#E06518] ring-offset-1 shadow-xs bg-white"
+                            ? 'border-[#E06518] ring-2 ring-[#E06518] ring-offset-1 shadow-xs bg-white'
                             : isBoundToSelectedSku
-                              ? "border-orange-300 bg-orange-50/30 hover:border-[#E06518]"
-                              : "border-slate-200/80 opacity-80 hover:opacity-100 hover:border-slate-300 bg-slate-50/60"
+                            ? 'border-orange-300 bg-orange-50/30 hover:border-[#E06518]'
+                            : 'border-slate-200/80 opacity-80 hover:opacity-100 hover:border-slate-300 bg-slate-50/60'
                         }`}
                       >
                         <ProductImage
@@ -556,17 +494,17 @@ export const ProductDetailPage: React.FC = () => {
                         />
                         <span
                           className={`absolute bottom-0 inset-x-0 text-[9.5px] font-bold px-1.5 py-0.5 text-center truncate ${
-                            img.scope === "variant" && img.variantCode
+                            img.scope === 'variant' && img.variantCode
                               ? isBoundToSelectedSku
-                                ? "bg-[#E06518] text-white font-mono"
-                                : "bg-slate-800/85 text-white font-mono"
-                              : "bg-slate-200/90 text-slate-700"
+                                ? 'bg-[#E06518] text-white font-mono'
+                                : 'bg-slate-800/85 text-white font-mono'
+                              : 'bg-slate-200/90 text-slate-700'
                           }`}
-                          dir={img.scope === "variant" ? "ltr" : "rtl"}
+                          dir={img.scope === 'variant' ? 'ltr' : 'rtl'}
                         >
-                          {img.scope === "variant" && img.variantCode
+                          {img.scope === 'variant' && img.variantCode
                             ? `کد ${img.variantCode}`
-                            : "عمومی خانواده"}
+                            : 'عمومی خانواده'}
                         </span>
                       </button>
                     );
@@ -584,13 +522,11 @@ export const ProductDetailPage: React.FC = () => {
               >
                 <Heart
                   className={`w-4 h-4 ${
-                    isFavorited ? "fill-red-500 text-red-500" : "text-slate-400"
+                    isFavorited ? 'fill-red-500 text-red-500' : 'text-slate-400'
                   }`}
                 />
                 <span className="text-[11.5px]">
-                  {isFavorited
-                    ? "نشان‌شده در حساب شما"
-                    : "نشان کردن خانواده کالا"}
+                  {isFavorited ? 'نشان‌شده در حساب شما' : 'نشان کردن خانواده کالا'}
                 </span>
               </button>
 
@@ -601,46 +537,37 @@ export const ProductDetailPage: React.FC = () => {
               >
                 <Copy className="w-4 h-4 text-slate-400" />
                 <span className="text-[11.5px]">
-                  {copiedCode
-                    ? "کد کالا کپی شد"
-                    : `کپی کد انتخاب‌شده (${requestedProduct.code})`}
+                  {copiedCode ? 'کد کالا کپی شد' : `کپی کد انتخاب‌شده (${requestedProduct.code})`}
                 </span>
               </button>
             </div>
           </div>
 
           {/* Right: Family Header + Variant Selector + SKU-Specific Specs & Price */}
-          <div className="product-detail-info flex flex-col space-y-5">
+          <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               {/* Metadata Line (Clean unboxed metadata + key codes) */}
               <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span>
-                    خانواده:{" "}
-                    <strong className="font-mono text-slate-800" dir="ltr">
-                      {product.code}
-                    </strong>
+                    خانواده: <strong className="font-mono text-slate-800" dir="ltr">{product.code}</strong>
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>
-                    کد کالای انتخاب‌شده:{" "}
+                    کد کالای انتخاب‌شده:{' '}
                     <strong className="font-mono text-[#E06518]" dir="ltr">
                       {requestedProduct.code}
                     </strong>
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>
-                    برند:{" "}
-                    <strong className="text-slate-800">{activeBrand}</strong>
+                    برند: <strong className="text-slate-800">{activeBrand}</strong>
                   </span>
                   {selectedVariant?.model && (
                     <>
                       <span aria-hidden="true">·</span>
                       <span>
-                        مدل:{" "}
-                        <strong className="font-mono text-slate-800" dir="ltr">
-                          {selectedVariant.model}
-                        </strong>
+                        مدل: <strong className="font-mono text-slate-800" dir="ltr">{selectedVariant.model}</strong>
                       </span>
                     </>
                   )}
@@ -653,10 +580,10 @@ export const ProductDetailPage: React.FC = () => {
                   />
                   <span className="text-slate-700">
                     {!isSelectedStockKnown
-                      ? "موجودی نیازمند استعلام"
+                      ? 'موجودی نیازمند استعلام'
                       : activeStockCount > 0
-                        ? `موجود در انبار (${toPersianDigits(activeStockCount)} ${activeUnit})`
-                        : "ناموجود / تأمین سفارشی"}
+                      ? `موجود در انبار (${toPersianDigits(activeStockCount)} ${activeUnit})`
+                      : 'ناموجود / تأمین سفارشی'}
                   </span>
                 </div>
               </div>
@@ -671,7 +598,7 @@ export const ProductDetailPage: React.FC = () => {
                 </h1>
                 {selectedVariant?.size && (
                   <div className="text-xs sm:text-sm font-bold text-[#E06518] pt-0.5">
-                    سایز / مشخصه فنی کد {selectedVariant.code}:{" "}
+                    سایز / مشخصه فنی کد {selectedVariant.code}:{' '}
                     <span className="font-mono text-slate-800" dir="auto">
                       {selectedVariant.size}
                     </span>
@@ -679,21 +606,17 @@ export const ProductDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Quick Variant Chips */}
-              {visibleVariants.length > 0 && visibleVariants.length <= 12 && (
+              {/* Quick Variant Chips (for fast 1-click switching when <= 12 variants) */}
+              {visibleVariants.length > 1 && visibleVariants.length <= 12 && (
                 <div className="space-y-2 pt-1">
                   <span className="text-xs font-bold text-slate-700 block">
-                    انتخاب سریع کد کالا (با انتخاب هر کد، تصویر و قیمت آن نمایش
-                    داده می‌شود):
+                    انتخاب سریع کد کالا (با انتخاب هر کد، تصویر و قیمت آن نمایش داده می‌شود):
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {visibleVariants.map((v) => {
+                    {visibleVariants.map(v => {
                       const isSel = v.code === selectedVariant?.code;
                       const vPrice = v.price ?? v.prices?.retail ?? 0;
-                      const vInq =
-                        v.inquiryOnly !== undefined
-                          ? v.inquiryOnly
-                          : vPrice <= 0;
+                      const vInq = v.inquiryOnly !== undefined ? v.inquiryOnly : vPrice <= 0;
                       return (
                         <button
                           key={v.code}
@@ -701,33 +624,25 @@ export const ProductDetailPage: React.FC = () => {
                           onClick={() => handleSelectVariant(v.code)}
                           className={`px-3 py-2 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-0.5 ${
                             isSel
-                              ? "border-[#E06518] bg-orange-50/90 text-[#37383b] ring-1 ring-[#E06518]"
-                              : "border-slate-200 bg-white hover:border-slate-300 text-slate-700"
+                              ? 'border-[#E06518] bg-orange-50/90 text-[#37383b] ring-1 ring-[#E06518]'
+                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span
-                              className="font-mono text-xs font-black text-[#E06518]"
-                              dir="ltr"
-                            >
+                            <span className="font-mono text-xs font-black text-[#E06518]" dir="ltr">
                               {v.code}
                             </span>
                             <span className="text-[11px] font-semibold text-slate-600">
-                              {v.size && v.size !== "نامشخص" ? v.size : v.name}
+                              {v.size && v.size !== 'نامشخص' ? v.size : v.name}
                             </span>
                           </div>
                           <div className="text-[10.5px] font-bold">
                             {!vInq && vPrice > 0 ? (
                               <span className="text-emerald-800 font-mono">
-                                {toPersianDigits(
-                                  new Intl.NumberFormat("fa-IR").format(vPrice),
-                                )}{" "}
-                                تومان
+                                {toPersianDigits(new Intl.NumberFormat('fa-IR').format(vPrice))} تومان
                               </span>
                             ) : (
-                              <span className="text-amber-700">
-                                نیازمند استعلام
-                              </span>
+                              <span className="text-amber-700">نیازمند استعلام</span>
                             )}
                           </div>
                         </button>
@@ -737,90 +652,78 @@ export const ProductDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {visibleVariants.length > 12 && (
-                <details className="product-variants-details" open>
-                  <summary>
-                    جستجو و انتخاب کد کالا
-                    <ChevronLeft size={15} />
-                  </summary>
-                  <ProductVariants
-                    key={product.code}
-                    variants={visibleVariants}
-                    selected={selectedVariant?.code || ""}
-                    onSelect={handleSelectVariant}
-                    galleryImages={galleryImages}
-                  />
-                </details>
+              {/* Full Searchable Variants Table */}
+              {visibleVariants.length > 0 && (
+                <ProductVariants
+                  key={product.code}
+                  variants={visibleVariants}
+                  selected={selectedVariant?.code || ''}
+                  onSelect={handleSelectVariant}
+                  galleryImages={galleryImages}
+                />
               )}
-              <div className="product-detail-specs">
-                <section className="product-spec-card selected">
-                  <h3>مشخصات کد {requestedProduct.code}</h3>
-                  <dl>
-                    {selectedVariant?.size && (
-                      <div>
-                        <dt>ابعاد / سایز</dt>
-                        <dd dir="auto">{selectedVariant.size}</dd>
-                      </div>
-                    )}
-                    {selectedVariant?.model && (
-                      <div>
-                        <dt>مدل</dt>
-                        <dd>{selectedVariant.model}</dd>
-                      </div>
-                    )}
-                    {activeVariantSpecs.slice(0, 5).map((sp, i) => (
-                      <div key={i}>
-                        <dt>{sp.key}</dt>
-                        <dd>{sp.value}</dd>
+
+              {/* Selected Variant Specific Technical Specs Summary Box */}
+              {selectedVariant && activeVariantSpecs.length > 0 && (
+                <div className="rounded-2xl border border-orange-200/80 bg-orange-50/40 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-black text-[#37383b]">
+                      مشخصات فنی اختصاصی کد انتخاب‌شده ({selectedVariant.code})
+                    </h3>
+                    <span className="text-[11px] font-mono text-[#E06518] font-bold" dir="ltr">
+                      {selectedVariant.model || selectedVariant.size}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {activeVariantSpecs.map((sp, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white/90 rounded-xl border border-orange-100 px-3 py-2 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <span className="text-slate-500">{sp.key}:</span>
+                        <span className="font-bold text-slate-800">{sp.value}</span>
                       </div>
                     ))}
-                    {!activeVariantSpecs.length && !selectedVariant?.size && (
-                      <div>
-                        <dt>کد کالا</dt>
-                        <dd>{requestedProduct.code}</dd>
-                      </div>
-                    )}
-                  </dl>
-                </section>
-                <section className="product-spec-card">
-                  <h3>مشخصات مشترک خانواده</h3>
-                  <dl>
-                    <div>
-                      <dt>واحد فروش</dt>
-                      <dd>{activeUnit}</dd>
-                    </div>
-                    <div>
-                      <dt>برند</dt>
-                      <dd>{activeBrand}</dd>
-                    </div>
-                    {product.technicalSpecs.slice(0, 4).map((sp, i) => (
-                      <div key={i}>
-                        <dt>{sp.key}</dt>
-                        <dd>{sp.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              </div>
-              {visibleVariants.length > 0 && visibleVariants.length <= 12 && (
-                <details className="product-variants-details">
-                  <summary>
-                    جدول تمام کدها و مشخصات
-                    <ChevronLeft size={15} />
-                  </summary>
-                  <ProductVariants
-                    key={product.code}
-                    variants={visibleVariants}
-                    selected={selectedVariant?.code || ""}
-                    onSelect={handleSelectVariant}
-                    galleryImages={galleryImages}
-                  />
-                </details>
+                  </div>
+                </div>
               )}
+
               {/* Family Description */}
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {selectedVariant?.description || product.description}
               </p>
+
+              {/* Industrial Key Info Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 font-medium">واحد شمارش کد:</span>
+                  <span className="text-xs font-bold text-slate-800 mt-1">{activeUnit}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 font-medium">وضعیت قیمت کد:</span>
+                  {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+                    <span className="text-xs font-bold text-emerald-700 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      قیمت مصوب فعال
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-amber-700 mt-1 flex items-center gap-1">
+                      <PhoneCall className="w-3.5 h-3.5 text-amber-600" />
+                      نیازمند استعلام
+                    </span>
+                  )}
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 font-medium">تحویل کالا:</span>
+                  <span className="text-xs font-bold text-slate-800 mt-1">انبار مرکزی یزد</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 font-medium">تعداد کل کدهای خانواده:</span>
+                  <span className="text-xs font-bold text-slate-800 mt-1">
+                    {toPersianDigits(visibleVariants.length || 1)} کد کالا
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Primary SKU-Owned Pricing & Order Action Area */}
@@ -831,31 +734,19 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
                       <span className="text-xs text-slate-500 block mb-1">
-                        قیمت واحد کد کالای انتخاب‌شده (
-                        <strong className="font-mono text-slate-800" dir="ltr">
-                          {requestedProduct.code}
-                        </strong>
-                        ):
+                        قیمت واحد کد کالای انتخاب‌شده (<strong className="font-mono text-slate-800" dir="ltr">{requestedProduct.code}</strong>):
                       </span>
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-2xl sm:text-3xl font-black text-emerald-800 font-mono">
                           {toPersianDigits(
-                            new Intl.NumberFormat("fa-IR").format(
-                              activeUnitPrice * quantity,
-                            ),
+                            new Intl.NumberFormat('fa-IR').format(activeUnitPrice * quantity)
                           )}
                         </span>
-                        <span className="text-xs text-slate-600 font-bold">
-                          تومان
-                        </span>
+                        <span className="text-xs text-slate-600 font-bold">تومان</span>
                         {quantity > 1 && (
                           <span className="text-[11px] text-slate-500 mr-2">
-                            (هر {activeUnit}{" "}
-                            {toPersianDigits(
-                              new Intl.NumberFormat("fa-IR").format(
-                                activeUnitPrice,
-                              ),
-                            )}{" "}
+                            (هر {activeUnit}{' '}
+                            {toPersianDigits(new Intl.NumberFormat('fa-IR').format(activeUnitPrice))}{' '}
                             تومان)
                           </span>
                         )}
@@ -864,13 +755,11 @@ export const ProductDetailPage: React.FC = () => {
 
                     {/* Quantity Selector */}
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">
-                        تعداد ({activeUnit}):
-                      </span>
+                      <span className="text-xs text-slate-500">تعداد ({activeUnit}):</span>
                       <div className="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden shadow-2xs">
                         <button
                           type="button"
-                          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                          onClick={() => setQuantity(q => Math.max(1, q - 1))}
                           className="w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold cursor-pointer transition-colors"
                         >
                           -
@@ -880,7 +769,7 @@ export const ProductDetailPage: React.FC = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setQuantity((q) => q + 1)}
+                          onClick={() => setQuantity(q => q + 1)}
                           className="w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold cursor-pointer transition-colors"
                         >
                           +
@@ -897,25 +786,21 @@ export const ProductDetailPage: React.FC = () => {
                       disabled={isSelectedStockKnown && activeStockCount <= 0}
                       className={`h-12 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 ${
                         isSelectedStockKnown && activeStockCount <= 0
-                          ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
                           : added
-                            ? "bg-emerald-600 text-white"
-                            : "bg-[#E06518] hover:bg-[#C95210] text-white"
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-[#E06518] hover:bg-[#C95210] text-white'
                       }`}
                     >
                       {added ? (
                         <>
                           <Check className="w-4 h-4" />
-                          <span>
-                            کد {requestedProduct.code} به پیش‌فاکتور افزوده شد
-                          </span>
+                          <span>کد {requestedProduct.code} به پیش‌فاکتور افزوده شد</span>
                         </>
                       ) : (
                         <>
                           <ShoppingCart className="w-4 h-4" />
-                          <span>
-                            افزودن کد {requestedProduct.code} به سبد خرید
-                          </span>
+                          <span>افزودن کد {requestedProduct.code} به سبد خرید</span>
                         </>
                       )}
                     </button>
@@ -940,9 +825,7 @@ export const ProductDetailPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-amber-900/80 leading-relaxed">
-                      برای این کد کالا هنوز قیمت ثابتی ثبت نشده است؛ درخواست
-                      استعلام خود را ثبت کنید تا قیمت روز و موجودی انبار اعلام
-                      شود.
+                      برای این کد کالا هنوز قیمت ثابتی ثبت نشده است؛ درخواست استعلام خود را ثبت کنید تا قیمت روز و موجودی انبار اعلام شود.
                     </p>
                   </div>
 
@@ -966,11 +849,11 @@ export const ProductDetailPage: React.FC = () => {
         <div className="flex items-center border-b border-slate-200/80 bg-slate-50/70 overflow-x-auto no-scrollbar">
           <button
             type="button"
-            onClick={() => setActiveTab("specs")}
+            onClick={() => setActiveTab('specs')}
             className={`px-5 sm:px-7 py-4 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-              activeTab === "specs"
-                ? "border-[#E06518] text-[#E06518] bg-white"
-                : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50"
+              activeTab === 'specs'
+                ? 'border-[#E06518] text-[#E06518] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -979,11 +862,11 @@ export const ProductDetailPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab("catalogue")}
+            onClick={() => setActiveTab('catalogue')}
             className={`px-5 sm:px-7 py-4 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-              activeTab === "catalogue"
-                ? "border-[#E06518] text-[#E06518] bg-white"
-                : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50"
+              activeTab === 'catalogue'
+                ? 'border-[#E06518] text-[#E06518] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -992,11 +875,11 @@ export const ProductDetailPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab("delivery")}
+            onClick={() => setActiveTab('delivery')}
             className={`px-5 sm:px-7 py-4 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-              activeTab === "delivery"
-                ? "border-[#E06518] text-[#E06518] bg-white"
-                : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50"
+              activeTab === 'delivery'
+                ? 'border-[#E06518] text-[#E06518] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'
             }`}
           >
             <Truck className="w-4 h-4" />
@@ -1005,15 +888,14 @@ export const ProductDetailPage: React.FC = () => {
         </div>
 
         <div className="p-5 sm:p-7">
-          {activeTab === "specs" && (
+          {activeTab === 'specs' && (
             <div className="space-y-6">
               {/* Variant-Specific Specs Table */}
               {selectedVariant && (
                 <div className="space-y-3">
                   <div>
                     <h3 className="text-sm font-bold text-[#37383b]">
-                      ۱. مشخصات اختصاصی کد کالای انتخاب‌شده (
-                      {selectedVariant.code})
+                      ۱. مشخصات اختصاصی کد کالای انتخاب‌شده ({selectedVariant.code})
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
                       اطلاعات فنی، سایز و ویژگی‌های مربوط به همین نوع/کد کالا
@@ -1023,9 +905,7 @@ export const ProductDetailPage: React.FC = () => {
                     <table className="w-full text-xs text-right">
                       <thead>
                         <tr className="bg-orange-50/70 border-b border-orange-200/80 text-slate-800">
-                          <th className="py-3 px-4 font-bold w-1/3">
-                            ویژگی اختصاصی کد {selectedVariant.code}
-                          </th>
+                          <th className="py-3 px-4 font-bold w-1/3">ویژگی اختصاصی کد {selectedVariant.code}</th>
                           <th className="py-3 px-4 font-bold">مقدار ثبت‌شده</th>
                         </tr>
                       </thead>
@@ -1034,10 +914,7 @@ export const ProductDetailPage: React.FC = () => {
                           <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
                             کد دقیق کالا
                           </td>
-                          <td
-                            className="py-3 px-4 font-mono font-bold text-[#E06518]"
-                            dir="ltr"
-                          >
+                          <td className="py-3 px-4 font-mono font-bold text-[#E06518]" dir="ltr">
                             {selectedVariant.code}
                           </td>
                         </tr>
@@ -1045,19 +922,14 @@ export const ProductDetailPage: React.FC = () => {
                           <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
                             نام دقیق نوع کالا
                           </td>
-                          <td className="py-3 px-4 font-bold text-slate-800">
-                            {selectedVariant.name}
-                          </td>
+                          <td className="py-3 px-4 font-bold text-slate-800">{selectedVariant.name}</td>
                         </tr>
                         <tr className="bg-white">
                           <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
                             سایز / ابعاد
                           </td>
-                          <td
-                            className="py-3 px-4 font-mono font-bold text-slate-800"
-                            dir="auto"
-                          >
-                            {selectedVariant.size || "—"}
+                          <td className="py-3 px-4 font-mono font-bold text-slate-800" dir="auto">
+                            {selectedVariant.size || '—'}
                           </td>
                         </tr>
                         {selectedVariant.model && (
@@ -1065,27 +937,17 @@ export const ProductDetailPage: React.FC = () => {
                             <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
                               مدل فنی
                             </td>
-                            <td
-                              className="py-3 px-4 font-mono font-bold text-slate-800"
-                              dir="ltr"
-                            >
+                            <td className="py-3 px-4 font-mono font-bold text-slate-800" dir="ltr">
                               {selectedVariant.model}
                             </td>
                           </tr>
                         )}
                         {activeVariantSpecs.map((spec, i) => (
-                          <tr
-                            key={i}
-                            className={
-                              i % 2 === 0 ? "bg-white" : "bg-orange-50/20"
-                            }
-                          >
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-orange-50/20'}>
                             <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
                               {spec.key}
                             </td>
-                            <td className="py-3 px-4 font-bold text-slate-800">
-                              {spec.value}
-                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{spec.value}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1101,8 +963,7 @@ export const ProductDetailPage: React.FC = () => {
                     ۲. مشخصات مشترک خانوادهٔ محصول ({product.name})
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    ویژگی‌های عمومی و مشترک بین تمام کدهای زیرمجموعهٔ این
-                    خانواده
+                    ویژگی‌های عمومی و مشترک بین تمام کدهای زیرمجموعهٔ این خانواده
                   </p>
                 </div>
 
@@ -1111,28 +972,17 @@ export const ProductDetailPage: React.FC = () => {
                     <table className="w-full text-xs text-right">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
-                          <th className="py-3.5 px-4 font-bold w-1/3">
-                            شاخص فنی مشترک خانواده
-                          </th>
-                          <th className="py-3.5 px-4 font-bold">
-                            اطلاعات ثبت‌شده
-                          </th>
+                          <th className="py-3.5 px-4 font-bold w-1/3">شاخص فنی مشترک خانواده</th>
+                          <th className="py-3.5 px-4 font-bold">اطلاعات ثبت‌شده</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {product.technicalSpecs.map((spec, i) => (
-                          <tr
-                            key={i}
-                            className={
-                              i % 2 === 0 ? "bg-white" : "bg-slate-50/40"
-                            }
-                          >
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                             <td className="py-3.5 px-4 font-semibold text-slate-700 border-l border-slate-100">
                               {spec.key}
                             </td>
-                            <td className="py-3.5 px-4 font-mono font-bold text-[#55565A]">
-                              {spec.value}
-                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold text-[#55565A]">{spec.value}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1140,65 +990,45 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
-                    اطلاعات فنی بیشتر طبق نقشه ساخت و فایل کاتالوگ قابل ارائه
-                    است.
+                    اطلاعات فنی بیشتر طبق نقشه ساخت و فایل کاتالوگ قابل ارائه است.
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {activeTab === "catalogue" && (
+          {activeTab === 'catalogue' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-[#55565A]">
-                  شناسه‌ها و مدارک محصول
-                </h3>
+                <h3 className="text-sm font-bold text-[#55565A]">شناسه‌ها و مدارک محصول</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  برای تطبیق دقیق، کد کالا و سایز انتخاب‌شده را به واحد فروش
-                  اعلام کنید.
+                  برای تطبیق دقیق، کد کالا و سایز انتخاب‌شده را به واحد فروش اعلام کنید.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">
-                    کد کالای انتخاب‌شده:
-                  </span>
-                  <span
-                    className="font-mono font-bold text-[#55565A] text-sm block"
-                    dir="ltr"
-                  >
+                  <span className="text-slate-400 block text-[11px]">کد کالای انتخاب‌شده:</span>
+                  <span className="font-mono font-bold text-[#55565A] text-sm block" dir="ltr">
                     {selectedVariant?.code || product.forzaCode || product.code}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">
-                    کد خانواده مرجع:
-                  </span>
-                  <span
-                    className="font-mono font-bold text-[#55565A] text-sm block"
-                    dir="ltr"
-                  >
+                  <span className="text-slate-400 block text-[11px]">کد خانواده مرجع:</span>
+                  <span className="font-mono font-bold text-[#55565A] text-sm block" dir="ltr">
                     {product.code}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">
-                    برند ثبت‌شده:
-                  </span>
-                  <span className="font-bold text-orange-600 text-sm block">
-                    {activeBrand}
-                  </span>
+                  <span className="text-slate-400 block text-[11px]">برند ثبت‌شده:</span>
+                  <span className="font-bold text-orange-600 text-sm block">{activeBrand}</span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">
-                    تصاویر متصل به این کد:
-                  </span>
+                  <span className="text-slate-400 block text-[11px]">تصاویر متصل به این کد:</span>
                   <span className="font-bold text-[#55565A] text-sm block">
                     {selectedVariantImagesCount > 0
                       ? `${toPersianDigits(selectedVariantImagesCount)} تصویر اختصاصی`
-                      : "استفاده از تصویر عمومی خانواده"}
+                      : 'استفاده از تصویر عمومی خانواده'}
                   </span>
                 </div>
               </div>
@@ -1206,24 +1036,19 @@ export const ProductDetailPage: React.FC = () => {
               <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-3">
                 <Shield className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <h4 className="font-bold text-amber-950">
-                    تأییدیه اصالت کاتالوگ رسمی
-                  </h4>
+                  <h4 className="font-bold text-amber-950">تأییدیه اصالت کاتالوگ رسمی</h4>
                   <p className="text-[11.5px] leading-relaxed text-amber-900/90">
-                    تمامی ابعاد، کدهای فنی و مشخصات ثبت‌شده با کاتالوگ رسمی
-                    بازرگانی تسمه و قطعات صنعتی اطلس مطابقت دارد.
+                    تمامی ابعاد، کدهای فنی و مشخصات ثبت‌شده با کاتالوگ رسمی بازرگانی تسمه و قطعات صنعتی اطلس مطابقت دارد.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === "delivery" && (
+          {activeTab === 'delivery' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-[#55565A]">
-                  انبارداری، لجستیک و تحویل کالا از انبار مرکزی یزد
-                </h3>
+                <h3 className="text-sm font-bold text-[#55565A]">انبارداری، لجستیک و تحویل کالا از انبار مرکزی یزد</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   روند آماده‌سازی، بسته‌بندی صنعتی و ارسال سریع به سراسر ایران
                 </p>
@@ -1234,12 +1059,9 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="w-9 h-9 rounded-xl bg-orange-100/80 text-orange-700 flex items-center justify-center">
                     <Truck className="w-4 h-4" />
                   </div>
-                  <h4 className="font-bold text-slate-900">
-                    روش‌های ارسال سریع
-                  </h4>
+                  <h4 className="font-bold text-slate-900">روش‌های ارسال سریع</h4>
                   <p className="text-slate-500 text-[11.5px] leading-relaxed">
-                    تحویل فوری از طریق باربری‌های معتبر، تیپاکس، وانت بین‌شهری و
-                    تحویل حضوری در انبار مرکزی یزد.
+                    تحویل فوری از طریق باربری‌های معتبر، تیپاکس، وانت بین‌شهری و تحویل حضوری در انبار مرکزی یزد.
                   </p>
                 </div>
 
@@ -1247,12 +1069,9 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="w-9 h-9 rounded-xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center">
                     <PackageCheck className="w-4 h-4" />
                   </div>
-                  <h4 className="font-bold text-slate-900">
-                    بسته‌بندی استاندارد صنعتی
-                  </h4>
+                  <h4 className="font-bold text-slate-900">بسته‌بندی استاندارد صنعتی</h4>
                   <p className="text-slate-500 text-[11.5px] leading-relaxed">
-                    پوشش ضد رطوبت و بسته‌بندی مقاوم جهت جلوگیری از هرگونه سایش،
-                    تغییر شکل یا آسیب‌دیدگی در حین حمل.
+                    پوشش ضد رطوبت و بسته‌بندی مقاوم جهت جلوگیری از هرگونه سایش، تغییر شکل یا آسیب‌دیدگی در حین حمل.
                   </p>
                 </div>
 
@@ -1260,12 +1079,9 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="w-9 h-9 rounded-xl bg-blue-100/80 text-blue-700 flex items-center justify-center">
                     <Award className="w-4 h-4" />
                   </div>
-                  <h4 className="font-bold text-slate-900">
-                    ضمانت اصالت و تطبیق کد
-                  </h4>
+                  <h4 className="font-bold text-slate-900">ضمانت اصالت و تطبیق کد</h4>
                   <p className="text-slate-500 text-[11.5px] leading-relaxed">
-                    پیش از ارسال، کد کالا، سایز و مشخصات فنی انتخاب‌شده توسط
-                    واحد کنترل کیفیت بررسی و تأیید می‌شود.
+                    پیش از ارسال، کد کالا، سایز و مشخصات فنی انتخاب‌شده توسط واحد کنترل کیفیت بررسی و تأیید می‌شود.
                   </p>
                 </div>
               </div>
@@ -1278,9 +1094,7 @@ export const ProductDetailPage: React.FC = () => {
       {similarProducts.length > 0 && (
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-[#55565A]">
-              محصولات مشابه در این دسته‌بندی
-            </h2>
+            <h2 className="text-base sm:text-lg font-bold text-[#55565A]">محصولات مشابه در این دسته‌بندی</h2>
             <Link
               to={`/category/${product.categorySlug}`}
               className="text-xs font-bold text-[#E06518] hover:text-[#C95210] flex items-center gap-1 transition-colors"
@@ -1290,7 +1104,7 @@ export const ProductDetailPage: React.FC = () => {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {similarProducts.map((p) => (
+            {similarProducts.map(p => (
               <ProductCard key={p.code} product={p} />
             ))}
           </div>
@@ -1300,21 +1114,13 @@ export const ProductDetailPage: React.FC = () => {
       {/* 4. MOBILE STICKY BOTTOM ACTION BAR */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 py-3 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <span
-            className="block text-[11px] font-mono text-slate-500 truncate"
-            dir="ltr"
-          >
+          <span className="block text-[11px] font-mono text-slate-500 truncate" dir="ltr">
             کد: {requestedProduct.code}
           </span>
           <div className="text-xs font-black text-[#55565A] truncate">
             {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
               <span className="text-emerald-700 font-mono">
-                {toPersianDigits(
-                  new Intl.NumberFormat("fa-IR").format(
-                    activeUnitPrice * quantity,
-                  ),
-                )}{" "}
-                تومان
+                {toPersianDigits(new Intl.NumberFormat('fa-IR').format(activeUnitPrice * quantity))} تومان
               </span>
             ) : (
               <span className="text-amber-700">نیازمند استعلام</span>
@@ -1331,7 +1137,7 @@ export const ProductDetailPage: React.FC = () => {
               className="h-11 px-5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>{added ? "افزوده شد" : "افزودن به سبد"}</span>
+              <span>{added ? 'افزوده شد' : 'افزودن به سبد'}</span>
             </button>
           ) : (
             <button
@@ -1355,21 +1161,15 @@ export const ProductDetailPage: React.FC = () => {
       >
         <form onSubmit={handleInquirySubmit} className="space-y-4 text-right">
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            <p className="font-semibold text-sm text-[#55565A]">
-              {requestedProduct.name}
-            </p>
+            <p className="font-semibold text-sm text-[#55565A]">{requestedProduct.name}</p>
             <p className="text-xs text-slate-500 mt-1">
-              خانواده: {product.name} | برند: {activeBrand} | دسته‌بندی:{" "}
-              {product.categoryName}
+              خانواده: {product.name} | برند: {activeBrand} | دسته‌بندی: {product.categoryName}
             </p>
           </div>
 
           <p className="text-xs bg-orange-50 p-3 rounded-xl font-medium text-orange-950">
-            کد کالای انتخاب‌شده:{" "}
-            <strong className="font-mono" dir="ltr">
-              {requestedProduct.code}
-            </strong>
-            {selectedVariant?.size ? ` — سایز: ${selectedVariant.size}` : ""}
+            کد کالای انتخاب‌شده: <strong className="font-mono" dir="ltr">{requestedProduct.code}</strong>
+            {selectedVariant?.size ? ` — سایز: ${selectedVariant.size}` : ''}
           </p>
           <div>
             <label className="block text-xs font-bold text-[#55565A] mb-1">
@@ -1379,9 +1179,7 @@ export const ProductDetailPage: React.FC = () => {
               type="number"
               min="1"
               value={quantity}
-              onChange={(e) =>
-                setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-              }
+              onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
               required
             />
@@ -1394,7 +1192,7 @@ export const ProductDetailPage: React.FC = () => {
             <textarea
               rows={3}
               value={inquiryNotes}
-              onChange={(e) => setInquiryNotes(e.target.value)}
+              onChange={e => setInquiryNotes(e.target.value)}
               placeholder="نکات مربوط به زمان تحویل یا نوع بسته‌بندی..."
               className="w-full p-3 border border-slate-200 rounded-xl text-xs"
             />
@@ -1402,8 +1200,7 @@ export const ProductDetailPage: React.FC = () => {
 
           {inquirySubmitted ? (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold text-center">
-              درخواست استعلام با موفقیت ثبت شد. واحد فروش به زودی پاسخ خواهد
-              داد.
+              درخواست استعلام با موفقیت ثبت شد. واحد فروش به زودی پاسخ خواهد داد.
             </div>
           ) : (
             <button

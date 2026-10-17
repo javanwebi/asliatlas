@@ -1,11 +1,6 @@
 @import "tailwindcss";
-@import "./storefront.css";
-
-@font-face {font-family: "Vazirmatn";src: url("./assets/fonts/Vazirmatn-variable.woff2") format("woff2");font-weight: 100 900;font-style: normal;font-display: swap;}
 
 @theme {
-  --font-sans: "Vazirmatn", sans-serif;
-  --font-mono: "Vazirmatn", monospace;
   --color-brand-primary: #E06518;
   --color-brand-hover: #C95210;
   --color-brand-accent: #E06518;
@@ -13,16 +8,16 @@
   --color-text-main: #55565A;
   --color-text-muted: #777A7D;
   --color-bg-main: #FFFFFF;
-  --color-bg-section: #F3F4F6;
+  --color-bg-section: #DEE2E5;
   --color-bg-card: #FFFFFF;
-  --color-border-subtle: #E5E7EB;
+  --color-border-subtle: #CBD2D8;
 }
 
 @layer base {
   :root {
     --bg-main: #FFFFFF;
-    --bg-section: #F3F4F6;
-    --bg-section-subtle: #F7F8FA;
+    --bg-section: #DEE2E5;
+    --bg-section-subtle: #E8ECEF;
     --bg-card: #FFFFFF;
     --bg-dark: #2B313A;
     --text-primary: #55565A;
@@ -30,7 +25,7 @@
     --heading-primary: #55565A;
     --btn-primary: #E06518;
     --btn-hover: #C95210;
-    --border-color: #E5E7EB;
+    --border-color: #CBD2D8;
     --icon-normal: #55565A;
     --icon-accent: #E06518;
     --ai-primary: #55565A;
@@ -70,12 +65,12 @@
 .btn-atlas-secondary {
   background-color: #FFFFFF;
   color: #55565A;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #CBD2D8;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-atlas-secondary:hover {
-  background-color: #F3F4F6;
+  background-color: #DEE2E5;
   color: #E06518;
   border-color: #E06518;
 }
@@ -89,7 +84,7 @@
 
 .ai-atlas-container {
   background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #CBD2D8;
   position: relative;
 }
 
@@ -106,12 +101,12 @@
 
 /* Section styling tokens */
 .section-surface {
-  background-color: #F3F4F6;
+  background-color: #DEE2E5;
 }
 
 .card-surface {
   background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #CBD2D8;
 }
 
 /* Custom subtle scrollbar */
@@ -121,11 +116,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #F3F4F6;
+  background: #DEE2E5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #E5E7EB;
+  background: #CBD2D8;
   border-radius: 9999px;
 }
 

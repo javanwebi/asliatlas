@@ -29,6 +29,7 @@ import type {
   CustomerIndividualOverride,
 } from "../../services/portalContentService";
 import "./portal.css";
+import "./portal-storefront.css";
 
 const icons: Record<string, typeof Home> = {
   saved_products: Heart,

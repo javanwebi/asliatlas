@@ -16,7 +16,7 @@ import {
 } from "../../data/mockGenerator";
 import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
-import { ProductCard } from "../product/ProductCard";
+import { PortalProductCard } from "./PortalProductCard";
 import { resolvePurchaseLines } from "../../utils/purchaseList";
 import { toPersianDigits } from "../../utils/formatters";
 export function PortalTools({
@@ -119,7 +119,7 @@ export function PortalTools({
         {saved.length ? (
           <div className="store-product-grid">
             {saved.map((p) => (
-              <ProductCard key={p.code} product={p} />
+              <PortalProductCard key={p.code} product={p} />
             ))}
           </div>
         ) : (
