@@ -1,3 +1,4 @@
+import { hydratePortal, flushPortalChanges } from '../services/portalRepository';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -44,9 +45,21 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   // Current admin session
-  const [currentUser, setCurrentUser] = useState<AdminUser | null>(() =>
-    adminService.getCurrentUser()
-  );
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [saveStatus, setSaveStatus] = useState({ state: '', message: '' });
+  useEffect(() => {
+    let mounted = true;
+    const sync = (event: Event) => {
+      const data = (event as CustomEvent).detail;
+      if (mounted) setCurrentUser(data.admin ? { id: 'admin', username: 'admin', name: 'مدیریت صنعت پیش', role: 'super_admin', email: '', lastLogin: '' } : null);
+    };
+    const status = (event: Event) => { if (mounted) setSaveStatus((event as CustomEvent).detail); };
+    window.addEventListener('atlas-session-updated', sync);
+    window.addEventListener('atlas-portal-save-status', status);
+    hydratePortal().catch(() => {}).finally(() => { if (mounted) setChecking(false); });
+    return () => { mounted = false; window.removeEventListener('atlas-session-updated', sync); window.removeEventListener('atlas-portal-save-status', status); };
+  }, []);
 
   // Active module tab
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -75,6 +88,7 @@ export const AdminLayout: React.FC = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [activeTab]);
 
+  if (checking) return <div role="status" className="p-16 text-center">در حال بررسی دسترسی مدیریت…</div>;
   if (!currentUser) {
     return <AdminLogin onLoginSuccess={user => setCurrentUser(user)} />;
   }
@@ -88,7 +102,8 @@ export const AdminLayout: React.FC = () => {
   const totalAlerts =
     pendingInquiries.length + pendingOrders.length + pendingAgencies.length + pendingGrading.length + openTickets.length;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await flushPortalChanges(); } catch { return; }
     adminService.logout();
     setCurrentUser(null);
   };
@@ -213,6 +228,7 @@ export const AdminLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row text-slate-900 font-sans" dir="rtl">
+      {saveStatus.state && <div role={saveStatus.state === 'error' ? 'alert' : 'status'} className={`fixed bottom-4 left-4 right-4 sm:right-auto z-[100] max-w-xl rounded-xl border bg-white px-4 py-3 text-sm shadow-lg ${saveStatus.state === 'error' ? 'text-red-700 border-red-300' : 'text-emerald-700 border-emerald-200'}`}>{saveStatus.state === 'error' ? saveStatus.message : saveStatus.state === 'saving' ? 'در حال ذخیره تغییرات…' : 'تغییرات در سرور ذخیره شد.'}</div>}
       {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div

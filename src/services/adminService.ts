@@ -1,3 +1,5 @@
+import { portalRequest, hydratePortal, clearPortalCache } from './portalRepository';
+import { persistPortalCache } from './portalRepository';
 import { Product, Order, PriceInquiry, Customer, DiscountCode, SmsLog, AgencyApplication, Category, Brand, Ticket, Representative, OfficialInvoice } from '../types';
 import {
   generateMockProducts,
@@ -451,35 +453,20 @@ export const adminService = {
     return this.getCurrentAdmin();
   },
 
-  login(username: string, pass: string): AdminUser | null {
-    if ((username === 'admin' && pass === '123admin') || (username === 'sales' && pass === '123sales')) {
-      const found = INITIAL_ADMINS.find(a => a.username === username) || INITIAL_ADMINS[0];
-      const sessionUser = {
-        ...found,
-        lastLogin: new Date().toLocaleDateString('fa-IR') + ' - ' + new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(sessionUser));
-      this.logAction('ورود به پنل', 'سیستم مدیریت', 'ورود موفق به پنل مدیریت');
-      return sessionUser;
-    }
-    return null;
+  async login(username: string, pass: string): Promise<AdminUser | null> {
+    await portalRequest({ action: 'admin_login', username, password: pass });
+    await hydratePortal();
+    const user: AdminUser = { id: 'admin', username, name: 'مدیریت صنعت پیش', role: 'super_admin', email: '', lastLogin: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(user));
+    return user;
   },
-
   logout(): void {
-    this.logAction('خروج از پنل', 'سیستم مدیریت', 'خروج کاربر ادمین');
+    void portalRequest({ action: 'logout' });
+    clearPortalCache();
     localStorage.removeItem(STORAGE_KEYS.ADMIN_AUTH);
   },
-
-  switchAdminRole(role: AdminUser['role']): AdminUser {
-    const current = this.getCurrentAdmin() || INITIAL_ADMINS[0];
-    const updated: AdminUser = {
-      ...current,
-      role,
-      name: role === 'super_admin' ? 'مهندس مرتضوی (مدیر کل)' : role === 'sales_manager' ? 'خانم دهقان (کارشناس فروش)' : 'آقای فلاح (انباردار)',
-    };
-    localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(updated));
-    this.logAction('تغییر نقش اپراتور', 'دسترسی', `نقش به ${role} تغییر یافت.`);
-    return updated;
+  switchAdminRole(_role: AdminUser['role']): AdminUser {
+    return this.getCurrentAdmin()!;
   },
 
   // --- Audit Logs ---
@@ -508,7 +495,7 @@ export const adminService = {
     };
     logs.unshift(newLog);
     try {
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs.slice(0, 100)));
+      persistPortalCache(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs.slice(0, 100)));
     } catch {
       // ignore
     }
@@ -612,7 +599,7 @@ export const adminService = {
     });
 
     try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(updatedList));
+      persistPortalCache(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(updatedList));
     } catch {
       // ignore
     }
@@ -641,7 +628,7 @@ export const adminService = {
     };
     logs.unshift(newLog);
     try {
-      localStorage.setItem(STORAGE_KEYS.PRICE_LOGS, JSON.stringify(logs.slice(0, 50)));
+      persistPortalCache(STORAGE_KEYS.PRICE_LOGS, JSON.stringify(logs.slice(0, 50)));
     } catch {
       // ignore
     }
@@ -808,7 +795,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     });
 
     try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(products));
+      persistPortalCache(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(products));
     } catch {
       // ignore
     }
@@ -856,7 +843,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       };
 
       try {
-        localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(inquiries));
+        persistPortalCache(STORAGE_KEYS.INQUIRIES, JSON.stringify(inquiries));
       } catch {
         // ignore
       }
@@ -912,7 +899,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       };
 
       try {
-        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        persistPortalCache(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
       } catch {
         // ignore
       }
@@ -936,7 +923,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_CUSTOMERS;
+    return [];
   },
 
   saveCustomerNote(customerId: string, note: string): void {
@@ -948,7 +935,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         notes: note,
       } as any;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
       } catch {
         // ignore
       }
@@ -981,7 +968,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(banner);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BANNERS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BANNERS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -992,7 +979,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getBanners();
     const filtered = list.filter(b => b.id !== bannerId);
     try {
-      localStorage.setItem(STORAGE_KEYS.BANNERS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BANNERS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1011,7 +998,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
   saveClubConfig(config: ClubConfig): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.CLUB_CONFIG, JSON.stringify(config));
+      persistPortalCache(STORAGE_KEYS.CLUB_CONFIG, JSON.stringify(config));
     } catch {
       // ignore
     }
@@ -1038,7 +1025,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(template);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.SMS_TEMPLATES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.SMS_TEMPLATES, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1082,7 +1069,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(discount);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.DISCOUNTS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.DISCOUNTS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1093,7 +1080,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getDiscounts();
     const filtered = list.filter(d => d.code !== code);
     try {
-      localStorage.setItem(STORAGE_KEYS.DISCOUNTS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.DISCOUNTS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1124,7 +1111,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(category);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.CATEGORIES, JSON.stringify(list));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1139,7 +1126,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getCategories();
     const filtered = list.filter(c => c.slug !== slug);
     try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.CATEGORIES, JSON.stringify(filtered));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1195,7 +1182,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(normalized);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BRANDS, JSON.stringify(list));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1210,7 +1197,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getBrands();
     const filtered = list.filter(b => b.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BRANDS, JSON.stringify(filtered));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1235,7 +1222,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       seasonalTargetAchieved: i === 0 ? 92 : i === 1 ? 84 : 78,
     }));
     try {
-      localStorage.setItem(STORAGE_KEYS.DEALERS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.DEALERS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1251,7 +1238,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(dealer);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.DEALERS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.DEALERS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1343,7 +1330,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1371,7 +1358,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         messages: msgs,
       };
       try {
-        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(list));
+        persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(list));
       } catch {
         // ignore
       }
@@ -1414,7 +1401,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1430,7 +1417,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(article);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1449,7 +1436,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getArticles();
     const filtered = list.filter(a => a.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1486,7 +1473,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.PAGES, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.PAGES, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1502,7 +1489,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(page);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.PAGES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.PAGES, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1544,7 +1531,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1560,7 +1547,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(campaign);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1571,7 +1558,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getCampaigns();
     const filtered = list.filter(c => c.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1612,7 +1599,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     };
     try {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.SETTINGS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1621,7 +1608,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
   saveSettings(settings: SystemSettings): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+      persistPortalCache(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     } catch {
       // ignore
     }
@@ -1736,7 +1723,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getOfficialInvoices();
     list.unshift(invoice);
     try {
-      localStorage.setItem('atlas_admin_official_invoices_v1', JSON.stringify(list));
+      persistPortalCache('atlas_admin_official_invoices_v1', JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1763,7 +1750,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     try {
       const logs = this.getSmsLogs();
       logs.unshift(log);
-      localStorage.setItem('atlas_admin_sms_logs_v1', JSON.stringify(logs));
+      persistPortalCache('atlas_admin_sms_logs_v1', JSON.stringify(logs));
     } catch {
       // ignore
     }
@@ -1806,7 +1793,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         receiptVerified: approved,
       } as any;
       try {
-        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        persistPortalCache(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
       } catch {
         // ignore
       }
@@ -1826,7 +1813,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         timestamp: new Date().toLocaleDateString('fa-IR'),
       });
       try {
-        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+        persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
       } catch {
         // ignore
       }
@@ -1882,7 +1869,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       } as any;
       customers[idx] = updatedCust;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
         const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
         const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
         const rIdx = registered.findIndex(r => r.id === customerId || r.phone === updatedCust.phone);
@@ -1891,7 +1878,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         } else {
           registered.unshift(updatedCust);
         }
-        localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+        persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
 
         const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
         const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
@@ -1901,7 +1888,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         } else if (updatedCust.approvedB2B) {
           legacyList.unshift(updatedCust);
         }
-        localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+        persistPortalCache('atlas_legacy_customers_v1', JSON.stringify(legacyList));
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
         }
@@ -1953,14 +1940,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       mobile: cleanPhone,
       password: payload.password || cleanPhone,
       economicCode: payload.economicCode || '',
-      creditLimit: payload.creditLimit ?? 250000000,
-      totalPurchases: payload.totalPurchases ?? 180000000,
-      totalOrdersAmount: payload.totalPurchases ?? 180000000,
+      creditLimit: payload.creditLimit ?? 0,
+      totalPurchases: payload.totalPurchases ?? 0,
+      totalOrdersAmount: payload.totalPurchases ?? 0,
       assignedPriceListCode: priceListCode,
       role: payload.role || 'wholesale',
       tier: payload.role === 'factory' ? 'factory' : payload.role === 'dealer' ? 'dealer' : 'colleague',
-      clubTier,
-      clubPoints: 1200,
+      clubTier: clubTier === 'platinum' ? 'gold' : clubTier,
+      clubPoints: 0,
       approvedB2B: payload.approvedB2B ?? true,
       isLegacyCustomer: true,
       onboardingCompleted: true,
@@ -1971,17 +1958,17 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
     customers.unshift(newCust);
     try {
-      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+      persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
 
       const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
       const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
       registered.unshift(newCust);
-      localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+      persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
 
       const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
       const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
       legacyList.unshift(newCust);
-      localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+      persistPortalCache('atlas_legacy_customers_v1', JSON.stringify(legacyList));
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
@@ -2005,14 +1992,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       const current = Boolean(customers[idx].approvedB2B);
       customers[idx].approvedB2B = !current;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
 
         const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
         const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
         const rIdx = registered.findIndex((r: Customer) => r.id === customerId || r.phone === customers[idx].phone);
         if (rIdx >= 0) {
           registered[rIdx].approvedB2B = !current;
-          localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+          persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
         }
       } catch {}
 
@@ -2063,7 +2050,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     if (idx >= 0) list[idx] = agency;
     else list.push(agency);
     try {
-      localStorage.setItem('atlas_admin_active_agencies_v1', JSON.stringify(list));
+      persistPortalCache('atlas_admin_active_agencies_v1', JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -2137,7 +2124,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     if (idx >= 0) {
       list[idx].status = status;
       try {
-        localStorage.setItem('atlas_admin_supply_reqs_v1', JSON.stringify(list));
+        persistPortalCache('atlas_admin_supply_reqs_v1', JSON.stringify(list));
       } catch {
         // ignore
       }
@@ -2166,7 +2153,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   deleteBlogPost(id: string): void {
     const posts = this.getBlogPosts().filter(p => p.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(posts));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(posts));
     } catch {
       // ignore
     }

@@ -9,7 +9,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, portalType }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, authLoading } = useAuth();
+
+  if (authLoading) return <div role="status" className="py-24 text-center text-[#55565A]">در حال بررسی حساب…</div>;
+  if (!currentUser) return <Navigate to="/login" replace />;
 
   if (currentUser && portalType) {
     const isHighVol = portalContentService.isHighVolumeCustomer(currentUser);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -10,29 +10,27 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Pages
 import { HomePage } from './pages/HomePage';
-import { ProductsPage } from './pages/ProductsPage';
-import { CategoryPage } from './pages/CategoryPage';
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then(module => ({ default: module.ProductsPage })));
+const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })));
 import { AllCategoriesPage } from './pages/AllCategoriesPage';
-import { ProductDetailPage } from './pages/ProductDetailPage';
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then(module => ({ default: module.ProductDetailPage })));
 import { SearchPage } from './pages/SearchPage';
 import { CartPage } from './pages/CartPage';
 import { WishlistPage } from './pages/WishlistPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { AccountPage } from './pages/AccountPage';
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })));
+const AccountPage = lazy(() => import('./pages/AccountPage').then(module => ({ default: module.AccountPage })));
 import { ClubPage } from './pages/ClubPage';
 import { AgencyPage } from './pages/AgencyPage';
-import { DealerPortalPage } from './pages/DealerPortalPage';
-import { DemoAgenciesAdminPage } from './pages/DemoAgenciesAdminPage';
-import { AiForzaPage } from './pages/AiForzaPage';
-import { AiConsultPage } from './pages/AiConsultPage';
+const AiForzaPage = lazy(() => import('./pages/AiForzaPage').then(module => ({ default: module.AiForzaPage })));
+const AiConsultPage = lazy(() => import('./pages/AiConsultPage').then(module => ({ default: module.AiConsultPage })));
 import { RegisterPage } from './pages/RegisterPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
-import { ConsumerDashboardPage } from './pages/ConsumerDashboardPage';
-import { TileCeramicIndustryPage } from './pages/TileCeramicIndustryPage';
+const ConsumerDashboardPage = lazy(() => import('./pages/ConsumerDashboardPage').then(module => ({ default: module.ConsumerDashboardPage })));
+const TileCeramicIndustryPage = lazy(() => import('./pages/TileCeramicIndustryPage').then(module => ({ default: module.TileCeramicIndustryPage })));
 import { AboutUsPage } from './pages/AboutUsPage';
 import { ContactUsPage } from './pages/ContactUsPage';
-import { AdminLayout } from './admin/AdminLayout';
+const AdminLayout = lazy(() => import('./admin/AdminLayout').then(module => ({ default: module.AdminLayout })));
 
 export default function App() {
   return (
@@ -43,6 +41,7 @@ export default function App() {
           <WishlistProvider>
             <ClubPointsProvider>
               <Layout>
+                <Suspense fallback={<div role="status" className="py-20 text-center text-[#55565A]">در حال بارگذاری…</div>}>
                 <Routes>
                   {/* Dedicated AI Consult Cognivo Workspace Page */}
                   <Route path="/ai-consult" element={<AiConsultPage />} />
@@ -81,7 +80,7 @@ export default function App() {
                   <Route path="/categories" element={<AllCategoriesPage />} />
 
                   {/* Club Page */}
-                  <Route path="/club" element={<ClubPage />} />
+                  <Route path="/club" element={<Navigate to="/account" replace />} />
 
                   {/* Dedicated Tile & Ceramic Industry Page */}
                   <Route path="/category/ceramic-tiles" element={<TileCeramicIndustryPage />} />
@@ -143,8 +142,8 @@ export default function App() {
 
                   {/* 8. Agency, Dealer, and Admin Portals */}
                   <Route path="/agency/*" element={<AgencyPage />} />
-                  <Route path="/dealer/*" element={<DealerPortalPage />} />
-                  <Route path="/admin/demo-agencies" element={<DemoAgenciesAdminPage />} />
+                  <Route path="/dealer/*" element={<Navigate to="/account" replace />} />
+                  <Route path="/admin/demo-agencies" element={<Navigate to="/admin" replace />} />
                   <Route path="/admin/*" element={<AdminLayout />} />
 
                   {/* 9. Full-screen Cinematic AI FORZA Experience */}
@@ -153,6 +152,7 @@ export default function App() {
                   {/* Catch-all */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                </Suspense>
               </Layout>
             </ClubPointsProvider>
           </WishlistProvider>

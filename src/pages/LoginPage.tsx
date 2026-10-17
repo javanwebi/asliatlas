@@ -63,9 +63,7 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     if (currentUser?.onboardingCompleted) {
       if (
-        currentUser.approvedB2B ||
-        currentUser.isLegacyCustomer ||
-        (currentUser.role && currentUser.role !== 'retail')
+        currentUser.approvedB2B === true
       ) {
         navigate('/account');
       } else {
@@ -118,7 +116,7 @@ export const LoginPage: React.FC = () => {
       if (res.success && res.user) {
         if (!res.user.onboardingCompleted) {
           navigate('/onboarding');
-        } else if (res.user.approvedB2B || res.user.role !== 'retail') {
+        } else if (res.user.approvedB2B === true) {
           navigate('/account');
         } else {
           navigate('/consumer-dashboard');
@@ -169,7 +167,7 @@ export const LoginPage: React.FC = () => {
     if (res.success && res.user) {
       if (!res.user.onboardingCompleted) {
         navigate('/onboarding');
-      } else if (res.user.approvedB2B || res.user.role !== 'retail') {
+      } else if (res.user.approvedB2B === true) {
         navigate('/account');
       } else {
         navigate('/consumer-dashboard');
@@ -244,14 +242,6 @@ export const LoginPage: React.FC = () => {
               <p className="text-xs sm:text-sm text-[#777A7D] mt-1 leading-relaxed">
                 وارد حساب کاربری خود شوید و به سفارش‌ها، استعلام‌ها و خدمات هوشمند دسترسی پیدا کنید.
               </p>
-            </div>
-
-            {/* B2B Notice Banner */}
-            <div className="p-3 bg-orange-50/80 border border-orange-200/80 rounded-2xl text-[11px] text-orange-950 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#E06518] shrink-0" />
-              <span>
-                <strong>مشتریان اعتباری B2B:</strong> جهت ورود به پرتال خرید چکی، از شناسه و رمز تعریف‌شده توسط مدیریت استفاده فرمایید.
-              </span>
             </div>
 
             {/* Segmented Switcher Tab */}
@@ -344,13 +334,7 @@ export const LoginPage: React.FC = () => {
                     <span>مرا به خاطر بسپار</span>
                   </label>
 
-                  <button
-                    type="button"
-                    onClick={() => setLoginMode('otp')}
-                    className="text-[#E06518] hover:underline font-bold text-xs"
-                  >
-                    ورود با پیامک (OTP)
-                  </button>
+
                 </div>
 
                 <button

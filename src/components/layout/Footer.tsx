@@ -326,7 +326,7 @@ export const Footer: React.FC = () => {
               </button>
 
               <ul className={`space-y-1.5 text-[11px] text-[#55565A] pt-1.5 md:pt-0 ${openAccordion === 'products' ? 'block' : 'hidden'} md:block animate-in fade-in`}>
-                {CATEGORIES.map(category => (
+                {CATEGORIES.slice(0, 4).map(category => (
                   <li key={category.slug}>
                     <Link to={`/category/${category.slug}`} className="hover:text-[#E06518] transition-colors flex items-center justify-between gap-2 group">
                       <span>{category.name}</span>

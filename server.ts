@@ -10,6 +10,7 @@ import { GoogleGenAI, Modality, type LiveServerMessage } from '@google/genai';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import portalHandler from './api/portal';
 
 dotenv.config();
 if (!process.env.GEMINI_API_KEY) {
@@ -127,7 +128,7 @@ async function generateWithModelCascade(
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const IMAGE_AI_DIR = path.join(process.cwd(), 'imageai');
 if (!fs.existsSync(IMAGE_AI_DIR)) {
   fs.mkdirSync(IMAGE_AI_DIR, { recursive: true });
@@ -291,6 +292,8 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+app.all('/api/portal', (req, res) => { void portalHandler(req, res); });
+app.use('/api/auth', (_req, res) => res.status(410).json({ success: false, message: 'از مسیر ورود جدید استفاده کنید.' }));
 
 interface CachedCustomerImage {
   buffer: Buffer;

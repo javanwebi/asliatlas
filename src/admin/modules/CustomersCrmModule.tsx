@@ -1,3 +1,4 @@
+import { flushPortalChanges } from '../../services/portalRepository';
 import React, { useState } from 'react';
 import {
   Users,
@@ -51,12 +52,13 @@ export const CustomersCrmModule: React.FC = () => {
   const [newB2bFullName, setNewB2bFullName] = useState('');
   const [newB2bCompany, setNewB2bCompany] = useState('');
   const [newB2bUsername, setNewB2bUsername] = useState('');
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [newB2bPhone, setNewB2bPhone] = useState('');
   const [newB2bPassword, setNewB2bPassword] = useState('');
   const [newB2bEconomicCode, setNewB2bEconomicCode] = useState('');
   const [newB2bPriceListCode, setNewB2bPriceListCode] = useState<string>('B');
-  const [newB2bTotalPurchases, setNewB2bTotalPurchases] = useState<number>(260000000);
-  const [newB2bCreditLimit, setNewB2bCreditLimit] = useState<number>(300000000);
+  const [newB2bTotalPurchases, setNewB2bTotalPurchases] = useState<number>(0);
+  const [newB2bCreditLimit, setNewB2bCreditLimit] = useState<number>(0);
   const [newB2bRole, setNewB2bRole] = useState<'wholesale' | 'dealer' | 'factory'>('wholesale');
 
   // Customer Edit Modal Form
@@ -85,7 +87,7 @@ export const CustomersCrmModule: React.FC = () => {
     setTickets(adminService.getTickets());
   };
 
-  const handleCreateB2bCustomer = (e: React.FormEvent) => {
+  const handleCreateB2bCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newB2bFullName.trim() || !newB2bPhone.trim()) return;
 
@@ -121,17 +123,18 @@ export const CustomersCrmModule: React.FC = () => {
       companyName: created.companyName || '',
       phone: created.phone,
       city: created.city || 'یزد',
-      priceListCode: newB2bPriceListCode,
-      clubTier: clubTierMap[newB2bPriceListCode] || 'silver',
-      totalPurchases: Number(newB2bTotalPurchases) || 0,
+      assignedPriceListCode: newB2bPriceListCode,
+      previousPurchaseVolume: Number(newB2bTotalPurchases) || 0,
       creditLimit: Number(newB2bCreditLimit) || 0,
     });
 
+    try { await flushPortalChanges(); } catch (error: any) { showToast(error.message); return; }
     refreshData();
     setIsAddB2bModalOpen(false);
     setNewB2bFullName('');
     setNewB2bCompany('');
     setNewB2bUsername('');
+    setUsernameEdited(false);
     setNewB2bPhone('');
     setNewB2bPassword('');
     setNewB2bEconomicCode('');
@@ -140,8 +143,9 @@ export const CustomersCrmModule: React.FC = () => {
     );
   };
 
-  const handleToggleB2bAccess = (customerId: string) => {
+  const handleToggleB2bAccess = async (customerId: string) => {
     adminService.toggleB2bApproval(customerId);
+    try { await flushPortalChanges(); } catch (error: any) { showToast(error.message); return; }
     refreshData();
   };
 
@@ -175,7 +179,7 @@ export const CustomersCrmModule: React.FC = () => {
           ? 'dealer'
           : customer.role === 'wholesale'
           ? 'colleague'
-          : 'colleague')
+          : 'regular')
     );
     setEditUsername(
       customer.username ||
@@ -186,10 +190,10 @@ export const CustomersCrmModule: React.FC = () => {
     setEditPriceListCode(customer.assignedPriceListCode || 'B');
     setEditTotalPurchases(customer.totalPurchases || customer.totalOrdersAmount || 250000000);
     setEditCreditLimit(customer.creditLimit || 250000000);
-    setEditDiscountPercent(customer.discountPercent || 10);
+    setEditDiscountPercent(customer.discountPercent ?? 0);
   };
 
-  const handleSaveCustomerTier = (e: React.FormEvent) => {
+  const handleSaveCustomerTier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return;
 
@@ -221,6 +225,7 @@ export const CustomersCrmModule: React.FC = () => {
       creditLimit: Number(editCreditLimit),
     });
 
+    try { await flushPortalChanges(); } catch (error: any) { showToast(error.message); return; }
     refreshData();
     setSelectedCustomer(null);
     showToast('اطلاعات ورود، نام کاربری، سطح باشگاه و لیست قیمت مشتری بروزرسانی شد.');
@@ -776,9 +781,7 @@ export const CustomersCrmModule: React.FC = () => {
                     value={newB2bCompany}
                     onChange={e => {
                       setNewB2bCompany(e.target.value);
-                      if (!newB2bUsername) {
-                        setNewB2bUsername(generateBaseUsername(e.target.value));
-                      }
+                      if (!usernameEdited) setNewB2bUsername(generateBaseUsername(e.target.value));
                     }}
                     placeholder="مثلاً کاشی ستاره میبد"
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#E06518]"
@@ -796,7 +799,7 @@ export const CustomersCrmModule: React.FC = () => {
                     required
                     dir="ltr"
                     value={newB2bUsername}
-                    onChange={e => setNewB2bUsername(e.target.value)}
+                    onChange={e => { setUsernameEdited(true); setNewB2bUsername(e.target.value); }}
                     placeholder="setareh_meybod"
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 font-mono text-left bg-white outline-none focus:border-[#E06518]"
                   />
@@ -813,9 +816,6 @@ export const CustomersCrmModule: React.FC = () => {
                     value={newB2bPhone}
                     onChange={e => {
                       setNewB2bPhone(e.target.value);
-                      if (!newB2bPassword) {
-                        setNewB2bPassword(e.target.value);
-                      }
                     }}
                     placeholder="09131514455"
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 font-mono text-left bg-white outline-none focus:border-[#E06518]"

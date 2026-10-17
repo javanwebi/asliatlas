@@ -504,27 +504,9 @@ export const Header: React.FC = () => {
                       <p className="text-[11px] text-[#777A7D] font-mono mt-0.5">{currentUser?.phone}</p>
                     </div>
                     <div className="py-1 text-xs">
-                      {currentUser?.role === 'dealer' ? (
+                      {currentUser?.approvedB2B === true ? (
                         <Link
-                          to="/dealer"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold border-b border-slate-100"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>ورود به پنل اختصاصی نمایندگی</span>
-                        </Link>
-                      ) : currentUser?.role === 'admin' ? (
-                        <Link
-                          to="/admin"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold border-b border-slate-100"
-                        >
-                          <Building className="w-4 h-4" />
-                          <span>ورود به پنل مدیریت ارشد</span>
-                        </Link>
-                      ) : (currentUser?.approvedB2B || currentUser?.isLegacyCustomer || (currentUser?.role && currentUser?.role !== 'retail')) ? (
-                        <Link
-                          to="/account"
+                          to={currentUser?.approvedB2B === true ? "/account" : "/consumer-dashboard"}
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold"
                         >
@@ -1209,7 +1191,7 @@ export const Header: React.FC = () => {
                       <div className="text-[10px] text-slate-500">عاملیت‌های فروش فعال در یزد، تهران و اصفهان</div>
                     </Link>
                     <Link
-                      to="/account"
+                      to={currentUser?.approvedB2B === true ? "/account" : "/consumer-dashboard"}
                       onClick={() => setActiveDropdown(null)}
                       className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >

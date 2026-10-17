@@ -383,11 +383,7 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = () => {
           {currentUser ? (
             <Link
               to={
-                currentUser.role === 'dealer'
-                  ? '/dealer'
-                  : currentUser.role === 'admin'
-                  ? '/admin'
-                  : currentUser.approvedB2B || currentUser.isLegacyCustomer || (currentUser.role && currentUser.role !== 'retail')
+                currentUser.approvedB2B === true
                   ? '/account'
                   : '/consumer-dashboard'
               }

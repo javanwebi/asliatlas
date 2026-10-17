@@ -555,7 +555,7 @@ export const CartPage: React.FC = () => {
 
               {tierDiscountAmount > 0 && (
                 <div className="flex items-center justify-between text-emerald-600 font-bold">
-                  <span>تخفیف سطح باشگاه ({toPersianDigits(tierDiscountPercent)}٪):</span>
+                  <span>تخفیف سبد خرید ({toPersianDigits(tierDiscountPercent)}٪):</span>
                   <span>- {formatPrice(tierDiscountAmount)}</span>
                 </div>
               )}

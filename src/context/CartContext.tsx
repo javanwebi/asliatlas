@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext';
 import { MOCK_ORDERS, MOCK_DISCOUNT_CODES, MOCK_SMS_LOGS, MOCK_INQUIRIES } from '../data/mockData';
 import { clubService } from '../services/clubService';
 import { showClubPointsToast } from '../components/club/ClubToastNotification';
+import { portalContentService } from '../services/portalContentService';
 
 export interface CartItem {
   product: Product;
@@ -120,6 +121,12 @@ const INQUIRY_STORAGE_KEY = 'hyper_sanat_inquiries_v2';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, priceLayer, activeRole, addClubPoints } = useAuth();
+  const [, setContentVersion] = useState(0);
+  useEffect(() => {
+    const update = () => setContentVersion(v => v + 1);
+    window.addEventListener('atlas-portal-content-updated', update);
+    return () => window.removeEventListener('atlas-portal-content-updated', update);
+  }, []);
 
   // Cart
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -183,7 +190,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // ignore
     }
-    return MOCK_ORDERS;
+    return [];
   });
 
   // SMS logs
@@ -422,12 +429,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   // Tier auto-discounts (Silver: 2%, Gold: 5%)
-  const tierDiscountPercent =
-    currentUser?.clubTier === 'gold' ? 5 : currentUser?.clubTier === 'silver' ? 2 : 0;
+  const tierDiscountPercent = portalContentService.getCartDiscountPercent(currentUser, subtotalAmount);
   const tierDiscountAmount = Math.round((subtotalAmount * tierDiscountPercent) / 100);
 
   // Gold Tier has Free Shipping benefit
-  const isFreeShippingByTier = currentUser?.clubTier === 'gold';
+  const isFreeShippingByTier = false;
   const currentShipping = SHIPPING_METHODS.find(s => s.id === selectedShippingId) || SHIPPING_METHODS[0];
   const shippingCost = isFreeShippingByTier ? 0 : currentShipping.cost;
 

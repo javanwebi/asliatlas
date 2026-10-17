@@ -1,3 +1,4 @@
+import { persistPortalCache } from './portalRepository';
 import * as XLSX from 'xlsx';
 import { ClubTier, Customer, Product } from '../types';
 import {
@@ -64,6 +65,7 @@ export interface CustomerRewardAssignment {
   rewardTitle: string;
   rewardValue: string;
   assignmentScope: 'individual' | 'collective';
+  targetCustomerIds?: string[];
   targetTierLabel?: string;
   targetCustomerName?: string;
   assignedAt: string;
@@ -699,7 +701,7 @@ export const pricingCreditService = {
       const stored = localStorage.getItem(GRADES_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
@@ -710,7 +712,7 @@ export const pricingCreditService = {
 
   saveGrades(grades: CustomerGrade[]): void {
     try {
-      localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(grades));
+      persistPortalCache(GRADES_STORAGE_KEY, JSON.stringify(grades));
       notifyListeners();
     } catch {
       // ignore
@@ -744,17 +746,17 @@ export const pricingCreditService = {
 
   // --- Dynamic Price Lists (لیست‌های قیمت A, B, C, D و خرده‌فروشی) ---
   getPriceLists(): DynamicPriceList[] {
-    let lists: DynamicPriceList[] = [];
+    let lists: DynamicPriceList[] | null = null;
     try {
       const stored = localStorage.getItem(PRICE_LISTS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) lists = parsed;
+        if (Array.isArray(parsed)) lists = parsed;
       }
     } catch {
       // ignore
     }
-    if (!lists.length) {
+    if (!lists) {
       lists = INITIAL_PRICE_LISTS;
       this.savePriceLists(lists);
     }
@@ -770,7 +772,7 @@ export const pricingCreditService = {
 
   savePriceLists(lists: DynamicPriceList[]): void {
     try {
-      localStorage.setItem(PRICE_LISTS_STORAGE_KEY, JSON.stringify(lists));
+      persistPortalCache(PRICE_LISTS_STORAGE_KEY, JSON.stringify(lists));
       notifyListeners();
     } catch {
       // ignore
@@ -999,7 +1001,7 @@ export const pricingCreditService = {
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `لیست قیمت ${pl.code}`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'لیست قیمت من');
 
     const dateStamp = new Date().toISOString().slice(0, 10);
     const safeCode = pl.code.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1010,11 +1012,11 @@ export const pricingCreditService = {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `PriceList_${safeCode}_${dateStamp}.csv`;
+      a.download = `MyPriceList_${dateStamp}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } else {
-      XLSX.writeFile(workbook, `PriceList_${safeCode}_${dateStamp}.xlsx`);
+      XLSX.writeFile(workbook, `MyPriceList_${dateStamp}.xlsx`);
     }
 
     return rows.length;
@@ -1365,7 +1367,7 @@ export const pricingCreditService = {
       const stored = localStorage.getItem(PRICE_LIST_HISTORY_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.map((h: any) => ({
             ...h,
             priceListTitle: h.priceListTitle || h.priceListName,
@@ -1390,7 +1392,7 @@ export const pricingCreditService = {
 
   savePriceListHistory(records: PriceListHistoryRecord[]): void {
     try {
-      localStorage.setItem(PRICE_LIST_HISTORY_KEY, JSON.stringify(records));
+      persistPortalCache(PRICE_LIST_HISTORY_KEY, JSON.stringify(records));
       notifyListeners();
     } catch {
       // ignore
@@ -1447,9 +1449,9 @@ export const pricingCreditService = {
       province: 'یزد',
       city: payload.city || 'یزد',
       activityField: 'تولید و خدمات صنعتی',
-      totalPurchaseVolume: payload.previousPurchaseVolume || 500000000,
-      priceListId: payload.assignedPriceListCode || 'A',
-      creditLimit: payload.creditLimit || 300000000,
+      totalPurchaseVolume: payload.previousPurchaseVolume ?? 0,
+      priceListId: this.getPriceListByCode(payload.assignedPriceListCode || 'C')?.id || '',
+      creditLimit: payload.creditLimit ?? 0,
       adminNotes: payload.notes,
     });
   },
@@ -1461,8 +1463,16 @@ export const pricingCreditService = {
 
   assignCustomerGradeAndPriceList(
     customerId: string,
-    data: { priceListCode?: string; clubTier?: ClubPortalTier; gradeId?: string }
+    data: { priceListCode?: string; clubTier?: ClubPortalTier; gradeId?: string; creditLimit?: number }
   ): CustomerApprovalRecord | undefined {
+    const crm = JSON.parse(localStorage.getItem('atlas_admin_customers_v1') || '[]') as Customer[];
+    const target = crm.find(c => c.id === customerId && c.approvedB2B === true);
+    if (target) {
+      const list = data.priceListCode ? this.getPriceListByCode(data.priceListCode) : undefined;
+      if (list) { target.assignedPriceListCode = list.code; target.clubTier = list.clubTier === 'platinum' ? 'gold' : list.clubTier; }
+      if (data.creditLimit !== undefined) target.creditLimit = data.creditLimit;
+      persistPortalCache('atlas_admin_customers_v1', JSON.stringify(crm));
+    }
     const records = this.getCustomerApprovals();
     const customer = records.find(c => c.id === customerId);
     if (!customer) return undefined;
@@ -1475,6 +1485,7 @@ export const pricingCreditService = {
         customer.assignedClubTier = pl.clubTier;
       }
     }
+    if (data.creditLimit !== undefined) customer.assignedCreditLimit = data.creditLimit;
     if (data.gradeId) {
       const g = this.getGradeById(data.gradeId);
       if (g) customer.assignedGradeId = g.id;
@@ -1489,18 +1500,17 @@ export const pricingCreditService = {
       const stored = localStorage.getItem(CUSTOMERS_APPROVAL_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
     }
-    this.saveCustomerApprovals(INITIAL_CUSTOMER_APPROVALS);
-    return INITIAL_CUSTOMER_APPROVALS;
+    return [];
   },
 
   saveCustomerApprovals(records: CustomerApprovalRecord[]): void {
     try {
-      localStorage.setItem(CUSTOMERS_APPROVAL_KEY, JSON.stringify(records));
+      persistPortalCache(CUSTOMERS_APPROVAL_KEY, JSON.stringify(records));
       notifyListeners();
     } catch {
       // ignore
@@ -1656,7 +1666,7 @@ export const pricingCreditService = {
           parsed.clubTier = priceList.clubTier === 'platinum' ? 'gold' : priceList.clubTier;
           parsed.creditLimit = customer.assignedCreditLimit;
           parsed.totalPurchases = customer.totalPurchaseVolume;
-          localStorage.setItem('hyper_sanat_auth_state_v2', JSON.stringify(parsed));
+          persistPortalCache('hyper_sanat_auth_state_v2', JSON.stringify(parsed));
         }
       }
     } catch {
@@ -1690,12 +1700,12 @@ export const pricingCreditService = {
       // ignore
     }
     this.saveClubRewards(INITIAL_CLUB_REWARDS);
-    return INITIAL_CLUB_REWARDS;
+    return [];
   },
 
   saveClubRewards(rewards: ClubRewardAssignment[]): void {
     try {
-      localStorage.setItem(CLUB_REWARDS_STORAGE_KEY, JSON.stringify(rewards));
+      persistPortalCache(CLUB_REWARDS_STORAGE_KEY, JSON.stringify(rewards));
       notifyListeners();
     } catch {
       // ignore
@@ -1875,28 +1885,7 @@ export const pricingCreditService = {
   },
 
   getAllCustomers(): Customer[] {
-    const approvals = this.getCustomerApprovals();
-    return approvals.map(app => ({
-      id: app.id,
-      fullName: app.fullName,
-      companyName: app.companyName,
-      company: app.companyName,
-      phone: app.phone,
-      mobile: app.phone,
-      password: app.password || '123',
-      economicCode: app.economicCode || '',
-      creditLimit: app.assignedCreditLimit || 150000000,
-      role: 'wholesale',
-      clubTier: app.assignedClubTier === 'platinum' ? 'gold' : (app.assignedClubTier || 'gold'),
-      clubPoints: Math.round((app.totalPurchaseVolume || 0) / 100000),
-      approvedB2B: app.status === 'approved',
-      city: app.city || 'یزد',
-      province: app.province || 'یزد',
-      createdAt: app.registeredAt || '۱۴۰۳/۰۶/۲۰',
-      assignedPriceListCode: app.assignedPriceListCode || 'C',
-      isLegacyCustomer: Boolean(app.isLegacyCustomer),
-      totalPurchases: app.totalPurchaseVolume || 0,
-    }));
+    try { return JSON.parse(localStorage.getItem('atlas_admin_customers_v1') || '[]').filter((c: Customer) => c.approvedB2B === true); } catch { return []; }
   },
 
   getAllCatalogSkuItems(): CatalogSkuPriceItem[] {
@@ -1939,11 +1928,11 @@ export const pricingCreditService = {
     return list;
   },
 
-  getPriceListForCustomer(customer: Customer): PriceListDefinition {
+  getPriceListForCustomer(customer: Customer): PriceListDefinition | undefined {
     const code = (customer.assignedPriceListCode || 'C').toUpperCase();
     const found = this.getPriceLists().find(p => p.code.toUpperCase() === code);
     if (found) return found;
-    return this.getPriceLists().find(p => p.code === 'C') || this.getPriceLists()[0];
+    return undefined;
   },
 
   getClubRewardRules(): ClubRewardRule[] {
@@ -1993,17 +1982,7 @@ export const pricingCreditService = {
         if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return [
-      {
-        id: 'asg-101',
-        rewardTitle: 'اعتبار خرید ویژه فصلی (۲۰ میلیون تومان)',
-        rewardValue: '۲۰,۰۰۰,۰۰۰ تومان اعتبار خرید',
-        assignmentScope: 'collective',
-        targetTierLabel: 'کلیه مشتریان لیست قیمت A (طلایی ویژه)',
-        assignedAt: '۱۴۰۴/۰۷/۱۵',
-        notes: 'اعطای فصلی پاداش وفاداری',
-      },
-    ];
+    return [];
   },
 
   assignRewardToCustomers(payload: {
@@ -2018,6 +1997,7 @@ export const pricingCreditService = {
       rewardTitle: payload.reward.title,
       rewardValue: payload.reward.valueLabel,
       assignmentScope: payload.assignmentScope,
+      targetCustomerIds: (payload.targetCustomers || []).map(c => c.id),
       targetCustomerName: payload.targetCustomers?.[0]?.companyName || payload.targetCustomers?.[0]?.fullName,
       targetTierLabel: payload.targetTierLabel || (payload.targetCustomers?.length ? `${payload.targetCustomers.length} مشتری` : 'گرید انتخابی'),
       assignedAt: new Date().toLocaleDateString('fa-IR'),
@@ -2026,7 +2006,7 @@ export const pricingCreditService = {
     try {
       const list = this.getRewardAssignments();
       list.unshift(newAsg);
-      localStorage.setItem('atlas_customer_reward_assignments_v1', JSON.stringify(list));
+      persistPortalCache('atlas_customer_reward_assignments_v1', JSON.stringify(list));
       notifyListeners();
     } catch {}
     return newAsg;
@@ -2035,23 +2015,14 @@ export const pricingCreditService = {
   deleteRewardAssignment(id: string): void {
     try {
       const list = this.getRewardAssignments().filter(a => a.id !== id);
-      localStorage.setItem('atlas_customer_reward_assignments_v1', JSON.stringify(list));
+      persistPortalCache('atlas_customer_reward_assignments_v1', JSON.stringify(list));
       notifyListeners();
     } catch {}
   },
 
   getRewardsForCustomer(customer?: Customer): CustomerRewardAssignment[] {
-    const all = this.getRewardAssignments() || [];
-    if (!Array.isArray(all)) return [];
-    if (!customer) return all;
-    return all.filter(a => {
-      if (!a) return false;
-      if (a.assignmentScope === 'individual') {
-        const name = customer.companyName || customer.fullName || '';
-        return Boolean(name && a.targetCustomerName && a.targetCustomerName.includes(name));
-      }
-      return true;
-    });
+    if (!customer || !customer.approvedB2B) return [];
+    return this.getRewardAssignments().filter(a => a.targetCustomerIds?.includes(customer.id));
   },
 
   recommendGradeByPurchaseVolume(volume: number): { code: string; customerTierLabel: string } {

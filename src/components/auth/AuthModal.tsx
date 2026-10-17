@@ -237,7 +237,7 @@ export const AuthModal: React.FC = () => {
           setView('onboarding_brands');
         } else {
           closeAuthModal();
-          if (res.user.approvedB2B || res.user.role !== 'retail') {
+          if (res.user.approvedB2B === true) {
             navigate('/account');
           } else {
             navigate('/consumer-dashboard');
@@ -292,7 +292,7 @@ export const AuthModal: React.FC = () => {
       closeAuthModal();
       if (!res.user.onboardingCompleted) {
         navigate('/onboarding');
-      } else if (res.user.approvedB2B || res.user.role !== 'retail') {
+      } else if (res.user.approvedB2B === true) {
         navigate('/account');
       } else {
         navigate('/consumer-dashboard');
@@ -382,7 +382,7 @@ export const AuthModal: React.FC = () => {
     try {
       await saveOnboardingStep2(selectedBusinessType);
       closeAuthModal();
-      if (currentUser?.approvedB2B || currentUser?.role !== 'retail') {
+      if (currentUser?.approvedB2B === true) {
         navigate('/account');
       } else {
         navigate('/consumer-dashboard');
@@ -639,16 +639,7 @@ export const AuthModal: React.FC = () => {
                       <span>مرا به خاطر بسپار</span>
                     </label>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setView('login_otp');
-                        setErrorMessage('');
-                      }}
-                      className="hover:underline font-bold text-xs cursor-pointer text-[#E06518]"
-                    >
-                      ورود بدون رمز (پیامک OTP)
-                    </button>
+
                   </div>
 
                   {/* Primary Submit Button */}
@@ -679,17 +670,7 @@ export const AuthModal: React.FC = () => {
                 </div>
 
                 {/* Switch to OTP Login Option */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView('login_otp');
-                    setErrorMessage('');
-                  }}
-                  className="btn-atlas-secondary w-full h-11 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                >
-                  <MessageSquare className="w-4 h-4 text-[#E06518]" />
-                  <span>ورود سریع با کد تأیید پیامکی</span>
-                </button>
+
 
                 {/* Bottom Register Prompt */}
                 <div className="pt-2 text-center text-xs text-slate-500">
@@ -1290,45 +1271,7 @@ export const AuthModal: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Demo Accounts Helper */}
-          {(view === 'login_password' || view === 'login_otp') && (
-            <div className="mt-3 pt-2.5 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowDemoList(s => !s)}
-                className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
-              >
-                <Sparkles className="w-3 h-3 text-[#E06518]" />
-                <span>ورود سریع با اکانت‌های دمو صنعت‌پیش</span>
-              </button>
 
-              {showDemoList && (
-                <div className="grid grid-cols-3 gap-1.5 mt-1.5 animate-fadeIn">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('retail')}
-                    className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:text-[#E06518] text-[10px] text-slate-700 font-bold cursor-pointer text-center transition-colors"
-                  >
-                    مشتری عادی
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('wholesale')}
-                    className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:text-[#E06518] text-[10px] text-slate-700 font-bold cursor-pointer text-center transition-colors"
-                  >
-                    همکار صنعتی
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('dealer')}
-                    className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:text-[#E06518] text-[10px] text-slate-700 font-bold cursor-pointer text-center transition-colors"
-                  >
-                    نمایندگی رسمی
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* ========================================================================= */}
