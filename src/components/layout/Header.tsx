@@ -522,23 +522,23 @@ export const Header: React.FC = () => {
                           <Building className="w-4 h-4" />
                           <span>ورود به پنل مدیریت ارشد</span>
                         </Link>
-                      ) : (currentUser?.approvedB2B || currentUser?.role === 'wholesale') ? (
+                      ) : (currentUser?.approvedB2B || currentUser?.isLegacyCustomer || (currentUser?.role && currentUser?.role !== 'retail')) ? (
                         <Link
                           to="/account"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold"
                         >
                           <Building className="w-4 h-4 text-[#E06518]" />
-                          <span>پرتال اعتباری B2B کارخانجات</span>
+                          <span>پنل کاربری و سفارشات من</span>
                         </Link>
                       ) : (
                         <Link
                           to="/consumer-dashboard"
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 text-[#2B313A] font-bold"
+                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 text-[#2B313A] font-bold"
                         >
                           <User className="w-4 h-4 text-[#E06518]" />
-                          <span>پنل خرید آنلاین و پیگیری مرسوله</span>
+                          <span>پنل کاربری و سفارشات من</span>
                         </Link>
                       )}
 

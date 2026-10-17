@@ -1,5 +1,12 @@
 import { Product, Order, PriceInquiry, Customer, DiscountCode, SmsLog, AgencyApplication, Category, Brand, Ticket, Representative, OfficialInvoice } from '../types';
-import { generateMockProducts } from '../data/mockGenerator';
+import {
+  generateMockProducts,
+  getManagedCatalogProducts,
+  saveManagedFamily,
+  deleteManagedFamily,
+  resetManagedFamily,
+  moveGalleryImageToFamily,
+} from '../data/mockGenerator';
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_INQUIRIES, MOCK_DISCOUNT_CODES, MOCK_SMS_LOGS, MOCK_REPRESENTATIVES } from '../data/mockData';
 import { CATEGORIES } from '../data/categories';
 import { BRANDS } from '../data/brands';
@@ -507,64 +514,61 @@ export const adminService = {
     }
   },
 
-  // --- Products Management ---
+  // --- Products Management (Full 1,383 Families + 10,435 SKUs + Custom Families) ---
   getProducts(): Product[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.ADMIN_PRODUCTS);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
-    }
-    const initial = generateMockProducts().slice(0, 35);
-    try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(initial));
-    } catch {
-      // ignore
-    }
-    return initial;
+    return getManagedCatalogProducts({ includeInactive: true });
   },
 
-  saveProduct(product: Product): void {
+  saveProduct(product: Product): Product {
     const list = this.getProducts();
-    const idx = list.findIndex(p => p.code === product.code);
+    const existing = list.find(p => p.code.toLowerCase() === product.code.toLowerCase());
     const admin = this.getCurrentAdmin();
 
-    if (idx >= 0) {
-      const old = list[idx];
-      // Check if price changed
-      if (old.prices.retail !== product.prices.retail) {
+    if (existing) {
+      if (existing.prices?.retail !== product.prices?.retail) {
         this.addPriceLog({
           productCode: product.code,
           productName: product.name,
-          oldPrice: old.prices.retail,
-          newPrice: product.prices.retail,
+          oldPrice: existing.prices?.retail || 0,
+          newPrice: product.prices?.retail || 0,
           changedBy: admin?.name || 'مدیر سیستم',
-          reason: 'ویرایش مستقیم کالا در پنل',
+          reason: 'ویرایش خانواده/کد کالا در پنل مدیریت',
         });
       }
-      list[idx] = product;
-      this.logAction('ویرایش کالا', `کد ${product.code}`, `کالای «${product.name}» به‌روزرسانی شد.`);
+      this.logAction('ویرایش خانواده محصول', `کد ${product.code}`, `خانواده «${product.name}» و کدهای زیرمجموعه به‌روزرسانی شد.`);
     } else {
-      list.unshift(product);
-      this.logAction('افزودن کالا', `کد ${product.code}`, `کالای جدید «${product.name}» ثبت شد.`);
+      this.logAction('ایجاد خانواده محصول', `کد ${product.code}`, `خانواده جدید «${product.name}» ثبت شد.`);
     }
 
-    try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(list));
-    } catch {
-      // ignore
-    }
+    saveManagedFamily(product);
+    return product;
   },
 
   deleteProduct(code: string): void {
-    const list = this.getProducts();
-    const filtered = list.filter(p => p.code !== code);
-    this.logAction('حذف کالا', `کد ${code}`, `کالای با کد ${code} از سیستم حذف شد.`);
-    try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(filtered));
-    } catch {
-      // ignore
+    deleteManagedFamily(code);
+    this.logAction('حذف خانواده محصول', `کد ${code}`, `خانواده با کد ${code} از کاتالوگ حذف شد.`);
+  },
+
+  resetProductToDefault(code: string): void {
+    resetManagedFamily(code);
+    this.logAction('بازنشانی خانواده محصول', `کد ${code}`, `خانواده ${code} به اطلاعات اولیه کاتالوگ بازگردانده شد.`);
+  },
+
+  async moveImageBetweenFamilies(
+    sourceFamilyCode: string,
+    imageId: string,
+    targetFamilyCode: string,
+    targetVariantCode?: string
+  ): Promise<boolean> {
+    const ok = await moveGalleryImageToFamily(sourceFamilyCode, imageId, targetFamilyCode, targetVariantCode);
+    if (ok) {
+      this.logAction(
+        'انتقال تصویر کالا',
+        `${sourceFamilyCode} ← ${targetFamilyCode}`,
+        `تصویر ${imageId} از خانواده ${sourceFamilyCode} به ${targetFamilyCode}${targetVariantCode ? ` (کد ${targetVariantCode})` : ''} منتقل شد.`
+      );
     }
+    return ok;
   },
 
   // --- Price Multipliers & Category Batch Update ---
@@ -1099,7 +1103,12 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   getCategories(): Category[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
     } catch {
       // ignore
     }
@@ -1107,19 +1116,23 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   },
 
   saveCategory(category: Category): void {
-    const list = this.getCategories();
-    const idx = list.findIndex(c => c.slug === category.slug);
+    const list = [...this.getCategories()];
+    const idx = list.findIndex(c => c.id === category.id || c.slug === category.slug);
     if (idx >= 0) {
-      list[idx] = category;
+      list[idx] = { ...list[idx], ...category };
     } else {
       list.push(category);
     }
     try {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(list));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
+        window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
+      }
     } catch {
       // ignore
     }
-    this.logAction('مدیریت دسته‌بندی', category.name, 'ذخیره مشخصات دسته‌بندی');
+    this.logAction('مدیریت دسته‌بندی', category.name, 'ذخیره و ویرایش مشخصات دسته‌بندی');
   },
 
   deleteCategory(slug: string): void {
@@ -1127,6 +1140,10 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const filtered = list.filter(c => c.slug !== slug);
     try {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(filtered));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
+        window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
+      }
     } catch {
       // ignore
     }
@@ -1137,7 +1154,26 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   getBrands(): Brand[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.BRANDS);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed: Brand[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(b => {
+            const def = BRANDS.find(d => d.id === b.id);
+            return {
+              ...def,
+              ...b,
+              nameEn: b.nameEn || def?.nameEn || b.name,
+              country: b.country || def?.country || 'ایران',
+              isExclusive: b.isExclusive ?? def?.isExclusive ?? false,
+              description: b.description || def?.description || '',
+              image: b.image || b.logo || def?.image || def?.logo || '',
+              logo: b.logo || b.image || def?.logo || def?.image || '',
+              bannerImage: b.bannerImage || def?.bannerImage || '',
+              active: b.active !== undefined ? b.active : true,
+            };
+          });
+        }
+      }
     } catch {
       // ignore
     }
@@ -1145,19 +1181,29 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   },
 
   saveBrand(brand: Brand): void {
-    const list = this.getBrands();
-    const idx = list.findIndex(b => b.id === brand.id);
+    const list = [...this.getBrands()];
+    const normalized: Brand = {
+      ...brand,
+      image: brand.image || brand.logo || '',
+      logo: brand.logo || brand.image || '',
+      active: brand.active !== undefined ? brand.active : true,
+    };
+    const idx = list.findIndex(b => b.id === normalized.id);
     if (idx >= 0) {
-      list[idx] = brand;
+      list[idx] = normalized;
     } else {
-      list.push(brand);
+      list.unshift(normalized);
     }
     try {
       localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(list));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
+        window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
+      }
     } catch {
       // ignore
     }
-    this.logAction('مدیریت برند', brand.name, 'ذخیره برند در سیستم');
+    this.logAction('مدیریت برند', normalized.name, 'ذخیره تصویر و مشخصات برند در سیستم');
   },
 
   deleteBrand(id: string): void {
@@ -1165,6 +1211,10 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const filtered = list.filter(b => b.id !== id);
     try {
       localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(filtered));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
+        window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
+      }
     } catch {
       // ignore
     }
@@ -1784,52 +1834,136 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     }
   },
 
-  updateCustomerTier(customerId: string, tier: any, creditLimit: number, discountPercent: number): void {
+  updateCustomerTier(
+    customerId: string,
+    tier: any,
+    creditLimit: number,
+    discountPercent: number,
+    extra?: {
+      username?: string;
+      phone?: string;
+      password?: string;
+      assignedPriceListCode?: string;
+      clubTier?: 'bronze' | 'silver' | 'gold' | 'platinum';
+      totalPurchases?: number;
+    }
+  ): void {
     const customers = this.getCustomers();
     const idx = customers.findIndex(c => c.id === customerId);
     if (idx >= 0) {
-      customers[idx] = {
+      const updatedCust: Customer = {
         ...customers[idx],
-        role: tier === 'dealer' ? 'dealer' : tier === 'colleague' ? 'wholesale' : 'retail',
-        clubTier: tier === 'dealer' ? 'gold' : tier === 'colleague' ? 'silver' : 'bronze',
+        role: tier === 'dealer' ? 'dealer' : tier === 'colleague' || tier === 'factory' ? 'wholesale' : 'retail',
+        tier: tier,
+        clubTier:
+          extra?.clubTier ||
+          (tier === 'dealer' ? 'gold' : tier === 'colleague' || tier === 'factory' ? 'silver' : 'bronze'),
+        assignedPriceListCode:
+          extra?.assignedPriceListCode ||
+          customers[idx].assignedPriceListCode ||
+          (tier === 'dealer' ? 'A' : tier === 'factory' ? 'A' : 'B'),
+        username: extra?.username?.trim() || customers[idx].username,
+        phone: extra?.phone?.trim() || customers[idx].phone,
+        mobile: extra?.phone?.trim() || customers[idx].phone,
+        password: extra?.password?.trim() || customers[idx].password,
+        totalPurchases:
+          extra?.totalPurchases !== undefined
+            ? extra.totalPurchases
+            : customers[idx].totalPurchases || customers[idx].totalOrdersAmount || 0,
+        totalOrdersAmount:
+          extra?.totalPurchases !== undefined
+            ? extra.totalPurchases
+            : customers[idx].totalOrdersAmount || customers[idx].totalPurchases || 0,
         creditLimit,
         discountPercent,
         approvedB2B: tier !== 'regular',
+        isLegacyCustomer: tier !== 'regular',
+        onboardingCompleted: true,
       } as any;
+      customers[idx] = updatedCust;
       try {
         localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
+        const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
+        const rIdx = registered.findIndex(r => r.id === customerId || r.phone === updatedCust.phone);
+        if (rIdx >= 0) {
+          registered[rIdx] = { ...registered[rIdx], ...updatedCust };
+        } else {
+          registered.unshift(updatedCust);
+        }
+        localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+
+        const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
+        const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
+        const lIdx = legacyList.findIndex(l => l.id === customerId || l.phone === updatedCust.phone);
+        if (lIdx >= 0) {
+          legacyList[lIdx] = { ...legacyList[lIdx], ...updatedCust };
+        } else if (updatedCust.approvedB2B) {
+          legacyList.unshift(updatedCust);
+        }
+        localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
+        }
       } catch {
         // ignore
       }
-      this.logAction('تغییر سطح B2B مشتری', customers[idx].fullName, `سطح: ${tier} - سقف: ${creditLimit}`);
+      this.logAction('تغییر سطح مشتری خرید بالا', customers[idx].fullName, `سطح: ${tier} - سقف: ${creditLimit}`);
     }
   },
 
   createB2bCustomer(payload: {
     fullName: string;
     companyName: string;
+    username?: string;
     phone: string;
     password?: string;
     economicCode?: string;
     creditLimit?: number;
+    totalPurchases?: number;
+    assignedPriceListCode?: string;
+    clubTier?: 'bronze' | 'silver' | 'gold' | 'platinum';
     role?: any;
     approvedB2B?: boolean;
   }): Customer {
     const customers = this.getCustomers();
+    const cleanPhone = payload.phone.trim();
+    const cleanUsername =
+      (payload.username && payload.username.trim()) ||
+      `vip_${cleanPhone.slice(-4)}`;
+    const priceListCode = payload.assignedPriceListCode || 'B';
+    const clubTier =
+      payload.clubTier ||
+      (priceListCode === 'D'
+        ? 'platinum'
+        : priceListCode === 'A'
+        ? 'gold'
+        : priceListCode === 'B'
+        ? 'silver'
+        : 'bronze');
+
     const newCust: Customer = {
       id: 'cust-b2b-' + Date.now().toString().slice(-6),
+      name: payload.fullName,
       fullName: payload.fullName,
       companyName: payload.companyName,
       company: payload.companyName,
-      phone: payload.phone,
-      mobile: payload.phone,
-      password: payload.password || 'atlas1403',
+      username: cleanUsername,
+      phone: cleanPhone,
+      mobile: cleanPhone,
+      password: payload.password || cleanPhone,
       economicCode: payload.economicCode || '',
-      creditLimit: payload.creditLimit || 150000000,
+      creditLimit: payload.creditLimit ?? 250000000,
+      totalPurchases: payload.totalPurchases ?? 180000000,
+      totalOrdersAmount: payload.totalPurchases ?? 180000000,
+      assignedPriceListCode: priceListCode,
       role: payload.role || 'wholesale',
-      clubTier: 'gold',
+      tier: payload.role === 'factory' ? 'factory' : payload.role === 'dealer' ? 'dealer' : 'colleague',
+      clubTier,
       clubPoints: 1200,
       approvedB2B: payload.approvedB2B ?? true,
+      isLegacyCustomer: true,
+      onboardingCompleted: true,
       city: 'یزد',
       province: 'یزد',
       createdAt: new Date().toLocaleDateString('fa-IR'),
@@ -1838,16 +1972,29 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     customers.unshift(newCust);
     try {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
-      
+
       const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
       const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
       registered.unshift(newCust);
       localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+
+      const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
+      const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
+      legacyList.unshift(newCust);
+      localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
+      }
     } catch {
       // ignore
     }
 
-    this.logAction('تعریف مشتری اعتباری B2B جدید', payload.companyName, `مسئول: ${payload.fullName} | شماره: ${payload.phone}`);
+    this.logAction(
+      'تعریف مشتری پنل خرید بالا (CRM)',
+      payload.companyName,
+      `مسئول: ${payload.fullName} | نام کاربری: ${cleanUsername} | شماره: ${cleanPhone}`
+    );
     return newCust;
   },
 

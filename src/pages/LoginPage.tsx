@@ -62,7 +62,15 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     if (currentUser?.onboardingCompleted) {
-      navigate('/account');
+      if (
+        currentUser.approvedB2B ||
+        currentUser.isLegacyCustomer ||
+        (currentUser.role && currentUser.role !== 'retail')
+      ) {
+        navigate('/account');
+      } else {
+        navigate('/consumer-dashboard');
+      }
     }
   }, [currentUser, navigate]);
 

@@ -44,11 +44,37 @@ export function matchesCatalogCategory(product: Product, slug: string, selection
   return product.categorySlug === resolveCategorySlug(slug) &&
     (selection === 'all' || product.submenu === selection || product.subcategory === selection);
 }
-export const CATEGORIES = definitions.map(category => ({
+export const CATEGORIES: EnhancedCategory[] = definitions.map(category => ({
   ...category, count: USER_PRODUCTS.filter(p => p.categorySlug === category.slug).length,
   description: category.children.map(n => n.name).join('، '),
   subcategories: category.children.map(n => n.name),
   image: USER_PRODUCTS.find(p => p.categorySlug === category.slug && p.images.length)?.images[0],
 }));
 export const PRIMARY_CATALOG_CATEGORIES = CATEGORIES;
-export const findCatalogCategory = (slug: string) => CATEGORIES.find(category => category.slug === resolveCategorySlug(slug));
+
+export const CATEGORIES_STORAGE_KEY = 'atlas_admin_categories_v1';
+
+export function getManagedCategories(): EnhancedCategory[] {
+  if (typeof window === 'undefined') return CATEGORIES;
+  try {
+    const raw = window.localStorage.getItem(CATEGORIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((c: any) => ({
+          ...c,
+          children: Array.isArray(c.children) && c.children.length > 0
+            ? c.children
+            : (Array.isArray(c.subcategories) ? c.subcategories.map((s: string) => ({ name: s, children: [] })) : []),
+        }));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return CATEGORIES;
+}
+
+export const findCatalogCategory = (slug: string) =>
+  getManagedCategories().find(category => category.slug === resolveCategorySlug(slug) || category.slug === slug) ||
+  CATEGORIES.find(category => category.slug === resolveCategorySlug(slug));

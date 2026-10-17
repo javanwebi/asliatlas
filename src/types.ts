@@ -30,14 +30,27 @@ export interface TechnicalSpec {
   value: string;
 }
 
+export interface ProductGalleryImage {
+  id: string;
+  url: string;
+  fileName?: string;
+  scope: 'family' | 'variant';
+  variantCode?: string;
+  title?: string;
+  order?: number;
+}
+
 export interface Product {
   submenu?: string;
   variants?: ProductVariant[];
   sourceRow?: number;
   stockKnown?: boolean;
-  imageScope?: 'family-example';
-  code: string;               // e.g. "AT-751", "SWR-230", "FORZA-A45"
-  name: string;               // نام فارسی محصول
+  imageScope?: 'family-example' | 'mixed' | 'sku-verified';
+  galleryImages?: ProductGalleryImage[];
+  active?: boolean;
+  updatedAt?: string;
+  code: string;               // e.g. "FAM-34265", "AT-751", "SWR-230"
+  name: string;               // نام فارسی خانواده محصول
   nameEn?: string;            // نام لاتین
   brand: string;              // SWR, FORZA, Megadyne, Optibelt, etc.
   categorySlug: string;       // industrial-belts, ceramic-tiles, etc.
@@ -68,6 +81,18 @@ export interface ProductVariant {
   code: string;
   size: string;
   name: string;
+  model?: string;
+  brand?: string;
+  unit?: string;
+  price?: number;                   // قیمت مستقیم این کد کالا (۰ یعنی نیازمند استعلام)
+  prices?: PriceTiers;              // سطوح قیمت این کد کالا
+  inquiryOnly?: boolean;            // آیا این کد نیازمند استعلام است؟
+  stock?: number;                   // موجودی انبار این کد
+  stockKnown?: boolean;             // آیا وضعیت موجودی مشخص است؟
+  technicalSpecs?: TechnicalSpec[]; // مشخصات فنی اختصاصی این کد
+  images?: string[];                // تصاویر اختصاصی متصل به این کد
+  description?: string;             // توضیحات اختصاصی این کد
+  active?: boolean;                 // فعال یا غیرفعال موقت
 }
 
 export interface Category {
@@ -79,6 +104,8 @@ export interface Category {
   subcategories: string[];
   icon: string;
   count: number;
+  image?: string;
+  active?: boolean;
 }
 
 export interface Brand {
@@ -88,7 +115,11 @@ export interface Brand {
   country: string;
   isExclusive: boolean;       // نماینده انحصاری بازرگانی اطلس
   description: string;
-  logo: string;
+  logo: string;               // تصویر یا لوگوی برند برای شناخت مشتری
+  image?: string;             // تصویر بصری برند / لوگو
+  bannerImage?: string;       // تصویر کاور برند
+  specialties?: string[];     // زمینه‌های تخصصی برند
+  active?: boolean;
 }
 
 export interface Customer {
@@ -108,7 +139,9 @@ export interface Customer {
   clubPoints: number;
   approvedB2B: boolean;
   assignedPriceListId?: string;
+  assignedPriceListCode?: string; // 'A' | 'B' | 'C' | 'D'
   assignedGradeId?: string;
+  isLegacyCustomer?: boolean;     // مشتری قدیمی که به سیستم منتقل و کریدبندی شده
   creditLimit?: number;
   discountPercent?: number;
   totalPurchases?: number;

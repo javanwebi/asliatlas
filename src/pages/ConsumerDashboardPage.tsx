@@ -1,931 +1,1367 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import { useClubPoints } from '../context/ClubPointsContext';
-import { generateMockProducts } from '../data/mockGenerator';
-import { toPersianDigits, formatPrice } from '../utils/formatters';
 import {
   ShoppingBag,
   Package,
   Truck,
-  Gift,
-  Heart,
-  MapPin,
-  MessageSquare,
-  Sparkles,
-  CreditCard,
-  ArrowRight,
-  ChevronLeft,
   CheckCircle2,
   Clock,
+  FileText,
+  MapPin,
+  Search,
+  ShoppingCart,
+  ShieldCheck,
+  ArrowLeft,
+  Printer,
   RefreshCw,
   Plus,
-  Trash2,
-  Send,
-  LogOut,
-  Building,
-  ShieldCheck,
-  Search,
-  ExternalLink,
-  Store,
-  Tag,
-  KeyRound,
+  CreditCard,
+  Zap,
+  Sparkles,
   User,
-  Sliders,
-  DollarSign
+  LogOut,
+  Download,
+  FileSpreadsheet,
+  Tag,
+  Bell,
+  Layers,
 } from 'lucide-react';
-import { Order, Address } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { getManagedCatalogProducts } from '../data/mockGenerator';
+import { CATEGORIES } from '../data/categories';
+import { formatPrice, toPersianDigits } from '../utils/formatters';
+import { ProductImage } from '../components/product/ProductImage';
+import {
+  portalContentService,
+  PortalBannerItem,
+  PortalAnnouncementItem,
+} from '../services/portalContentService';
+import { pricingCreditService } from '../services/pricingCreditService';
+
+interface CustomerOrderItem {
+  id: string;
+  orderNumber: string;
+  date: string;
+  status: 'processing' | 'shipped' | 'delivered';
+  paymentMethod: string;
+  paymentRef: string;
+  shippingMethod: string;
+  trackingCode: string;
+  totalAmount: number;
+  receiverName: string;
+  receiverAddress: string;
+  items: {
+    code: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+  }[];
+}
+
+const INITIAL_CUSTOMER_ORDERS: CustomerOrderItem[] = [
+  {
+    id: 'ord-101',
+    orderNumber: 'ORD-1403-8841',
+    date: '۱۴۰۳/۰۷/۱۴',
+    status: 'shipped',
+    paymentMethod: 'درگاه آنلاین بانکی شاپرک',
+    paymentRef: '۸۴۹۲۰۱۷۴۵۲۱',
+    shippingMethod: 'تیپاکس اکسپرس (ارسال مستقیم از انبار مرکزی)',
+    trackingCode: 'TPX-649820145',
+    totalAmount: 4850000,
+    receiverName: 'مهندس امیرحسین کاظمی',
+    receiverAddress: 'تهران، بزرگراه فتح، کیلومتر ۵، مجتمع صنعتی پارس، پلاک ۱۴',
+    items: [
+      {
+        code: '34265',
+        name: 'چرخ دنده صنعتی استاندارد سایز Z18',
+        quantity: 2,
+        unit: 'عدد',
+        unitPrice: 1450000,
+      },
+      {
+        code: 'SWR-230',
+        name: 'تسمه تایمینگ صنعتی SWR آلمان مدل HTD-8M',
+        quantity: 1,
+        unit: 'حلقه',
+        unitPrice: 1950000,
+      },
+    ],
+  },
+  {
+    id: 'ord-102',
+    orderNumber: 'ORD-1403-7912',
+    date: '۱۴۰۳/۰۶/۲۵',
+    status: 'delivered',
+    paymentMethod: 'درگاه آنلاین بانکی شاپرک',
+    paymentRef: '۷۱۲۰۳۹۴۸۱۱۵',
+    shippingMethod: 'پست ویژه صنعتی',
+    trackingCode: 'PST-29810475210',
+    totalAmount: 2900000,
+    receiverName: 'مهندس امیرحسین کاظمی',
+    receiverAddress: 'تهران، بزرگراه فتح، کیلومتر ۵، مجتمع صنعتی پارس، پلاک ۱۴',
+    items: [
+      {
+        code: 'FORZA-C85',
+        name: 'تسمه انتقال قدرت FORZA تیپ C85',
+        quantity: 2,
+        unit: 'حلقه',
+        unitPrice: 1450000,
+      },
+    ],
+  },
+];
 
 export const ConsumerDashboardPage: React.FC = () => {
+  const { currentUser, logout } = useAuth();
+  const user = currentUser;
+  const { addToCart, cart: cartItems = [] } = useCart();
   const navigate = useNavigate();
-  const { currentUser, logout, getUserAddresses, addAddress, deleteAddress } = useAuth();
-  const { cart, addToCart, itemCount } = useCart();
-  const { wishlist, toggleWishlist } = useWishlist();
-  const { points } = useClubPoints();
 
-  // Strict Access Control: CRM & B2B stored customers ONLY have access to B2B Factory Credit Portal (/account)
-  React.useEffect(() => {
-    if (currentUser) {
-      const isCrmOrB2b = currentUser.approvedB2B ||
-                         currentUser.role === 'wholesale' ||
-                         currentUser.role === 'dealer' ||
-                         currentUser.role === 'admin' ||
-                         Boolean(currentUser.creditLimit && currentUser.creditLimit > 0);
-      if (isCrmOrB2b) {
-        navigate('/account', { replace: true });
-      }
+  // اگر کاربر متعلق به پنل خرید بالا (CRM) باشد، فقط به /account دسترسی دارد
+  useEffect(() => {
+    if (user && portalContentService.isHighVolumeCustomer(user)) {
+      navigate('/account', { replace: true });
     }
-  }, [currentUser, navigate]);
+  }, [user, navigate]);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'wishlist' | 'club' | 'addresses' | 'support' | 'b2bRequest'>('dashboard');
+  const [portalTick, setPortalTick] = useState(0);
+  useEffect(() => {
+    const onUpdate = () => setPortalTick(t => t + 1);
+    window.addEventListener('atlas-portal-content-updated', onUpdate);
+    return () => window.removeEventListener('atlas-portal-content-updated', onUpdate);
+  }, []);
 
-  // Address Modal
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [newAddress, setNewAddress] = useState({
-    title: 'منزل / دفتر',
-    recipientName: currentUser?.fullName || '',
-    recipientPhone: currentUser?.phone || '',
-    province: 'یزد',
-    city: 'یزد',
-    fullAddress: '',
-    postalCode: '',
-  });
+  const resolvedConfig = useMemo(
+    () => portalContentService.getResolvedConfigForCustomer('consumer', user?.id),
+    [user?.id, portalTick]
+  );
 
-  // Support Ticket Form
-  const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketMsg, setTicketMsg] = useState('');
-  const [ticketSentFeedback, setTicketSentFeedback] = useState(false);
+  const activeBanners: PortalBannerItem[] = useMemo(
+    () => portalContentService.getBannersForCustomer('consumer', user?.id),
+    [user?.id, portalTick]
+  );
 
-  // B2B Upgrade Request
-  const [b2bCompanyName, setB2bCompanyName] = useState(currentUser?.companyName || '');
-  const [b2bNotes, setB2bNotes] = useState('');
-  const [b2bSubmitted, setB2bSubmitted] = useState(false);
+  const activeAnnouncements: PortalAnnouncementItem[] = useMemo(
+    () => portalContentService.getAnnouncementsForCustomer('consumer', user?.id),
+    [user?.id, portalTick]
+  );
 
-  // Reorder feedback
-  const [reorderFeedback, setReorderFeedback] = useState<string | null>(null);
+  const enabledMenus = useMemo(
+    () => resolvedConfig.menus.filter(m => m.enabled),
+    [resolvedConfig.menus]
+  );
 
-  // Sample Retail Orders
-  const [orders] = useState<Order[]>([
+  const [activeTab, setActiveTab] = useState<string>('overview');
+
+  useEffect(() => {
+    if (enabledMenus.length > 0 && !enabledMenus.some(m => m.id === activeTab)) {
+      setActiveTab(enabledMenus[0].id);
+    }
+  }, [enabledMenus, activeTab]);
+
+  const [orders] = useState<CustomerOrderItem[]>(INITIAL_CUSTOMER_ORDERS);
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<CustomerOrderItem | null>(null);
+  const [quickSkuQuery, setQuickSkuQuery] = useState('');
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>('all');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [addresses, setAddresses] = useState([
     {
-      id: 'ORD-1403-9081',
-      orderNumber: 'ORD-1403-9081',
-      customerId: currentUser?.id || 'cust-9081',
-      role: 'retail',
-      customerName: currentUser?.fullName || 'خریدار گرامی',
-      recipientPhone: currentUser?.phone || '09131234567',
-      totalAmount: 1450000,
-      discountAmount: 0,
-      finalAmount: 1450000,
-      paymentMethod: 'online',
-      status: 'shipped',
-      createdAt: '۱۴۰۳/۰۶/۲۰',
-      trackingCode: 'TRK-98124578',
-      items: [
-        {
-          productCode: 'FORZA-C85',
-          productName: 'تسمه پروانه‌ای استاندارد FORZA ایتالیا تیپ C طول ۲۱۵۰',
-          quantity: 2,
-          unitPrice: 680000,
-          totalPrice: 1360000,
-          brand: 'فورزا (FORZA)',
-          unit: 'حلقه',
-          priceLayerUsed: 'retail',
-          image: '',
-        },
-      ],
-      shippingAddress: 'یزد، خیابان کاشانی، جنب بانک ملی، پلاک ۴۲',
+      id: 'addr-1',
+      title: 'محل فعالیت / کارگاه اصلی',
+      receiver: user?.fullName || 'مهندس امیرحسین کاظمی',
+      phone: user?.phone || '09123456789',
+      city: user?.city || 'تهران',
+      postalCode: '1387654321',
+      fullAddress: 'تهران، بزرگراه فتح، کیلومتر ۵، مجتمع صنعتی پارس، پلاک ۱۴',
+      isDefault: true,
     },
     {
-      id: 'ORD-1403-8712',
-      orderNumber: 'ORD-1403-8712',
-      customerId: currentUser?.id || 'cust-8712',
-      role: 'retail',
-      customerName: currentUser?.fullName || 'خریدار گرامی',
-      recipientPhone: currentUser?.phone || '09131234567',
-      totalAmount: 2890000,
-      discountAmount: 0,
-      finalAmount: 2890000,
-      paymentMethod: 'online',
-      status: 'delivered',
-      createdAt: '۱۴۰۳/۰۵/۱۴',
-      trackingCode: 'TRK-77123904',
-      items: [
-        {
-          productCode: 'SWR-230',
-          productName: 'تسمه تایمینگ دنده‌ای تقویت‌شده SWR آلمان HTD-8M',
-          quantity: 1,
-          unitPrice: 1250000,
-          totalPrice: 1250000,
-          brand: 'اس دبلیو آر (SWR)',
-          unit: 'حلقه',
-          priceLayerUsed: 'retail',
-          image: '',
-        },
-      ],
-      shippingAddress: 'یزد، بلوار جمهوری، مجتمع اطلس',
+      id: 'addr-2',
+      title: 'انبار تحویل مرسولات',
+      receiver: 'مسئول تحویل انبار',
+      phone: '09131514455',
+      city: 'یزد',
+      postalCode: '8917945639',
+      fullAddress: 'یزد، بلوار جمهوری، شهرک صنعتی، فاز ۱، خیابان صنعتگران',
+      isDefault: false,
     },
   ]);
 
-  const addresses = getUserAddresses();
-  const allProducts = useMemo(() => generateMockProducts(), []);
+  const [newAddress, setNewAddress] = useState({
+    title: '',
+    receiver: '',
+    phone: '',
+    city: '',
+    postalCode: '',
+    fullAddress: '',
+  });
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
 
-  // Filter wishlist items
-  const wishlistProducts = useMemo(() => {
-    return wishlist
-      .map(code => allProducts.find(p => p.code.toLowerCase() === code.toLowerCase()))
-      .filter(Boolean) as typeof allProducts;
-  }, [allProducts, wishlist]);
-
-  const handleAddAddressSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAddress.fullAddress.trim()) return;
-    addAddress({
-      title: newAddress.title,
-      recipientName: newAddress.recipientName,
-      recipientPhone: newAddress.recipientPhone,
-      province: newAddress.province,
-      city: newAddress.city,
-      fullAddress: newAddress.fullAddress,
-      postalCode: newAddress.postalCode,
-      isDefault: addresses.length === 0,
-    });
-    setIsAddressModalOpen(false);
-    setNewAddress({
-      title: 'منزل / دفتر',
-      recipientName: currentUser?.fullName || '',
-      recipientPhone: currentUser?.phone || '',
-      province: 'یزد',
-      city: 'یزد',
-      fullAddress: '',
-      postalCode: '',
-    });
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleSendSupportTicket = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketSubject.trim() || !ticketMsg.trim()) return;
-    setTicketSentFeedback(true);
-    setTimeout(() => {
-      setTicketSentFeedback(false);
-      setTicketSubject('');
-      setTicketMsg('');
-    }, 4000);
+  // Catalog products with category filter & search
+  const catalogProducts = useMemo(() => {
+    const all = getManagedCatalogProducts().filter(p => p.active !== false);
+    const byCat =
+      selectedCategorySlug === 'all'
+        ? all
+        : all.filter(p => p.categorySlug === selectedCategorySlug);
+    const q = quickSkuQuery.trim().toLowerCase();
+    const filtered = q
+      ? byCat.filter(
+          p =>
+            p.code.toLowerCase().includes(q) ||
+            p.name.toLowerCase().includes(q) ||
+            (p.variants || []).some(
+              v => v.code.toLowerCase().includes(q) || v.name.toLowerCase().includes(q)
+            )
+        )
+      : byCat;
+    return filtered.slice(0, 24);
+  }, [quickSkuQuery, selectedCategorySlug]);
+
+  const handleQuickAddProduct = (product: any) => {
+    const firstVar = (product.variants || [])[0];
+    const price =
+      (firstVar && (firstVar.price || firstVar.prices?.retail)) ||
+      product.prices?.retail ||
+      1450000;
+    addToCart(
+      {
+        ...product,
+        code: firstVar ? firstVar.code : product.code,
+        name: firstVar ? `${product.name} (${firstVar.size || firstVar.code})` : product.name,
+        prices: {
+          base: price,
+          retail: price,
+          wholesale: price,
+          dealer: price,
+        },
+        inquiryOnly: false,
+      },
+      1
+    );
+    showToast(`کالای «${product.name}» به سبد خرید شما اضافه شد.`);
   };
 
-  const handleB2bRequestSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setB2bSubmitted(true);
-  };
-
-  const handleReorder = (order: Order) => {
+  const handleReorderItems = (order: CustomerOrderItem) => {
+    const catalog = getManagedCatalogProducts();
     order.items.forEach(item => {
-      const prod = allProducts.find(p => p.code === item.productCode);
-      if (prod) {
-        addToCart(prod, item.quantity);
+      const found = catalog[0];
+      if (found) {
+        addToCart(
+          {
+            ...found,
+            code: item.code,
+            name: item.name,
+            prices: {
+              base: item.unitPrice,
+              retail: item.unitPrice,
+              wholesale: item.unitPrice,
+              dealer: item.unitPrice,
+            },
+            inquiryOnly: false,
+          },
+          item.quantity
+        );
       }
     });
-    setReorderFeedback(`اقلام سفارش شماره ${order.orderNumber} به سبد خرید شما اضافه گردید.`);
-    setTimeout(() => setReorderFeedback(null), 3500);
+    showToast(`اقلام سفارش ${order.orderNumber} مجدداً به سبد خرید شما افزوده شد.`);
+  };
+
+  const handleDownloadMyPriceListExcel = () => {
+    const lists = pricingCreditService.getPriceLists();
+    const retailPl = lists.find(p => p.code === 'RETAIL') || lists[0];
+    if (retailPl) {
+      pricingCreditService.exportPriceListToExcel(retailPl.id);
+    }
+    showToast('فایل «اکسل لیست قیمت من» (.xlsx) با موفقیت دانلود شد.');
+  };
+
+  const handleBannerAction = (banner: PortalBannerItem) => {
+    if (banner.ctaLinkOrTab.startsWith('/')) {
+      navigate(banner.ctaLinkOrTab);
+    } else if (enabledMenus.some(m => m.id === banner.ctaLinkOrTab)) {
+      setActiveTab(banner.ctaLinkOrTab);
+    } else {
+      setActiveTab('quick_buy');
+    }
+    if (banner.cartDiscountPercent) {
+      showToast(
+        `طرح تخفیف ${toPersianDigits(banner.cartDiscountPercent)}٪ روی سبد خرید شما فعال است.`
+      );
+    }
+  };
+
+  const handleAddAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddress.title.trim() || !newAddress.fullAddress.trim()) return;
+    setAddresses(prev => [
+      ...prev,
+      {
+        id: `addr-${Date.now()}`,
+        ...newAddress,
+        isDefault: prev.length === 0,
+      },
+    ]);
+    setNewAddress({
+      title: '',
+      receiver: '',
+      phone: '',
+      city: '',
+      postalCode: '',
+      fullAddress: '',
+    });
+    setIsAddingAddress(false);
+    showToast('آدرس جدید تحویل مرسوله ثبت شد.');
+  };
+
+  const totalSpent = orders.reduce((acc, o) => acc + o.totalAmount, 0);
+
+  const getBannerThemeClasses = (theme: PortalBannerItem['theme']) => {
+    switch (theme) {
+      case 'royal_gold':
+        return 'from-slate-900 via-amber-950 to-slate-900 border-amber-400/40 text-white';
+      case 'emerald_trust':
+        return 'from-emerald-950 via-teal-900 to-slate-900 border-emerald-400/40 text-white';
+      case 'titanium_blue':
+        return 'from-slate-900 via-blue-950 to-indigo-950 border-sky-400/40 text-white';
+      case 'ruby_crimson':
+        return 'from-rose-950 via-slate-900 to-slate-950 border-rose-400/40 text-white';
+      default:
+        return 'from-[#1B222C] via-[#252D3A] to-[#1B222C] border-[#E06518]/50 text-white';
+    }
+  };
+
+  const getHeaderThemeClasses = () => {
+    switch (resolvedConfig.uiTexts.headerAccentTheme) {
+      case 'charcoal_gold':
+        return 'from-slate-950 via-slate-900 to-amber-950/80 border-amber-500/30';
+      case 'slate_emerald':
+        return 'from-slate-950 via-emerald-950/70 to-slate-900 border-emerald-500/30';
+      case 'deep_royal':
+        return 'from-indigo-950 via-slate-900 to-slate-950 border-indigo-500/30';
+      default:
+        return 'from-[#181F29] via-[#222B38] to-[#181F29] border-slate-800';
+    }
+  };
+
+  const getMenuIcon = (id: string) => {
+    switch (id) {
+      case 'overview':
+        return ShoppingBag;
+      case 'orders':
+        return Truck;
+      case 'quick_buy':
+        return Zap;
+      case 'receipts':
+        return FileText;
+      case 'addresses':
+        return MapPin;
+      default:
+        return Package;
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#F8FAFD] via-[#F2F5F9] to-[#ECF1F7] text-slate-800 pb-24 text-right select-none" dir="rtl">
-      
-      {/* Dynamic Glass Top Bar Header */}
-      <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-2xl border-b border-slate-200/80 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#E06518] to-amber-500 text-white flex items-center justify-center font-black text-base shadow-md shadow-orange-500/20">
-            {currentUser?.fullName?.[0] || 'م'}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
-                {currentUser?.fullName || 'خریدار گرامی'}
+    <div className="min-h-screen bg-[#F3F5F8] pb-16 text-right" dir="rtl">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 left-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/40 flex items-center gap-2.5 text-xs font-bold">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toast}</span>
+        </div>
+      )}
+
+      {/* Top Hero Header */}
+      <div className={`bg-gradient-to-l ${getHeaderThemeClasses()} text-white border-b`}>
+        <div className="max-w-7xl mx-auto px-4 py-7 sm:py-9">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 text-amber-400 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-[#E06518]" />
+                <span>پنل کاربری و مدیریت هوشمند سفارشات</span>
+                {user?.companyName && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-slate-300">{user.companyName}</span>
+                  </>
+                )}
+              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-snug">
+                {resolvedConfig.uiTexts.heroWelcomePrefix}{' '}
+                <span className="text-[#E06518]">{user?.fullName || 'مشتری گرامی'}</span>
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                حساب خریدار آنلاین
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              شماره همراه: <span className="font-mono">{currentUser?.phone || currentUser?.mobile || 'ثبت شده'}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Actions Header */}
-        <div className="flex items-center gap-2">
-          <Link
-            to="/cart"
-            className="px-3.5 py-2 rounded-xl bg-orange-50 border border-orange-200/80 hover:bg-orange-100 text-[#E06518] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span className="hidden sm:inline">سبد خرید</span>
-            {itemCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-[#E06518] text-white text-[10px] font-black flex items-center justify-center">
-                {toPersianDigits(itemCount)}
-              </span>
-            )}
-          </Link>
-
-          <button
-            type="button"
-            onClick={logout}
-            className="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition-colors cursor-pointer"
-            title="خروج از حساب"
-          >
-            <LogOut className="w-4.5 h-4.5" />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Container Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        
-        {/* Reorder feedback toast */}
-        {reorderFeedback && (
-          <div className="p-4 bg-emerald-600 text-white rounded-2xl shadow-lg flex items-center justify-between text-xs font-bold animate-fadeIn">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-white" />
-              <span>{reorderFeedback}</span>
-            </div>
-            <Link to="/cart" className="underline font-black text-amber-200 hover:text-white">
-              مشاهده سبد و پرداخت
-            </Link>
-          </div>
-        )}
-
-        {/* Top Summary Cards Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div
-            onClick={() => setActiveTab('orders')}
-            className="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:border-[#E06518] cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="w-9 h-9 rounded-2xl bg-orange-100 text-[#E06518] flex items-center justify-center font-bold">
-                <Package className="w-5 h-5" />
-              </span>
-              <span className="text-[10px] font-bold text-slate-400">سفارش‌ها</span>
-            </div>
-            <div>
-              <div className="text-xl font-black text-slate-900">
-                {toPersianDigits(orders.length)} سفارش
-              </div>
-              <div className="text-[11px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
-                <Truck className="w-3 h-3" />
-                <span>۱ مرسوله در حال ارسال</span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setActiveTab('club')}
-            className="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:border-amber-400 cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                <Gift className="w-5 h-5" />
-              </span>
-              <span className="text-[10px] font-bold text-slate-400">امتیازات باشگاه</span>
-            </div>
-            <div>
-              <div className="text-xl font-black text-slate-900 font-mono">
-                {toPersianDigits(points)} امتیاز
-              </div>
-              <div className="text-[11px] text-amber-700 font-bold mt-0.5">
-                تخفیف قابل استفاده در خرید بعدی
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setActiveTab('wishlist')}
-            className="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:border-rose-400 cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
-                <Heart className="w-5 h-5" />
-              </span>
-              <span className="text-[10px] font-bold text-slate-400">علاقه‌مندی‌ها</span>
-            </div>
-            <div>
-              <div className="text-xl font-black text-slate-900">
-                {toPersianDigits(wishlist.length)} کالا
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                ذخیره‌شده برای خرید بعدی
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setActiveTab('addresses')}
-            className="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:border-sky-400 cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="w-9 h-9 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
-                <MapPin className="w-5 h-5" />
-              </span>
-              <span className="text-[10px] font-bold text-slate-400">نشانی‌ها</span>
-            </div>
-            <div>
-              <div className="text-xl font-black text-slate-900">
-                {toPersianDigits(addresses.length)} آدرس
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                آدرس تحویل کالا و بارنامه
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs Bar */}
-        <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'dashboard'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Store className="w-4 h-4" />
-            <span>میز کار خریدار</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'orders'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>سفارش‌ها و پیگیری مرسوله</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('wishlist')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'wishlist'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Heart className="w-4 h-4" />
-            <span>علاقه‌مندی‌ها ({toPersianDigits(wishlist.length)})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('club')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'club'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Gift className="w-4 h-4" />
-            <span>باشگاه و تخفیف‌ها</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('addresses')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'addresses'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <MapPin className="w-4 h-4" />
-            <span>آدرس‌های ارسال</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('support')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'support'
-                ? 'bg-[#E06518] text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>پشتیبانی و تیکت</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('b2bRequest')}
-            className={`py-2.5 px-4 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              activeTab === 'b2bRequest'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-700 bg-orange-50/80 hover:bg-orange-100 border border-orange-200'
-            }`}
-          >
-            <Building className="w-4 h-4 text-[#E06518]" />
-            <span>درخواست اعتبار B2B</span>
-          </button>
-        </div>
-
-        {/* TAB 1: MAIN DASHBOARD HOME */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            
-            {/* Quick Banner to Catalog */}
-            <div className="bg-gradient-to-r from-[#12161f] via-[#1b2230] to-[#12161f] text-white p-6 rounded-3xl shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="space-y-2 max-w-xl text-center md:text-right">
-                <span className="px-3 py-1 bg-white/10 text-[#E06518] border border-white/10 rounded-full text-xs font-black inline-block">
-                  تضمین اصالت کالا و تحویل فوری
-                </span>
-                <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white">
-                  خرید آنلاین قطعات و تسمه‌های صنعتی با درگاه مستقیم بانکی
-                </h2>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  ارسال سریع به تمام نقاط کشور، پشتیبانی مهندسی و ضمانت ۳۰ روزه کیفیت کالا.
-                </p>
-              </div>
-
-              <Link
-                to="/products"
-                className="py-3 px-6 rounded-2xl bg-[#E06518] hover:bg-[#C95210] active:scale-95 text-white font-black text-xs sm:text-sm shadow-lg shadow-orange-950/40 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-              >
-                <ShoppingBag className="w-4.5 h-4.5" />
-                <span>ورود به فروشگاه و کاتالوگ محصولات</span>
-              </Link>
-            </div>
-
-            {/* Active Recent Order Card */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-[#E06518]" />
-                  <h3 className="font-black text-sm text-slate-900">
-                    آخرین سفارش ثبت‌شده: {orders[0].orderNumber}
-                  </h3>
-                </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300 flex items-center gap-1">
-                  <Truck className="w-3.5 h-3.5 text-sky-600" />
-                  <span>تحویل باربری وطن</span>
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className="p-3.5 bg-slate-50 rounded-2xl space-y-1">
-                  <span className="text-slate-400 block text-[11px]">مبلغ پرداختی نقد:</span>
-                  <span className="font-mono font-black text-slate-900 text-sm">
-                    {formatPrice(orders[0].totalAmount)} تومان
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 rounded-2xl space-y-1">
-                  <span className="text-slate-400 block text-[11px]">کد پیگیری مرسوله:</span>
-                  <span className="font-mono font-bold text-blue-700 text-sm">
-                    {orders[0].trackingCode}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 rounded-2xl space-y-1">
-                  <span className="text-slate-400 block text-[11px]">تاریخ ثبت سفارش:</span>
-                  <span className="font-bold text-slate-800 text-sm">
-                    {orders[0].createdAt}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleReorder(orders[0])}
-                  className="py-2.5 px-4 rounded-xl bg-orange-50 text-[#E06518] hover:bg-orange-100 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>سفارش مجدد این اقلام</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('orders')}
-                  className="py-2.5 px-4 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>جزئیات کامل مرسوله</span>
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Recommended Products Grid */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-4.5 h-4.5 text-[#E06518]" />
-                  <span>محصولات پرفروش و پیشنهادی برای خرید نقدی</span>
-                </h3>
-                <Link to="/products" className="text-xs font-bold text-[#E06518] hover:underline flex items-center gap-1">
-                  <span>مشاهده همه</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allProducts.slice(0, 3).map(product => (
-                  <div key={product.code} className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all space-y-3 text-right flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                          {product.code}
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          موجود در انبار یزد
-                        </span>
-                      </div>
-                      <h4 className="font-black text-xs text-slate-900 line-clamp-2">
-                        {product.name}
-                      </h4>
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-slate-400">قیمت نقدی:</span>
-                        <span className="font-mono font-black text-sm text-[#E06518]">
-                          {formatPrice(product.prices.retail)} تومان
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => addToCart(product, 1)}
-                        className="w-full py-2 bg-[#E06518] hover:bg-[#C95210] active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>افزودن به سبد خرید</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: ORDERS & TRACKING */}
-        {activeTab === 'orders' && (
-          <div className="space-y-4">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-              <h2 className="font-black text-base text-slate-900 flex items-center gap-2">
-                <Package className="w-5 h-5 text-[#E06518]" />
-                <span>سوابق سفارش‌ها و پیگیری مرسوله‌ها</span>
-              </h2>
-
-              <div className="space-y-4">
-                {orders.map(o => (
-                  <div key={o.id} className="p-5 rounded-2xl border border-slate-200/90 bg-slate-50/50 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
-                      <div>
-                        <span className="font-mono font-black text-sm text-slate-900">{o.orderNumber}</span>
-                        <span className="text-xs text-slate-400 mr-2">تاریخ: {o.createdAt}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          پرداخت آنلاین موفق
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      {o.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs py-1">
-                          <span className="font-bold text-slate-800">{item.productName} ({toPersianDigits(item.quantity)} عدد)</span>
-                          <span className="font-mono font-bold text-slate-700">{formatPrice(item.totalPrice)} تومان</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-                      <div className="text-slate-600">
-                        <span>بارنامه / کد پیگیری: </span>
-                        <span className="font-mono font-bold text-blue-700">{o.trackingCode}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleReorder(o)}
-                          className="py-2 px-3 bg-[#E06518] hover:bg-[#C95210] text-white font-bold rounded-xl cursor-pointer text-xs flex items-center gap-1"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>خرید مجدد</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: WISHLIST */}
-        {activeTab === 'wishlist' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <h2 className="font-black text-base text-slate-900 flex items-center gap-2">
-              <Heart className="w-5 h-5 text-rose-500" />
-              <span>لیست علاقه‌مندی‌ها</span>
-            </h2>
-
-            {wishlistProducts.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-xs space-y-3">
-                <Heart className="w-12 h-12 text-slate-300 mx-auto" />
-                <p>هیچ کالایی در لیست علاقه‌مندی‌های شما ذخیره نشده است.</p>
-                <Link to="/products" className="inline-block py-2 px-4 bg-[#E06518] text-white font-bold rounded-xl text-xs">
-                  مشاهده کاتالوگ کالاها
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {wishlistProducts.map(p => (
-                  <div key={p.code} className="p-4 rounded-2xl border border-slate-200 space-y-3 text-right">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] text-slate-400">{p.code}</span>
-                      <button
-                        onClick={() => toggleWishlist(p.code)}
-                        className="text-rose-500 hover:text-rose-700 cursor-pointer p-1"
-                        title="حذف از لیست"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <h4 className="font-black text-xs text-slate-900 line-clamp-2">{p.name}</h4>
-
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <span className="font-mono font-black text-sm text-[#E06518]">{formatPrice(p.prices.retail)} ت</span>
-                      <button
-                        onClick={() => addToCart(p, 1)}
-                        className="py-1.5 px-3 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer"
-                      >
-                        + سبد خرید
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: CLUB & REWARDS */}
-        {activeTab === 'club' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="font-black text-base text-slate-900 flex items-center gap-2">
-                <Gift className="w-5 h-5 text-amber-500" />
-                <span>باشگاه مشتریان و امتیازات خرید</span>
-              </h2>
-              <span className="font-mono font-black text-base text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
-                موجودی: {toPersianDigits(points)} امتیاز
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              با هر خرید از صنعت پیش، به ازای هر ۱۰۰ هزار تومان، ۱ امتیاز به کیف پول شما اضافه می‌شود. امتیازات شما در فرم خرید آنلاین به تخفیف نقدی تبدیل خواهد شد.
-            </p>
-
-            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl space-y-2 text-xs text-amber-900">
-              <div className="font-bold flex items-center gap-2">
-                <Tag className="w-4 h-4 text-[#E06518]" />
-                <span>کد تخفیف هدیه عضویت جدید</span>
-              </div>
-              <p>کد تخفیف اختصاصی ۵٪ برای خریدهای بالای ۲ میلیون تومان: <strong className="font-mono bg-white px-2 py-0.5 rounded border border-amber-300 text-[#E06518]">WELCOME-ATL</strong></p>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: ADDRESSES */}
-        {activeTab === 'addresses' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="font-black text-base text-slate-900 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-sky-500" />
-                <span>مدیریت آدرس‌های تحویل کالا</span>
-              </h2>
-
-              <button
-                type="button"
-                onClick={() => setIsAddressModalOpen(true)}
-                className="py-2 px-3.5 bg-[#E06518] text-white rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>ثبت آدرس جدید</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {addresses.map(addr => (
-                <div key={addr.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex items-start justify-between text-xs">
-                  <div className="space-y-1">
-                    <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                      <span>{addr.title}</span>
-                      {addr.isDefault && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">پیش‌فرض</span>
-                      )}
-                    </div>
-                    <p className="text-slate-600">{addr.province}، {addr.city}، {addr.fullAddress}</p>
-                    <p className="text-slate-400">گیرنده: {addr.recipientName} ({addr.recipientPhone})</p>
-                  </div>
-
-                  <button
-                    onClick={() => deleteAddress(addr.id)}
-                    className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: SUPPORT & TICKETS */}
-        {activeTab === 'support' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
-            <h2 className="font-black text-base text-slate-900 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-500" />
-              <span>پشتیبانی و ثبت سؤال فنی</span>
-            </h2>
-
-            {ticketSentFeedback ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-1 text-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                <h3 className="font-bold">پیام شما ثبت شد</h3>
-                <p>کارشناسان واحد فروش و فنی بازرگانی اطلس به‌زودی با شما تماس خواهند گرفت.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSendSupportTicket} className="space-y-4 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">موضوع سؤال / استعلام:</label>
-                  <input
-                    type="text"
-                    required
-                    value={ticketSubject}
-                    onChange={e => setTicketSubject(e.target.value)}
-                    placeholder="مثلاً سؤال در مورد سایز تسمه کوره یا زمان ارسال..."
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-slate-800 bg-slate-50 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">متن پیام:</label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={ticketMsg}
-                    onChange={e => setTicketMsg(e.target.value)}
-                    placeholder="شرح دقیق سؤال یا کد کالای مورد نظر..."
-                    className="w-full p-3 rounded-xl border border-slate-200 text-slate-800 bg-slate-50 focus:bg-white text-xs"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="py-2.5 px-6 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer flex items-center gap-2"
-                >
-                  <Send className="w-4 h-4 text-[#E06518]" />
-                  <span>ارسال پیام به واحد پشتیبانی</span>
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* TAB 7: B2B CREDIT UPGRADE REQUEST */}
-        {activeTab === 'b2bRequest' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
-            <div className="space-y-1">
-              <span className="px-3 py-1 bg-orange-100 text-[#E06518] rounded-full text-xs font-black inline-block">
-                ویژه صاحب کارخانه، نمایندگی و فروشگاه‌های صنعتی
-              </span>
-              <h2 className="font-black text-lg text-slate-900">
-                درخواست ارتقا به پرتال اعتباری B2B و خرید چکی ۳۰ روزه
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                اگر خریدار عمده هستید یا مدیریت کارخانه/فروشگاه را بر عهده دارید، فرم زیر را تکمیل نمایید تا حساب شما توسط واحد CRM بررسی و رمز عبور اختصاصی B2B برای شما صادر گردد.
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                {resolvedConfig.uiTexts.heroSubtitle}
               </p>
             </div>
 
-            {b2bSubmitted ? (
-              <div className="p-5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 text-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                <h3 className="font-black text-sm">درخواست شما با موفقیت به واحد CRM ارسال شد</h3>
-                <p>پس از بررسی پرونده، شناسه و رمز ورود B2B به همراه سقف اعتباری از طریق پیامک برای شما ارسال خواهد شد.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleB2bRequestSubmit} className="space-y-4 text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">نام شرکت / کارخانه / مغازه:</label>
-                  <input
-                    type="text"
-                    required
-                    value={b2bCompanyName}
-                    onChange={e => setB2bCompanyName(e.target.value)}
-                    placeholder="مثلاً کارخانه کاشی ستاره میبد یا فروشگاه ابزار پارس..."
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">توضیحات و زمینه فعالیت:</label>
-                  <textarea
-                    rows={3}
-                    value={b2bNotes}
-                    onChange={e => setB2bNotes(e.target.value)}
-                    placeholder="توضیح در مورد حجم خرید ماهانه تسمه، بلبرینگ و قطعات صنعتی..."
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs"
-                  />
-                </div>
-
+            <div className="flex flex-wrap items-center gap-3">
+              {resolvedConfig.permissions.allowExcelPriceListDownload && (
                 <button
-                  type="submit"
-                  className="py-2.5 px-6 bg-[#E06518] hover:bg-[#C95210] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-2"
+                  type="button"
+                  onClick={handleDownloadMyPriceListExcel}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-2 shadow-lg transition cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>ثبت درخواست اعتبار B2B</span>
+                  <Download className="w-4 h-4" />
+                  <span>{resolvedConfig.uiTexts.excelDownloadButtonLabel}</span>
                 </button>
-              </form>
+              )}
+              <Link
+                to="/products"
+                className="px-4 py-2.5 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-orange-600/20 transition"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>{resolvedConfig.uiTexts.primaryCtaLabel}</span>
+              </Link>
+              <Link
+                to="/cart"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold flex items-center gap-2 transition"
+              >
+                <ShoppingCart className="w-4 h-4 text-amber-400" />
+                <span>سبد خرید من ({toPersianDigits((cartItems || []).length)})</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* 4 KPI Summary Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-7">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>{resolvedConfig.uiTexts.kpi1Title}</span>
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-sm sm:text-base font-black text-emerald-400">
+                حساب کاربری فعال
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                نام کاربری: <span className="font-mono">{user?.username || user?.phone || 'فعال'}</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>{resolvedConfig.uiTexts.kpi2Title}</span>
+                <Package className="w-4 h-4 text-[#E06518]" />
+              </div>
+              <div className="text-base sm:text-lg font-black text-white font-mono">
+                {toPersianDigits(orders.length)} سفارش
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                ۱ مرسوله در مسیر تحویل
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>{resolvedConfig.uiTexts.kpi3Title}</span>
+                <FileText className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="text-base sm:text-lg font-black text-white font-mono">
+                {formatPrice(totalSpent)} <span className="text-xs font-normal">تومان</span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                همراه با فاکتور و رسید رسمی
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>{resolvedConfig.uiTexts.kpi4Title}</span>
+                <ShieldCheck className="w-4 h-4 text-sky-400" />
+              </div>
+              <div className="text-sm sm:text-base font-black text-white">
+                تضمین ۱۰۰٪ اصالت کالا
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                ارسال مستقیم از انبار مرکزی یزد
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================================
+          DEDICATED BANNER SLOT (جایگاه ویژه طراحی بنر و کمپین‌های جمعی و تکی)
+         ===================================================================== */}
+      {resolvedConfig.permissions.showPromotionalBanners &&
+        (activeBanners.length > 0 || resolvedConfig.customCartDiscountRule) && (
+          <div className="max-w-7xl mx-auto px-4 mt-6 space-y-3">
+            {resolvedConfig.customCartDiscountRule && (
+              <div className="p-5 rounded-3xl bg-gradient-to-l from-emerald-900 via-teal-900 to-slate-900 text-white border border-emerald-400/40 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-1.5 text-emerald-300 text-xs font-bold">
+                    <Sparkles className="w-4 h-4" />
+                    <span>طرح تشویقی ویژه حساب شما</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    با رسیدن حجم خرید شما به{' '}
+                    {formatPrice(resolvedConfig.customCartDiscountRule.minVolume)} تومان،{' '}
+                    {toPersianDigits(resolvedConfig.customCartDiscountRule.discountPercent)}٪ تخفیف به کل سبد خرید شما اضافه می‌شود
+                  </h3>
+                  <p className="text-xs text-emerald-100/90">
+                    {resolvedConfig.customCartDiscountRule.description}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('quick_buy')}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shrink-0 cursor-pointer transition"
+                >
+                  ثبت سفارش و دریافت تخفیف
+                </button>
+              </div>
             )}
+
+            {activeBanners.map(banner => (
+              <div
+                key={banner.id}
+                className={`relative overflow-hidden rounded-3xl border bg-gradient-to-l ${getBannerThemeClasses(
+                  banner.theme
+                )} p-5 sm:p-7 shadow-lg`}
+              >
+                {banner.backgroundImage && (
+                  <img
+                    src={banner.backgroundImage}
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
+                  />
+                )}
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="space-y-2 max-w-3xl">
+                    <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-amber-300">
+                      <Tag className="w-3.5 h-3.5 text-[#E06518]" />
+                      <span>{banner.badgeText}</span>
+                      {banner.minCartVolume && banner.cartDiscountPercent ? (
+                        <>
+                          <span className="text-white/40">•</span>
+                          <span className="text-emerald-300">
+                            خرید بالای {formatPrice(banner.minCartVolume)} ت ={' '}
+                            {toPersianDigits(banner.cartDiscountPercent)}٪ تخفیف کل سبد خرید
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-black text-white leading-relaxed">
+                      {banner.title}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                      {banner.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleBannerAction(banner)}
+                      className="px-5 py-3 rounded-2xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-black flex items-center gap-2 shadow-lg cursor-pointer transition"
+                    >
+                      <span>{banner.ctaText || 'مشاهده و ثبت سفارش'}</span>
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-      </div>
+      {/* Main Content Layout */}
+      <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Right Navigation Sidebar */}
+        <aside className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 p-4 shadow-xs space-y-2 lg:sticky lg:top-24">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3 mb-2">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#E06518] to-amber-600 text-white flex items-center justify-center font-black text-base shrink-0 shadow-xs">
+              <User className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-black text-xs text-slate-900 truncate">
+                {user?.fullName || 'مهندس امیرحسین کاظمی'}
+              </div>
+              <div className="text-[11px] font-mono text-slate-500 mt-0.5">
+                {user?.phone || '09123456789'}
+              </div>
+              <div className="text-[10px] font-bold text-emerald-700 mt-1">
+                پنل کاربری من
+              </div>
+            </div>
+          </div>
 
-      {/* Address Form Modal */}
-      {isAddressModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-6 space-y-4 text-right">
-            <h3 className="font-black text-sm text-slate-900 border-b border-slate-100 pb-2">
-              افزودن نشانی جدید تحویل بار
-            </h3>
+          {enabledMenus.map(item => {
+            const Icon = getMenuIcon(item.id);
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-all ${
+                  isActive
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon
+                    className={`w-4 h-4 ${isActive ? 'text-[#E06518]' : 'text-slate-400'}`}
+                  />
+                  <span>{item.label}</span>
+                </div>
+                <ArrowLeft className="w-3.5 h-3.5 opacity-60" />
+              </button>
+            );
+          })}
 
-            <form onSubmit={handleAddAddressSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">عنوان نشانی (مثلاً منزل / انبار کارخانه):</label>
-                <input
-                  type="text"
-                  required
-                  value={newAddress.title}
-                  onChange={e => setNewAddress({ ...newAddress, title: e.target.value })}
-                  className="w-full h-9 px-3 border border-slate-200 rounded-xl"
-                />
+          {/* Category Quick Links in Menu */}
+          <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
+            <div className="px-2 text-[11px] font-black text-slate-500 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#E06518]" />
+              <span>دسترسی سریع دسته‌بندی کالاها</span>
+            </div>
+            <div className="space-y-1">
+              {CATEGORIES.slice(0, 5).map(cat => (
+                <button
+                  key={cat.slug}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategorySlug(cat.slug);
+                    setActiveTab('quick_buy');
+                  }}
+                  className="w-full text-right px-3 py-1.5 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-orange-50 hover:text-[#E06518] transition flex items-center justify-between cursor-pointer"
+                >
+                  <span className="truncate">{cat.name}</span>
+                  <ArrowLeft className="w-3 h-3 opacity-40 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {user && (
+            <div className="pt-3 mt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>خروج از حساب کاربری</span>
+              </button>
+            </div>
+          )}
+        </aside>
+
+        {/* Left Main Area */}
+        <main className="lg:col-span-9 space-y-6">
+          {/* Active Announcements */}
+          {activeAnnouncements.length > 0 && activeTab === 'overview' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeAnnouncements.map(ann => (
+                <div
+                  key={ann.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-start justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[11px] text-[#E06518] font-bold">
+                      <Bell className="w-3.5 h-3.5" />
+                      <span>{ann.tag}</span>
+                      {ann.highlightValue && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-emerald-700">{ann.highlightValue}</span>
+                        </>
+                      )}
+                    </div>
+                    <h4 className="font-black text-xs sm:text-sm text-slate-900">{ann.title}</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">{ann.body}</p>
+                  </div>
+                  {ann.actionLabel && ann.actionTab && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab(ann.actionTab!)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#E06518] text-white text-[11px] font-bold shrink-0 cursor-pointer transition"
+                    >
+                      {ann.actionLabel}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ===============================================================
+              TAB 1: OVERVIEW (پیشخوان کاربری و رهگیری مرسوله)
+             =============================================================== */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Active Shipment Live Tracker */}
+              {orders[0] && (
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-bold text-emerald-700">تأیید و تسویه‌شده</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="font-mono font-black text-sm text-slate-900" dir="ltr">
+                          {orders[0].orderNumber}
+                        </span>
+                      </div>
+                      <h2 className="text-base font-black text-slate-800 mt-1">
+                        وضعیت لحظه‌ای آخرین سفارش شما
+                      </h2>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {resolvedConfig.permissions.allowExcelPriceListDownload && (
+                        <button
+                          type="button"
+                          onClick={handleDownloadMyPriceListExcel}
+                          className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>{resolvedConfig.uiTexts.excelDownloadButtonLabel}</span>
+                        </button>
+                      )}
+                      {resolvedConfig.permissions.allowInvoicePrint && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReceiptOrder(orders[0])}
+                          className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>مشاهده و چاپ فاکتور</span>
+                        </button>
+                      )}
+                      {resolvedConfig.permissions.allowQuickReorder && (
+                        <button
+                          type="button"
+                          onClick={() => handleReorderItems(orders[0])}
+                          className="px-3.5 py-2 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>تکرار این سفارش</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Visual Stepper */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {[
+                      {
+                        step: '۱. ثبت و تأیید سفارش',
+                        desc: 'تأیید نهایی در سیستم',
+                        done: true,
+                      },
+                      {
+                        step: '۲. کنترل کیفی و بسته‌بندی',
+                        desc: 'تست اصالت در انبار مرکزی',
+                        done: true,
+                      },
+                      {
+                        step: '۳. تحویل به تیپاکس / باربری',
+                        desc: `کد رهگیری: ${orders[0].trackingCode}`,
+                        done: true,
+                        active: true,
+                      },
+                      {
+                        step: '۴. تحویل به آدرس شما',
+                        desc: 'در مسیر ارسال به مقصد',
+                        done: false,
+                      },
+                    ].map((st, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-2xl border text-xs ${
+                          st.active
+                            ? 'border-[#E06518] bg-orange-50/70'
+                            : st.done
+                            ? 'border-emerald-200 bg-emerald-50/50'
+                            : 'border-slate-200 bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-black text-slate-800">{st.step}</span>
+                          {st.done ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-slate-400" />
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-600">{st.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Order Items Summary */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-slate-600 pb-2 border-b border-slate-200">
+                      <span>
+                        روش ارسال: <strong className="text-slate-900">{orders[0].shippingMethod}</strong>
+                      </span>
+                      <span>
+                        مبلغ کل سفارش:{' '}
+                        <strong className="text-emerald-700 font-mono text-sm">
+                          {formatPrice(orders[0].totalAmount)} تومان
+                        </strong>
+                      </span>
+                    </div>
+                    <div className="divide-y divide-slate-200/60">
+                      {orders[0].items.map((item, i) => (
+                        <div key={i} className="py-2 flex items-center justify-between">
+                          <div>
+                            <span className="font-mono font-bold text-[#E06518] ml-2" dir="ltr">
+                              [{item.code}]
+                            </span>
+                            <span className="font-bold text-slate-800">{item.name}</span>
+                          </div>
+                          <div className="font-mono text-slate-700">
+                            {toPersianDigits(item.quantity)} {item.unit} × {formatPrice(item.unitPrice)} ت
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Product Selection Grid */}
+              {resolvedConfig.permissions.allowQuickSkuOrder && (
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-[#E06518]" />
+                        <span>{resolvedConfig.uiTexts.priceListSectionTitle}</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        قطعات و ملزومات پرمصرف صنعتی آماده افزودن مستقیم به سبد خرید شما
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('quick_buy')}
+                      className="text-xs font-bold text-[#E06518] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>مشاهده همه کالاها و جستجو با کد فنی</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {catalogProducts.slice(0, 6).map(prod => {
+                      const firstVar = (prod.variants || [])[0];
+                      const unitPrice =
+                        (firstVar && (firstVar.price || firstVar.prices?.retail)) ||
+                        prod.prices?.retail ||
+                        1450000;
+                      return (
+                        <div
+                          key={prod.code}
+                          className="p-4 rounded-2xl border border-slate-200 hover:border-[#E06518] bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between gap-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 p-1.5 shrink-0 overflow-hidden">
+                              <ProductImage
+                                src={prod.images?.[0]}
+                                alt={prod.name}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <span
+                                className="inline-block font-mono text-[11px] font-black text-[#E06518]"
+                                dir="ltr"
+                              >
+                                کد: {firstVar ? firstVar.code : prod.code}
+                              </span>
+                              <Link
+                                to={`/product/${encodeURIComponent(prod.code)}`}
+                                className="block font-black text-xs text-slate-800 hover:text-[#E06518] line-clamp-2 mt-0.5"
+                              >
+                                {prod.name}
+                              </Link>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
+                            <div>
+                              <span className="text-[10px] text-slate-500 block">قیمت واحد:</span>
+                              <span className="font-mono font-black text-xs text-emerald-700">
+                                {formatPrice(unitPrice)} تومان
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAddProduct(prod)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#E06518] text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>افزودن به سبد</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ===============================================================
+              TAB 2: ORDERS & MY PRICE LIST DOWNLOAD
+             =============================================================== */}
+          {activeTab === 'orders' && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-[#E06518]" />
+                    <span>{resolvedConfig.uiTexts.ordersSectionTitle}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    پیگیری وضعیت مرسولات، دریافت فاکتور و دانلود فایل اکسل لیست قیمت من
+                  </p>
+                </div>
+
+                {resolvedConfig.permissions.allowExcelPriceListDownload && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadMyPriceListExcel}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-sm transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{resolvedConfig.uiTexts.excelDownloadButtonLabel} (.xlsx)</span>
+                  </button>
+                )}
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">آدرس کامل:</label>
-                <textarea
-                  rows={2}
-                  required
-                  value={newAddress.fullAddress}
-                  onChange={e => setNewAddress({ ...newAddress, fullAddress: e.target.value })}
-                  placeholder="استان، شهر، خیابان، پلاک..."
-                  className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
-                />
+              <div className="space-y-4">
+                {orders.map(order => (
+                  <div
+                    key={order.id}
+                    className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-sm text-slate-900" dir="ltr">
+                            {order.orderNumber}
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span
+                            className={`text-xs font-bold ${
+                              order.status === 'delivered'
+                                ? 'text-emerald-700'
+                                : 'text-amber-700'
+                            }`}
+                          >
+                            {order.status === 'delivered'
+                              ? 'تحویل‌شده به مشتری'
+                              : 'تحویل تیپاکس / در مسیر ارسال'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          تاریخ ثبت: {order.date} • کد رهگیری مرسوله:{' '}
+                          <span className="font-mono font-bold text-slate-800" dir="ltr">
+                            {order.trackingCode}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {resolvedConfig.permissions.allowInvoicePrint && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceiptOrder(order)}
+                            className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>مشاهده فاکتور</span>
+                          </button>
+                        )}
+                        {resolvedConfig.permissions.allowQuickReorder && (
+                          <button
+                            type="button"
+                            onClick={() => handleReorderItems(order)}
+                            className="px-3 py-1.5 rounded-xl bg-[#E06518] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>سفارش مجدد</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      {order.items.map((it, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div>
+                            <span className="font-mono font-bold text-[#E06518] ml-1.5" dir="ltr">
+                              {it.code}
+                            </span>
+                            <span className="font-bold text-slate-800">{it.name}</span>
+                          </div>
+                          <div className="font-mono text-slate-700">
+                            {toPersianDigits(it.quantity)} {it.unit} × {formatPrice(it.unitPrice)} ت
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===============================================================
+              TAB 3: QUICK ORDER BY SKU CODE & CATEGORY
+             =============================================================== */}
+          {activeTab === 'quick_buy' && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-black text-base text-slate-800">
+                    جستجو و ثبت سفارش سریع بر اساس کد کالا یا دسته‌بندی
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    کد فنی قطعه (مثلاً 34265) یا نام آن را وارد کنید و مستقیماً به سبد خرید اضافه نمایید
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-72">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="search"
+                      value={quickSkuQuery}
+                      onChange={e => setQuickSkuQuery(e.target.value)}
+                      placeholder="جستجوی کد کالا یا نام محصول..."
+                      className="w-full pr-9 pl-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#E06518] outline-none"
+                    />
+                  </div>
+                  {resolvedConfig.permissions.allowExcelPriceListDownload && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadMyPriceListExcel}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>اکسل لیست قیمت من</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {/* Category Filter Bar */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddressModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 rounded-xl font-bold text-slate-600 cursor-pointer"
+                  onClick={() => setSelectedCategorySlug('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition ${
+                    selectedCategorySlug === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
-                  انصراف
+                  همه دسته‌بندی‌ها
                 </button>
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat.slug}
+                    type="button"
+                    onClick={() => setSelectedCategorySlug(cat.slug)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition ${
+                      selectedCategorySlug === cat.slug
+                        ? 'bg-[#E06518] text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {catalogProducts.map(prod => {
+                  const firstVar = (prod.variants || [])[0];
+                  const unitPrice =
+                    (firstVar && (firstVar.price || firstVar.prices?.retail)) ||
+                    prod.prices?.retail ||
+                    1450000;
+                  return (
+                    <div
+                      key={prod.code}
+                      className="p-3.5 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3 bg-slate-50/40 hover:bg-white hover:border-[#E06518] transition"
+                    >
+                      <div>
+                        <span className="font-mono text-xs font-black text-[#E06518]" dir="ltr">
+                          کد: {firstVar ? firstVar.code : prod.code}
+                        </span>
+                        <div className="font-bold text-xs text-slate-800 mt-1">{prod.name}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{prod.categoryName}</div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                        <span className="font-mono font-black text-xs text-emerald-700">
+                          {formatPrice(unitPrice)} ت
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAddProduct(prod)}
+                          className="px-3 py-1.5 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold cursor-pointer transition"
+                        >
+                          + افزودن به سبد
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ===============================================================
+              TAB 4: RECEIPTS & INVOICES
+             =============================================================== */}
+          {activeTab === 'receipts' && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-black text-base text-slate-800">
+                  رسیدهای پرداخت و فاکتورهای رسمی سفارشات من
+                </h3>
+                {resolvedConfig.permissions.allowExcelPriceListDownload && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadMyPriceListExcel}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{resolvedConfig.uiTexts.excelDownloadButtonLabel}</span>
+                  </button>
+                )}
+              </div>
+              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full text-xs text-right border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-700">
+                    <tr>
+                      <th className="py-3 px-4 font-bold">شماره فاکتور</th>
+                      <th className="py-3 px-4 font-bold">تاریخ ثبت</th>
+                      <th className="py-3 px-4 font-bold">شماره پیگیری پرداخت</th>
+                      <th className="py-3 px-4 font-bold">مبلغ کل (تومان)</th>
+                      <th className="py-3 px-4 font-bold">عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {orders.map(o => (
+                      <tr key={o.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4 font-mono font-black text-slate-900" dir="ltr">
+                          {o.orderNumber}
+                        </td>
+                        <td className="py-3 px-4">{o.date}</td>
+                        <td className="py-3 px-4 font-mono text-slate-600">{o.paymentRef}</td>
+                        <td className="py-3 px-4 font-mono font-black text-emerald-700">
+                          {formatPrice(o.totalAmount)} ت
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceiptOrder(o)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs cursor-pointer"
+                          >
+                            مشاهده و چاپ فاکتور
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ===============================================================
+              TAB 5: SHIPPING ADDRESSES
+             =============================================================== */}
+          {activeTab === 'addresses' && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-base text-slate-800">
+                  آدرس‌های ثبت‌شده جهت ارسال مرسولات
+                </h3>
                 <button
-                  type="submit"
-                  className="px-5 py-2 bg-[#E06518] text-white rounded-xl font-bold cursor-pointer"
+                  type="button"
+                  onClick={() => setIsAddingAddress(!isAddingAddress)}
+                  className="px-4 py-2 rounded-xl bg-[#E06518] text-white text-xs font-bold cursor-pointer"
                 >
-                  ذخیره نشانی
+                  + افزودن آدرس جدید
                 </button>
               </div>
-            </form>
+
+              {isAddingAddress && (
+                <form
+                  onSubmit={handleAddAddress}
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      required
+                      placeholder="عنوان آدرس (مثلاً کارگاه مرکزی)"
+                      value={newAddress.title}
+                      onChange={e => setNewAddress({ ...newAddress, title: e.target.value })}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    />
+                    <input
+                      type="text"
+                      required
+                      placeholder="نام تحویل‌گیرنده"
+                      value={newAddress.receiver}
+                      onChange={e => setNewAddress({ ...newAddress, receiver: e.target.value })}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    />
+                    <input
+                      type="text"
+                      dir="ltr"
+                      placeholder="شماره تماس"
+                      value={newAddress.phone}
+                      onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-mono"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="نشانی دقیق پستی..."
+                    value={newAddress.fullAddress}
+                    onChange={e =>
+                      setNewAddress({ ...newAddress, fullAddress: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold cursor-pointer"
+                    >
+                      ذخیره آدرس
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addresses.map(addr => (
+                  <div
+                    key={addr.id}
+                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm text-slate-900">{addr.title}</span>
+                      {addr.isDefault && (
+                        <span className="text-emerald-700 text-[11px] font-bold">
+                          آدرس پیش‌فرض
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">{addr.fullAddress}</p>
+                    <div className="text-[11px] text-slate-500 pt-1">
+                      تحویل‌گیرنده: <strong>{addr.receiver}</strong> • تلفن:{' '}
+                      <span className="font-mono">{addr.phone}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Printable Invoice Modal */}
+      {selectedReceiptOrder && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <h4 className="text-sm font-black">
+                فاکتور و رسید خرید — {selectedReceiptOrder.orderNumber}
+              </h4>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 rounded-lg bg-[#E06518] text-white text-xs font-bold cursor-pointer"
+                >
+                  چاپ فاکتور
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReceiptOrder(null)}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold cursor-pointer"
+                >
+                  بستن
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4 text-xs">
+              <div className="flex justify-between pb-3 border-b border-slate-200">
+                <div>
+                  <div className="font-black text-sm text-slate-900">
+                    فروشگاه و بازرگانی هایپرصنعت اطلس یزد
+                  </div>
+                  <div className="text-slate-500 mt-0.5">
+                    خریدار: {selectedReceiptOrder.receiverName}
+                  </div>
+                </div>
+                <div className="text-left">
+                  <div>تاریخ: {selectedReceiptOrder.date}</div>
+                  <div className="text-emerald-700 font-bold mt-0.5">وضعیت: تسویه کامل</div>
+                </div>
+              </div>
+
+              <table className="w-full text-right border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-600">
+                    <th className="py-2">کد کالا</th>
+                    <th className="py-2">شرح کالا</th>
+                    <th className="py-2">تعداد</th>
+                    <th className="py-2">قیمت واحد (تومان)</th>
+                    <th className="py-2">جمع (تومان)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {selectedReceiptOrder.items.map((it, i) => (
+                    <tr key={i}>
+                      <td className="py-2.5 font-mono font-bold text-[#E06518]" dir="ltr">
+                        {it.code}
+                      </td>
+                      <td className="py-2.5 font-bold">{it.name}</td>
+                      <td className="py-2.5">
+                        {toPersianDigits(it.quantity)} {it.unit}
+                      </td>
+                      <td className="py-2.5 font-mono">{formatPrice(it.unitPrice)}</td>
+                      <td className="py-2.5 font-mono font-bold">
+                        {formatPrice(it.unitPrice * it.quantity)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between font-black text-sm text-emerald-950">
+                <span>جمع کل پرداخت‌شده:</span>
+                <span className="font-mono">{formatPrice(selectedReceiptOrder.totalAmount)} تومان</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

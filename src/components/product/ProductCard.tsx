@@ -206,15 +206,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Dynamic Pricing Box */}
         <div className="mt-auto pt-2.5 border-t border-[#CBD2D8]">
-          {!currentUser ? (
+          {!product.inquiryOnly && product.prices?.retail > 0 ? (
+            <div className="bg-emerald-50/70 rounded-xl p-2.5 border border-emerald-200 text-right mb-2.5 space-y-0.5">
+              <div className="flex items-center justify-between text-[10.5px] text-slate-600">
+                <span>
+                  {product.variants && product.variants.length > 1
+                    ? 'شروع قیمت کدها از:'
+                    : 'قیمت کد کالا:'}
+                </span>
+                <span className="font-mono text-emerald-700 font-bold">قیمت مصوب</span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-black text-emerald-900 font-mono">
+                  {toPersianDigits(new Intl.NumberFormat('fa-IR').format(product.prices.retail))}
+                </span>
+                <span className="text-[10.5px] font-bold text-emerald-800">تومان</span>
+              </div>
+            </div>
+          ) : !currentUser ? (
             /* Guest / Not logged in */
             <div className="bg-[#DEE2E5] rounded-xl p-2.5 border border-[#CBD2D8] text-center mb-2.5 space-y-1">
               <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#55565A]">
                 <Lock className="w-3.5 h-3.5 text-[#E06518] shrink-0" />
-                <span>مشاهده قیمت منوط به استعلام</span>
+                <span>نیازمند استعلام (بر اساس کد کالا)</span>
               </div>
               <p className="text-[10px] text-[#777A7D]">
-                سایز و کد کالا را برای استعلام قیمت و موجودی انتخاب کنید.
+                سایز و کد کالا را برای مشاهده مشخصات و استعلام انتخاب کنید.
               </p>
             </div>
           ) : inquiryResult ? (
@@ -244,7 +261,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             /* Logged in but not yet inquired */
             <div className="bg-[#DEE2E5] rounded-xl p-2.5 border border-[#CBD2D8] text-center mb-2.5">
               <span className="text-[11px] font-bold text-[#55565A] block">
-                استعلام نرخ اختصاصی برای شما
+                نیازمند استعلام قیمت کد کالا
               </span>
               <span className="text-[10px] text-[#777A7D]">
                 برای انتخاب سایز و ثبت استعلام کلیک کنید
@@ -257,20 +274,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Link
               to={`/product/${encodeURIComponent(product.code)}`}
               className="col-span-1 flex items-center justify-center h-9 rounded-xl border border-[#CBD2D8] text-[#55565A] hover:text-[#E06518] hover:bg-[#DEE2E5] transition-colors"
-              title="مشاهده مشخصات فنی و استعلام"
+              title="مشاهده مشخصات فنی و کدها"
             >
               <Eye className="w-4 h-4 text-[#55565A]" />
             </Link>
 
-            {!currentUser ? (
-              /* Guest: Inquiry Button that prompts login */
+            {!product.inquiryOnly && product.prices?.retail > 0 ? (
+              <Link
+                to={`/product/${encodeURIComponent(product.code)}`}
+                className="col-span-4 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>انتخاب کد کالا و خرید</span>
+              </Link>
+            ) : !currentUser ? (
+              /* Guest: Inquiry Button */
               <button
                 type="button"
                 onClick={handleInquirePriceClick}
                 className="col-span-4 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#55565A] hover:bg-[#55565A]/90 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 <PhoneCall className="w-3.5 h-3.5 text-[#E06518]" />
-                <span>استعلام قیمت کالا</span>
+                <span>انتخاب کد و استعلام قیمت</span>
               </button>
             ) : inquiryResult ? (
               /* Logged In with price: Can add to cart / quote */

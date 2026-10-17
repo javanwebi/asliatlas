@@ -1,8 +1,13 @@
 import { ProductVariants } from '../components/product/ProductVariants';
 import { ProductImage } from '../components/product/ProductImage';
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getProductByCode, getSimilarProducts } from '../data/mockGenerator';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import {
+  getProductByCode,
+  getSimilarProducts,
+  buildDefaultGalleryImages,
+  subscribeCatalogChanges,
+} from '../data/mockGenerator';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -19,8 +24,6 @@ import {
   Heart,
   Share2,
   Copy,
-  Info,
-  Lock,
   Sparkles,
   Layers,
   Award,
@@ -29,22 +32,56 @@ import {
   ArrowUpRight,
   Shield,
   CheckCircle2,
+  Eye,
+  Link2,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ProductCard } from '../components/product/ProductCard';
 import { pricingCreditService } from '../services/pricingCreditService';
+import { adminService } from '../services/adminService';
 
 export const ProductDetailPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
+  const [searchParams] = useSearchParams();
+  const isPreviewMode = searchParams.get('preview') === '1' || !!adminService.getCurrentAdmin();
+
   const { currentUser, openAuthModal } = useAuth();
   const { addToCart, submitInquiry } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
-  const product = code ? getProductByCode(decodeURIComponent(code)) : undefined;
+  const [catalogTick, setCatalogTick] = useState(0);
+  useEffect(() => {
+    return subscribeCatalogChanges(() => setCatalogTick(t => t + 1));
+  }, []);
+
+  const decodedCode = code ? decodeURIComponent(code).trim() : '';
+  const product = useMemo(
+    () => (decodedCode ? getProductByCode(decodedCode, { includeInactive: isPreviewMode }) : undefined),
+    [decodedCode, isPreviewMode, catalogTick]
+  );
+
+  // Visible variants (filter out inactive unless in preview mode)
+  const visibleVariants = useMemo(() => {
+    if (!product?.variants) return [];
+    return isPreviewMode
+      ? product.variants
+      : product.variants.filter(v => v.active !== false);
+  }, [product, isPreviewMode]);
+
+  // Structured gallery images with scope ('family' vs 'variant') and variantCode
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    const allImgs = buildDefaultGalleryImages(product);
+    if (isPreviewMode) return allImgs;
+    // Hide images belonging to inactive variants for public visitors
+    const activeCodes = new Set(visibleVariants.map(v => v.code));
+    return allImgs.filter(
+      img => img.scope === 'family' || !img.variantCode || activeCodes.has(img.variantCode)
+    );
+  }, [product, visibleVariants, isPreviewMode]);
 
   const [selectedVariantCode, setSelectedVariantCode] = useState('');
-  useEffect(() => { setSelectedVariantCode(product?.variants?.find(v => v.code === code)?.code || product?.variants?.[0]?.code || ''); setActiveImageIndex(0); }, [code, product?.code]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -56,27 +93,72 @@ export const ProductDetailPage: React.FC = () => {
   const [isInquiring, setIsInquiring] = useState(false);
   const [activeTab, setActiveTab] = useState<'specs' | 'catalogue' | 'delivery'>('specs');
 
-  const [inquiryData, setInquiryData] = useState<{
-    price: number;
-    gradeName: string;
-    priceListName: string;
-    discountPercent: number;
-  } | null>(() => {
-    if (!product || !currentUser) return null;
-    const approval = pricingCreditService.getCustomerByPhone(currentUser.phone);
-    const gradeId = approval?.assignedGradeId || 'grade-4';
-    const priceListId = approval?.assignedPriceListId || 'pl-standard-d';
-    const calc = pricingCreditService.calculateInquiryPrice(product, priceListId, gradeId);
-    if (calc) {
-      return {
-        price: calc.calculatedPrice,
-        gradeName: calc.gradeName,
-        priceListName: calc.priceListName,
-        discountPercent: calc.discountPercent,
-      };
+  // Initialize selected variant & matching image when URL code or family changes
+  useEffect(() => {
+    if (!product) return;
+    const matchedFromUrl = visibleVariants.find(
+      v => v.code.toLowerCase() === decodedCode.toLowerCase()
+    );
+    const initialCode = matchedFromUrl?.code || visibleVariants[0]?.code || '';
+    setSelectedVariantCode(initialCode);
+
+    if (initialCode) {
+      const variantImgIdx = galleryImages.findIndex(
+        img => img.scope === 'variant' && img.variantCode === initialCode
+      );
+      setActiveImageIndex(variantImgIdx >= 0 ? variantImgIdx : 0);
+    } else {
+      setActiveImageIndex(0);
     }
-    return null;
-  });
+  }, [decodedCode, product?.code, visibleVariants.length]);
+
+  // 1. Customer selects a SKU code -> show image, specs, and price of that SKU
+  const handleSelectVariant = (newVariantCode: string) => {
+    setSelectedVariantCode(newVariantCode);
+    setQuantity(1);
+
+    const currentImg = galleryImages[activeImageIndex];
+    // If current image is already linked to this exact SKU, keep it (do not jump)
+    if (currentImg && currentImg.scope === 'variant' && currentImg.variantCode === newVariantCode) {
+      return;
+    }
+
+    // Find first image linked to this SKU
+    const firstLinkedIdx = galleryImages.findIndex(
+      img => img.scope === 'variant' && img.variantCode === newVariantCode
+    );
+    if (firstLinkedIdx >= 0) {
+      setActiveImageIndex(firstLinkedIdx);
+      return;
+    }
+
+    // If this SKU has no dedicated image and current image belongs to another SKU,
+    // switch to the first general family image so another SKU's photo isn't shown misleadingly
+    if (currentImg && currentImg.scope === 'variant' && currentImg.variantCode !== newVariantCode) {
+      const firstFamilyIdx = galleryImages.findIndex(img => img.scope === 'family');
+      if (firstFamilyIdx >= 0) {
+        setActiveImageIndex(firstFamilyIdx);
+      }
+    }
+  };
+
+  // 2. Customer clicks an image -> if linked to a SKU, automatically select that SKU;
+  //    if multiple images belong to the same SKU, switching between them keeps that SKU;
+  //    if it is a general family image, do NOT change the selected SKU.
+  const handleSelectImage = (idx: number) => {
+    setActiveImageIndex(idx);
+    const clickedImg = galleryImages[idx];
+    if (!clickedImg) return;
+
+    if (clickedImg.scope === 'variant' && clickedImg.variantCode) {
+      const targetExists = visibleVariants.some(v => v.code === clickedImg.variantCode);
+      if (targetExists && selectedVariantCode !== clickedImg.variantCode) {
+        setSelectedVariantCode(clickedImg.variantCode);
+        setQuantity(1);
+      }
+    }
+    // When clickedImg.scope === 'family', we deliberately keep selectedVariantCode unchanged.
+  };
 
   if (!product) {
     return (
@@ -86,7 +168,7 @@ export const ProductDetailPage: React.FC = () => {
         </div>
         <h2 className="text-lg font-bold text-[#55565A]">کالای مورد نظر یافت نشد</h2>
         <p className="text-xs text-slate-500 leading-relaxed">
-          کد کالای وارد شده در کاتالوگ جامع قطعات ثبت نشده است یا ممکن است کد تغییر یافته باشد.
+          کد کالای وارد شده در کاتالوگ جامع قطعات ثبت نشده است یا ممکن است موقتاً غیرفعال شده باشد.
         </p>
         <Link
           to="/products"
@@ -98,65 +180,89 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const stockInfo = product.stockKnown === false ? { text: 'موجودی نیازمند استعلام', badgeBg: '#94a3b8' } : getStockStatus(product.stock);
-  const selectedVariant = product.variants?.find(v => v.code === selectedVariantCode);
-  const requestedProduct = selectedVariant ? { ...product, code: selectedVariant.code, name: selectedVariant.name, technicalSpecs: [...product.technicalSpecs, { key: 'سایز انتخاب‌شده', value: selectedVariant.size }] } : product;
+  const selectedVariant = visibleVariants.find(v => v.code === selectedVariantCode) || visibleVariants[0];
+
+  // SKU-owned pricing & stock resolution
+  const activeUnitPrice = selectedVariant
+    ? selectedVariant.price ?? selectedVariant.prices?.retail ?? 0
+    : product.prices?.retail ?? 0;
+
+  const isSelectedInquiryOnly = selectedVariant
+    ? selectedVariant.inquiryOnly !== undefined
+      ? selectedVariant.inquiryOnly
+      : activeUnitPrice <= 0
+    : product.inquiryOnly || activeUnitPrice <= 0;
+
+  const isSelectedStockKnown = selectedVariant
+    ? selectedVariant.stockKnown !== undefined
+      ? selectedVariant.stockKnown
+      : typeof selectedVariant.stock === 'number' && !isSelectedInquiryOnly
+    : product.stockKnown !== false;
+
+  const activeStockCount = selectedVariant
+    ? selectedVariant.stock ?? 0
+    : product.stock ?? 0;
+
+  const stockInfo = !isSelectedStockKnown
+    ? { text: 'موجودی نیازمند استعلام', badgeBg: '#94a3b8' }
+    : getStockStatus(activeStockCount);
+
+  const activeBrand = selectedVariant?.brand || product.brand || 'ثبت نشده';
+  const activeUnit = selectedVariant?.unit || product.unit || 'عدد';
+  const activeVariantSpecs = selectedVariant?.technicalSpecs || [];
+
+  // Combined technical specs for cart/inquiry payload
+  const combinedSpecs = [
+    ...(selectedVariant?.size ? [{ key: 'سایز انتخاب‌شده', value: selectedVariant.size }] : []),
+    ...(selectedVariant?.model ? [{ key: 'مدل فنی', value: selectedVariant.model }] : []),
+    ...activeVariantSpecs,
+    ...(product.technicalSpecs || []),
+  ];
+
+  const requestedProduct = selectedVariant
+    ? {
+        ...product,
+        code: selectedVariant.code,
+        name: selectedVariant.name || product.name,
+        brand: activeBrand,
+        unit: activeUnit,
+        prices: selectedVariant.prices || {
+          base: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.8) : 0,
+          retail: activeUnitPrice,
+          wholesale: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.9) : 0,
+          dealer: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.84) : 0,
+        },
+        stock: activeStockCount,
+        inquiryOnly: isSelectedInquiryOnly,
+        images:
+          selectedVariant.images && selectedVariant.images.length > 0
+            ? selectedVariant.images
+            : product.images,
+        technicalSpecs: combinedSpecs,
+      }
+    : product;
+
   const isFavorited = isInWishlist(product.code);
   const similarProducts = getSimilarProducts(product, 4);
-  const imageLabels = product.images.map(() => 'تصویر نمونه خانواده محصول');
+  const currentGalleryImage = galleryImages[activeImageIndex] || galleryImages[0];
 
-  const handleInquirePriceClick = () => {
-    if (!currentUser) {
-      openAuthModal();
-      return;
-    }
-
-    if (product.inquiryOnly && product.prices.retail <= 0) { setIsInquiryModalOpen(true); return; }
-    setIsInquiring(true);
-    setTimeout(() => {
-      let approval = pricingCreditService.getCustomerByPhone(currentUser.phone);
-      if (!approval) {
-        approval = pricingCreditService.registerCustomer({
-          fullName: currentUser.fullName,
-          companyName: currentUser.companyName || '',
-          phone: currentUser.phone,
-          province: currentUser.province || 'یزد',
-          city: currentUser.city || 'یزد',
-          activityField: 'صنعتی',
-          monthlyPurchaseEstimate: 'متوسط',
-        });
-      }
-
-      const gradeId = approval.assignedGradeId || 'grade-4';
-      const priceListId = approval.assignedPriceListId || 'pl-standard-d';
-      const calc = pricingCreditService.calculateInquiryPrice(product, priceListId, gradeId);
-
-      if (calc) {
-        setInquiryData({
-          price: calc.calculatedPrice,
-          gradeName: calc.gradeName,
-          priceListName: calc.priceListName,
-          discountPercent: calc.discountPercent,
-        });
-      }
-      setIsInquiring(false);
-    }, 400);
-  };
+  // Images connected to the currently selected variant
+  const selectedVariantImagesCount = selectedVariant
+    ? galleryImages.filter(g => g.scope === 'variant' && g.variantCode === selectedVariant.code).length
+    : 0;
 
   const handleAddToCart = () => {
-    if (!currentUser) {
-      openAuthModal();
-      return;
-    }
-
-    if (product.inquiryOnly || !inquiryData) {
+    if (isSelectedInquiryOnly || activeUnitPrice <= 0) {
       setIsInquiryModalOpen(true);
       return;
     }
-
     addToCart(requestedProduct, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+  };
+
+  const handleInquirePriceClick = () => {
+    setIsInquiryModalOpen(true);
   };
 
   const handleInquirySubmit = (e: React.FormEvent) => {
@@ -179,8 +285,8 @@ export const ProductDetailPage: React.FC = () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: product.name,
-          text: `${product.name} (کد فنی: ${product.code}) - بازرگانی اطلس`,
+          title: requestedProduct.name,
+          text: `${requestedProduct.name} (کد کالا: ${requestedProduct.code}) - صنعت پیش اطلس`,
           url: window.location.href,
         });
         return;
@@ -201,7 +307,30 @@ export const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 lg:space-y-8 pb-24 lg:pb-12 text-right" dir="rtl">
-      {/* 1. BREADCRUMB & UTILITY ACTIONS (MOBILE & DESKTOP) */}
+      {/* Preview / Inactive Banner for Site Manager */}
+      {(product.active === false || selectedVariant?.active === false || searchParams.get('preview') === '1') && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 px-5 flex items-center justify-between gap-3 flex-wrap text-xs text-amber-900">
+          <div className="flex items-center gap-2 font-bold">
+            <Eye className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              حالت پیش‌نمایش مدیر سایت:
+              {product.active === false
+                ? ' این خانواده محصول در حال حاضر «غیرفعال موقت» است و فقط برای شما نمایش داده می‌شود.'
+                : selectedVariant?.active === false
+                ? ` کد کالای ${selectedVariant.code} «غیرفعال موقت» است.`
+                : ' در حال بررسی رابطهٔ دوطرفهٔ کد کالا، تصویر و قیمت پیش از انتشار نهایی هستید.'}
+            </span>
+          </div>
+          <Link
+            to="/admin"
+            className="px-3 py-1.5 rounded-lg bg-amber-800 text-white font-bold hover:bg-amber-900 transition-colors"
+          >
+            بازگشت به پنل مدیریت
+          </Link>
+        </div>
+      )}
+
+      {/* 1. BREADCRUMB & UTILITY ACTIONS */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto no-scrollbar py-1">
           <Link to="/" className="hover:text-[#E06518] transition-colors shrink-0">
@@ -214,12 +343,20 @@ export const ProductDetailPage: React.FC = () => {
           <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <Link
             to={`/category/${product.categorySlug}`}
-            className="hover:text-[#E06518] transition-colors shrink-0 max-w-[120px] sm:max-w-none truncate"
+            className="hover:text-[#E06518] transition-colors shrink-0 max-w-[140px] sm:max-w-none truncate"
           >
             {product.categoryName}
           </Link>
           <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="text-[#55565A] font-bold font-mono shrink-0">{product.code}</span>
+          <span className="text-[#55565A] font-bold shrink-0">{product.name}</span>
+          {selectedVariant && (
+            <>
+              <ChevronLeft className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="text-[#E06518] font-bold font-mono shrink-0" dir="ltr">
+                {selectedVariant.code}
+              </span>
+            </>
+          )}
         </nav>
 
         {/* Quick Utilities */}
@@ -249,44 +386,132 @@ export const ProductDetailPage: React.FC = () => {
       {/* 2. MAIN PRODUCT DETAIL HERO CONTAINER */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 lg:p-8 shadow-xs">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-start">
-          {/* Left: Gallery (Sticky on Desktop) */}
+          {/* Left: Gallery with Two-Way SKU Binding (Sticky on Desktop) */}
           <div className="lg:col-span-5 space-y-3.5 lg:sticky lg:top-24">
             <div className="relative w-full pt-[82%] bg-gradient-to-b from-slate-50/70 to-white border border-slate-200/90 rounded-2xl overflow-hidden group flex items-center justify-center">
               <ProductImage
-                src={product.images[activeImageIndex] || product.images[0]}
-                alt={product.name}
+                src={currentGalleryImage?.url || product.images[0]}
+                alt={currentGalleryImage?.title || requestedProduct.name}
                 className="absolute inset-0 w-full h-full object-contain p-6 sm:p-8 group-hover:scale-105 transition-transform duration-300"
               />
-              {product.images.length > 0 && <div className="absolute bottom-3 right-3 bg-slate-900/75 backdrop-blur-xs text-white text-[10.5px] px-3 py-1 rounded-lg font-medium shadow-xs">
-                {imageLabels[activeImageIndex]} ({toPersianDigits(activeImageIndex + 1)} از {toPersianDigits(product.images.length)})
-              </div>}
+
+              {/* Top Scope Badge on Main Image: Distinguishes SKU-Specific Image vs General Family Image */}
+              {currentGalleryImage && (
+                <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2 pointer-events-none">
+                  {currentGalleryImage.scope === 'variant' && currentGalleryImage.variantCode ? (
+                    <span className="inline-flex items-center gap-1.5 bg-[#E06518] text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow-xs">
+                      <Link2 className="w-3.5 h-3.5" />
+                      <span>تصویر اختصاصی کد {currentGalleryImage.variantCode}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 bg-slate-800/85 text-white text-[11px] font-medium px-3 py-1 rounded-lg shadow-xs">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>تصویر عمومی خانواده محصول</span>
+                    </span>
+                  )}
+
+                  {galleryImages.length > 1 && (
+                    <span className="bg-white/90 border border-slate-200 text-slate-700 text-[10.5px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
+                      {toPersianDigits(activeImageIndex + 1)} از {toPersianDigits(galleryImages.length)}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom Caption */}
+              {currentGalleryImage && (
+                <div className="absolute bottom-3 right-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] px-3 py-1.5 rounded-xl font-medium shadow-xs flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {currentGalleryImage.title ||
+                      (currentGalleryImage.scope === 'variant' && currentGalleryImage.variantCode
+                        ? `تصویر اختصاصی متصل به کد کالای ${currentGalleryImage.variantCode}`
+                        : `تصویر عمومی خانواده ${product.name}`)}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {product.imageScope === 'family-example' && <p className="text-xs text-slate-500 leading-6">تصویر نمونهٔ این خانواده است؛ تصویر اختصاصی هر سایز و کد کالا هنوز ثبت نشده است.</p>}
-            {/* Thumbnails */}
-            <div className="grid grid-cols-4 gap-2 sm:gap-3 max-h-60 overflow-y-auto p-1" aria-label="گالری تصاویر محصول">
-              {product.images.map((imgUrl, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  aria-label={`نمایش تصویر ${toPersianDigits(idx + 1)} از ${toPersianDigits(product.images.length)} ${product.name}`}
-                  aria-pressed={activeImageIndex === idx}
-                  onClick={() => setActiveImageIndex(idx)}
-                  className={`relative pt-[75%] rounded-xl border overflow-hidden transition-all cursor-pointer ${
-                    activeImageIndex === idx
-                      ? 'border-[#E06518] ring-2 ring-[#E06518] ring-offset-1 shadow-xs bg-white'
-                      : 'border-slate-200/80 opacity-70 hover:opacity-100 hover:border-slate-300 bg-slate-50/60'
-                  }`}
+            {/* Scope Notice */}
+            {currentGalleryImage?.scope === 'family' ? (
+              <p className="text-xs text-slate-500 leading-6 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2">
+                این یک <strong>تصویر عمومی خانوادهٔ محصول</strong> است؛ مشاهدهٔ آن کد کالای انتخاب‌شده را تغییر نمی‌دهد.
+              </p>
+            ) : currentGalleryImage?.scope === 'variant' && currentGalleryImage.variantCode ? (
+              <p className="text-xs text-emerald-900 leading-6 bg-emerald-50/80 border border-emerald-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                <span>
+                  این تصویر مستقیماً به کد کالای <strong className="font-mono" dir="ltr">{currentGalleryImage.variantCode}</strong> متصل است.
+                </span>
+                {selectedVariantImagesCount > 1 && (
+                  <span className="text-[11px] font-bold text-emerald-700 shrink-0">
+                    ({toPersianDigits(selectedVariantImagesCount)} تصویر برای این کد)
+                  </span>
+                )}
+              </p>
+            ) : null}
+
+            {/* Thumbnails Strip with Interactive Two-Way Selection */}
+            {galleryImages.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                  <span>با کلیک روی تصویر هر کد، همان کد کالا خودکار انتخاب می‌شود:</span>
+                  <span>{toPersianDigits(galleryImages.length)} تصویر</span>
+                </div>
+                <div
+                  className="grid grid-cols-4 gap-2 sm:gap-3 max-h-64 overflow-y-auto p-1"
+                  aria-label="گالری تصاویر محصول"
                 >
-                  <ProductImage
-                    src={imgUrl}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-contain p-2"
-                  />
-                </button>
-              ))}
-            </div>
+                  {galleryImages.map((img, idx) => {
+                    const isCurrentImg = activeImageIndex === idx;
+                    const isBoundToSelectedSku =
+                      img.scope === 'variant' &&
+                      img.variantCode &&
+                      img.variantCode === selectedVariant?.code;
+
+                    return (
+                      <button
+                        key={img.id || idx}
+                        type="button"
+                        aria-label={
+                          img.scope === 'variant' && img.variantCode
+                            ? `انتخاب تصویر کد ${img.variantCode} (${toPersianDigits(idx + 1)} از ${toPersianDigits(galleryImages.length)})`
+                            : `نمایش تصویر عمومی خانواده ${toPersianDigits(idx + 1)} از ${toPersianDigits(galleryImages.length)}`
+                        }
+                        aria-pressed={isCurrentImg}
+                        onClick={() => handleSelectImage(idx)}
+                        className={`relative pt-[78%] rounded-xl border overflow-hidden transition-all cursor-pointer text-right ${
+                          isCurrentImg
+                            ? 'border-[#E06518] ring-2 ring-[#E06518] ring-offset-1 shadow-xs bg-white'
+                            : isBoundToSelectedSku
+                            ? 'border-orange-300 bg-orange-50/30 hover:border-[#E06518]'
+                            : 'border-slate-200/80 opacity-80 hover:opacity-100 hover:border-slate-300 bg-slate-50/60'
+                        }`}
+                      >
+                        <ProductImage
+                          src={img.url}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-contain p-2 pb-5"
+                        />
+                        <span
+                          className={`absolute bottom-0 inset-x-0 text-[9.5px] font-bold px-1.5 py-0.5 text-center truncate ${
+                            img.scope === 'variant' && img.variantCode
+                              ? isBoundToSelectedSku
+                                ? 'bg-[#E06518] text-white font-mono'
+                                : 'bg-slate-800/85 text-white font-mono'
+                              : 'bg-slate-200/90 text-slate-700'
+                          }`}
+                          dir={img.scope === 'variant' ? 'ltr' : 'rtl'}
+                        >
+                          {img.scope === 'variant' && img.variantCode
+                            ? `کد ${img.variantCode}`
+                            : 'عمومی خانواده'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions Under Gallery */}
             <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-500">
@@ -300,7 +525,9 @@ export const ProductDetailPage: React.FC = () => {
                     isFavorited ? 'fill-red-500 text-red-500' : 'text-slate-400'
                   }`}
                 />
-                <span className="text-[11.5px]">{isFavorited ? 'نشان‌شده در حساب شما' : 'نشان کردن کالا'}</span>
+                <span className="text-[11.5px]">
+                  {isFavorited ? 'نشان‌شده در حساب شما' : 'نشان کردن خانواده کالا'}
+                </span>
               </button>
 
               <button
@@ -309,137 +536,217 @@ export const ProductDetailPage: React.FC = () => {
                 className="flex items-center gap-1.5 hover:text-[#55565A] transition-colors cursor-pointer py-1"
               >
                 <Copy className="w-4 h-4 text-slate-400" />
-                <span className="text-[11.5px]">{copiedCode ? 'کد کپی شد' : 'کپی کد فنی کالا'}</span>
+                <span className="text-[11.5px]">
+                  {copiedCode ? 'کد کالا کپی شد' : `کپی کد انتخاب‌شده (${requestedProduct.code})`}
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Right: Technical Specs & Pricing Actions */}
+          {/* Right: Family Header + Variant Selector + SKU-Specific Specs & Price */}
           <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              {/* Badges Strip */}
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              {/* Metadata Line (Clean unboxed metadata + key codes) */}
+              <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-[#55565A] border border-slate-200">
-                    کد فنی: {product.code}
+                  <span>
+                    خانواده: <strong className="font-mono text-slate-800" dir="ltr">{product.code}</strong>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-orange-50 text-[#C95210] text-xs font-bold border border-orange-200">
-                    {product.brand}
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    کد کالای انتخاب‌شده:{' '}
+                    <strong className="font-mono text-[#E06518]" dir="ltr">
+                      {requestedProduct.code}
+                    </strong>
                   </span>
-                  {product.forzaCode && (
-                    <span
-                      className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200"
-                      dir="ltr"
-                    >
-                      {product.forzaCode}
-                    </span>
-                  )}
-                  {product.cataloguePage && (
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
-                      کاتالوگ رسمی: صفحه {toPersianDigits(product.cataloguePage)}
-                    </span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    برند: <strong className="text-slate-800">{activeBrand}</strong>
+                  </span>
+                  {selectedVariant?.model && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span>
+                        مدل: <strong className="font-mono text-slate-800" dir="ltr">{selectedVariant.model}</strong>
+                      </span>
+                    </>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{product.stockKnown === false ? 'موجودی نیازمند استعلام' : `موجود در انبار یزد (${toPersianDigits(product.stock)} عدد)`}</span>
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: stockInfo.badgeBg }}
+                  />
+                  <span className="text-slate-700">
+                    {!isSelectedStockKnown
+                      ? 'موجودی نیازمند استعلام'
+                      : activeStockCount > 0
+                      ? `موجود در انبار (${toPersianDigits(activeStockCount)} ${activeUnit})`
+                      : 'ناموجود / تأمین سفارشی'}
+                  </span>
                 </div>
               </div>
 
-              {/* Product Title */}
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#55565A] tracking-tight leading-snug">
-                {product.name}
-              </h1>
+              {/* Family Title & Active SKU Subtitle */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold text-slate-500">
+                  خانواده محصول: {product.name}
+                </div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#37383b] tracking-tight leading-snug">
+                  {selectedVariant ? selectedVariant.name : product.name}
+                </h1>
+                {selectedVariant?.size && (
+                  <div className="text-xs sm:text-sm font-bold text-[#E06518] pt-0.5">
+                    سایز / مشخصه فنی کد {selectedVariant.code}:{' '}
+                    <span className="font-mono text-slate-800" dir="auto">
+                      {selectedVariant.size}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-              {/* Stock status indicator */}
-              <div className="flex items-center gap-2 text-xs">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: stockInfo.badgeBg }}
+              {/* Quick Variant Chips (for fast 1-click switching when <= 12 variants) */}
+              {visibleVariants.length > 1 && visibleVariants.length <= 12 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-xs font-bold text-slate-700 block">
+                    انتخاب سریع کد کالا (با انتخاب هر کد، تصویر و قیمت آن نمایش داده می‌شود):
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleVariants.map(v => {
+                      const isSel = v.code === selectedVariant?.code;
+                      const vPrice = v.price ?? v.prices?.retail ?? 0;
+                      const vInq = v.inquiryOnly !== undefined ? v.inquiryOnly : vPrice <= 0;
+                      return (
+                        <button
+                          key={v.code}
+                          type="button"
+                          onClick={() => handleSelectVariant(v.code)}
+                          className={`px-3 py-2 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-0.5 ${
+                            isSel
+                              ? 'border-[#E06518] bg-orange-50/90 text-[#37383b] ring-1 ring-[#E06518]'
+                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-black text-[#E06518]" dir="ltr">
+                              {v.code}
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-600">
+                              {v.size && v.size !== 'نامشخص' ? v.size : v.name}
+                            </span>
+                          </div>
+                          <div className="text-[10.5px] font-bold">
+                            {!vInq && vPrice > 0 ? (
+                              <span className="text-emerald-800 font-mono">
+                                {toPersianDigits(new Intl.NumberFormat('fa-IR').format(vPrice))} تومان
+                              </span>
+                            ) : (
+                              <span className="text-amber-700">نیازمند استعلام</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Full Searchable Variants Table */}
+              {visibleVariants.length > 0 && (
+                <ProductVariants
+                  key={product.code}
+                  variants={visibleVariants}
+                  selected={selectedVariant?.code || ''}
+                  onSelect={handleSelectVariant}
+                  galleryImages={galleryImages}
                 />
-                <span className="text-slate-700 font-bold">{stockInfo.text}</span>
-              </div>
+              )}
 
-              {product.variants?.length ? <ProductVariants key={product.code} variants={product.variants} selected={selectedVariantCode} onSelect={setSelectedVariantCode} /> : null}
-              {selectedVariant && <p className="rounded-xl bg-orange-50 p-3 text-xs text-orange-900" aria-live="polite">کالای انتخاب‌شده برای استعلام: {selectedVariant.name} — کد {selectedVariant.code}</p>}
-              {/* Description */}
+              {/* Selected Variant Specific Technical Specs Summary Box */}
+              {selectedVariant && activeVariantSpecs.length > 0 && (
+                <div className="rounded-2xl border border-orange-200/80 bg-orange-50/40 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-black text-[#37383b]">
+                      مشخصات فنی اختصاصی کد انتخاب‌شده ({selectedVariant.code})
+                    </h3>
+                    <span className="text-[11px] font-mono text-[#E06518] font-bold" dir="ltr">
+                      {selectedVariant.model || selectedVariant.size}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {activeVariantSpecs.map((sp, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white/90 rounded-xl border border-orange-100 px-3 py-2 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <span className="text-slate-500">{sp.key}:</span>
+                        <span className="font-bold text-slate-800">{sp.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Family Description */}
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                {product.description}
+                {selectedVariant?.description || product.description}
               </p>
 
-              {/* Industrial Features Bar */}
+              {/* Industrial Key Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium">واحد شمارش:</span>
-                  <span className="text-xs font-bold text-slate-800 mt-1">{product.unit}</span>
+                  <span className="text-[11px] text-slate-400 font-medium">واحد شمارش کد:</span>
+                  <span className="text-xs font-bold text-slate-800 mt-1">{activeUnit}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium">وضعیت قیمت:</span>
-                  <span className="text-xs font-bold text-emerald-700 mt-1 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    نیازمند استعلام
-                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">وضعیت قیمت کد:</span>
+                  {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+                    <span className="text-xs font-bold text-emerald-700 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      قیمت مصوب فعال
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-amber-700 mt-1 flex items-center gap-1">
+                      <PhoneCall className="w-3.5 h-3.5 text-amber-600" />
+                      نیازمند استعلام
+                    </span>
+                  )}
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
                   <span className="text-[11px] text-slate-400 font-medium">تحویل کالا:</span>
                   <span className="text-xs font-bold text-slate-800 mt-1">انبار مرکزی یزد</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium">مستندات مهندسی:</span>
+                  <span className="text-[11px] text-slate-400 font-medium">تعداد کل کدهای خانواده:</span>
                   <span className="text-xs font-bold text-slate-800 mt-1">
-                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'هنوز ثبت نشده'}
+                    {toPersianDigits(visibleVariants.length || 1)} کد کالا
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Primary Pricing & Order Action Area */}
+            {/* Primary SKU-Owned Pricing & Order Action Area */}
             <div className="pt-5 border-t border-slate-200/80 space-y-4">
-              {!currentUser ? (
-                /* Guest: Sleek, Minimal Inquiry Row */
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-slate-50/80 to-orange-50/20 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#55565A]">استعلام رسمی قیمت کالا</span>
-                      <span className="text-[10.5px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                        محاسبه طبق رتبه اعتباری
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>جهت مشاهده نرخ اختصاصی و صدور پیش‌فاکتور رسمی، وارد حساب خود شوید.</span>
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal()}
-                    className="h-11 sm:h-12 px-6 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-98"
-                  >
-                    <PhoneCall className="w-4 h-4" />
-                    <span>ورود و استعلام قیمت رسمی</span>
-                  </button>
-                </div>
-              ) : inquiryData ? (
-                /* Logged In with Inquired Price */
-                <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90">
+              {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+                /* SKU HAS AN ACTIVE PRICE */
+                <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90">
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
-                      <span className="text-[11px] text-slate-500 block mb-0.5">
-                        نرخ مصوب استعلامی ({inquiryData.gradeName}):
+                      <span className="text-xs text-slate-500 block mb-1">
+                        قیمت واحد کد کالای انتخاب‌شده (<strong className="font-mono text-slate-800" dir="ltr">{requestedProduct.code}</strong>):
                       </span>
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl sm:text-3xl font-black text-emerald-900 font-mono">
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-800 font-mono">
                           {toPersianDigits(
-                            new Intl.NumberFormat('fa-IR').format(inquiryData.price * quantity)
+                            new Intl.NumberFormat('fa-IR').format(activeUnitPrice * quantity)
                           )}
                         </span>
-                        <span className="text-xs text-slate-600 font-medium">تومان</span>
+                        <span className="text-xs text-slate-600 font-bold">تومان</span>
                         {quantity > 1 && (
-                          <span className="text-[11px] text-slate-400 mr-2">
-                            (هر {product.unit}{' '}
-                            {toPersianDigits(new Intl.NumberFormat('fa-IR').format(inquiryData.price))}{' '}
+                          <span className="text-[11px] text-slate-500 mr-2">
+                            (هر {activeUnit}{' '}
+                            {toPersianDigits(new Intl.NumberFormat('fa-IR').format(activeUnitPrice))}{' '}
                             تومان)
                           </span>
                         )}
@@ -448,7 +755,7 @@ export const ProductDetailPage: React.FC = () => {
 
                     {/* Quantity Selector */}
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">تعداد ({product.unit}):</span>
+                      <span className="text-xs text-slate-500">تعداد ({activeUnit}):</span>
                       <div className="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden shadow-2xs">
                         <button
                           type="button"
@@ -472,14 +779,14 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <button
                       type="button"
                       onClick={handleAddToCart}
-                      disabled={!product.inquiryOnly && product.stock <= 0}
+                      disabled={isSelectedStockKnown && activeStockCount <= 0}
                       className={`h-12 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 ${
-                        !product.inquiryOnly && product.stock <= 0
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        isSelectedStockKnown && activeStockCount <= 0
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
                           : added
                           ? 'bg-emerald-600 text-white'
                           : 'bg-[#E06518] hover:bg-[#C95210] text-white'
@@ -488,12 +795,12 @@ export const ProductDetailPage: React.FC = () => {
                       {added ? (
                         <>
                           <Check className="w-4 h-4" />
-                          <span>به پیش‌فاکتور افزوده شد</span>
+                          <span>کد {requestedProduct.code} به پیش‌فاکتور افزوده شد</span>
                         </>
                       ) : (
                         <>
                           <ShoppingCart className="w-4 h-4" />
-                          <span>افزودن به سبد و پیش‌فاکتور</span>
+                          <span>افزودن کد {requestedProduct.code} به سبد خرید</span>
                         </>
                       )}
                     </button>
@@ -504,27 +811,31 @@ export const ProductDetailPage: React.FC = () => {
                       className="h-12 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-[#55565A] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-slate-50 active:scale-98"
                     >
                       <FileSpreadsheet className="w-4 h-4 text-[#E06518]" />
-                      <span>درخواست هماهنگی تحویل انبار یزد</span>
+                      <span>درخواست پیش‌فاکتور رسمی / خرید عمده</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                /* Logged In, needs instant click to inquire */
-                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                /* SKU HAS NO PRICE -> REQUIRES INQUIRY ("نیازمند استعلام") */
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/60 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <span className="text-sm font-bold text-[#55565A] block">استعلام قیمت و موجودی کد انتخاب‌شده</span>
-                    <p className="text-[11px] text-slate-500">
-                      کد و سایز انتخاب‌شده همراه درخواست شما ثبت می‌شود.
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black text-amber-950">
+                        وضعیت قیمت کد {requestedProduct.code}: نیازمند استعلام
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-900/80 leading-relaxed">
+                      برای این کد کالا هنوز قیمت ثابتی ثبت نشده است؛ درخواست استعلام خود را ثبت کنید تا قیمت روز و موجودی انبار اعلام شود.
                     </p>
                   </div>
+
                   <button
                     type="button"
                     onClick={handleInquirePriceClick}
-                    disabled={isInquiring}
                     className="h-11 sm:h-12 px-6 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-98"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{isInquiring ? 'در حال استعلام نرخ...' : 'درخواست قیمت و موجودی'}</span>
+                    <PhoneCall className="w-4 h-4" />
+                    <span>ثبت استعلام قیمت کد {requestedProduct.code}</span>
                   </button>
                 </div>
               )}
@@ -533,9 +844,8 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2.5 INTERACTIVE TABS: SPECS, CATALOGUE, WAREHOUSE & DELIVERY */}
+      {/* 2.5 INTERACTIVE TABS: SPECS (SHARED + VARIANT-SPECIFIC), CATALOGUE, DELIVERY */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-        {/* Tab Headers */}
         <div className="flex items-center border-b border-slate-200/80 bg-slate-50/70 overflow-x-auto no-scrollbar">
           <button
             type="button"
@@ -547,7 +857,7 @@ export const ProductDetailPage: React.FC = () => {
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>اطلاعات فنی ثبت‌شده</span>
+            <span>مشخصات فنی (اختصاصی کد + مشترک خانواده)</span>
           </button>
 
           <button
@@ -560,7 +870,7 @@ export const ProductDetailPage: React.FC = () => {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>تطبیق با کاتالوگ و نقشه‌کشی کارخانه</span>
+            <span>شناسنامه کد و تطبیق با کاتالوگ</span>
           </button>
 
           <button
@@ -577,65 +887,113 @@ export const ProductDetailPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab Content */}
         <div className="p-5 sm:p-7">
           {activeTab === 'specs' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              {/* Variant-Specific Specs Table */}
+              {selectedVariant && (
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#37383b]">
+                      ۱. مشخصات اختصاصی کد کالای انتخاب‌شده ({selectedVariant.code})
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      اطلاعات فنی، سایز و ویژگی‌های مربوط به همین نوع/کد کالا
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto rounded-2xl border border-orange-200/80 shadow-2xs">
+                    <table className="w-full text-xs text-right">
+                      <thead>
+                        <tr className="bg-orange-50/70 border-b border-orange-200/80 text-slate-800">
+                          <th className="py-3 px-4 font-bold w-1/3">ویژگی اختصاصی کد {selectedVariant.code}</th>
+                          <th className="py-3 px-4 font-bold">مقدار ثبت‌شده</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-orange-100">
+                        <tr className="bg-white">
+                          <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
+                            کد دقیق کالا
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-[#E06518]" dir="ltr">
+                            {selectedVariant.code}
+                          </td>
+                        </tr>
+                        <tr className="bg-orange-50/20">
+                          <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
+                            نام دقیق نوع کالا
+                          </td>
+                          <td className="py-3 px-4 font-bold text-slate-800">{selectedVariant.name}</td>
+                        </tr>
+                        <tr className="bg-white">
+                          <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
+                            سایز / ابعاد
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-slate-800" dir="auto">
+                            {selectedVariant.size || '—'}
+                          </td>
+                        </tr>
+                        {selectedVariant.model && (
+                          <tr className="bg-orange-50/20">
+                            <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
+                              مدل فنی
+                            </td>
+                            <td className="py-3 px-4 font-mono font-bold text-slate-800" dir="ltr">
+                              {selectedVariant.model}
+                            </td>
+                          </tr>
+                        )}
+                        {activeVariantSpecs.map((spec, i) => (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-orange-50/20'}>
+                            <td className="py-3 px-4 font-semibold text-slate-700 border-l border-orange-100">
+                              {spec.key}
+                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{spec.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Shared Family Specs Table */}
+              <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-[#55565A]">مشخصات خانواده محصول</h3>
+                  <h3 className="text-sm font-bold text-[#55565A]">
+                    ۲. مشخصات مشترک خانوادهٔ محصول ({product.name})
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    مشخصات ثبت‌شده در فهرست محصولات
+                    ویژگی‌های عمومی و مشترک بین تمام کدهای زیرمجموعهٔ این خانواده
                   </p>
                 </div>
-                {product.cataloguePage && (
-                  <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200">
-                    صفحه {toPersianDigits(product.cataloguePage)} کاتالوگ جامع ۱۴۰۴
-                  </span>
+
+                {product.technicalSpecs && product.technicalSpecs.length > 0 ? (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
+                    <table className="w-full text-xs text-right">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
+                          <th className="py-3.5 px-4 font-bold w-1/3">شاخص فنی مشترک خانواده</th>
+                          <th className="py-3.5 px-4 font-bold">اطلاعات ثبت‌شده</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {product.technicalSpecs.map((spec, i) => (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                            <td className="py-3.5 px-4 font-semibold text-slate-700 border-l border-slate-100">
+                              {spec.key}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold text-[#55565A]">{spec.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
+                    اطلاعات فنی بیشتر طبق نقشه ساخت و فایل کاتالوگ قابل ارائه است.
+                  </div>
                 )}
               </div>
-
-              {product.technicalSpecs && product.technicalSpecs.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
-                  <table className="w-full text-xs text-right">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
-                        <th className="py-3.5 px-4 font-bold w-1/3">شاخص فنی و مهندسی</th>
-                        <th className="py-3.5 px-4 font-bold">اطلاعات ثبت‌شده</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {product.technicalSpecs.map((spec, i) => (
-                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
-                          <td className="py-3.5 px-4 font-semibold text-slate-700 border-l border-slate-100">
-                            {spec.key}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-bold text-[#55565A]">{spec.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
-                  اطلاعات فنی بیشتر طبق نقشه ساخت و فایل کاتالوگ قابل ارائه است.
-                </div>
-              )}
-
-              {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap pt-2">
-                  <span className="text-xs text-slate-400">برچسب‌های طبقه‌بندی قطعه:</span>
-                  {product.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -651,23 +1009,27 @@ export const ProductDetailPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
                   <span className="text-slate-400 block text-[11px]">کد کالای انتخاب‌شده:</span>
-                  <span className="font-mono font-bold text-[#55565A] text-sm block">
+                  <span className="font-mono font-bold text-[#55565A] text-sm block" dir="ltr">
                     {selectedVariant?.code || product.forzaCode || product.code}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">صفحه در کاتالوگ مرجع:</span>
-                  <span className="font-bold text-[#55565A] text-sm block">
-                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'ثبت نشده'}
+                  <span className="text-slate-400 block text-[11px]">کد خانواده مرجع:</span>
+                  <span className="font-mono font-bold text-[#55565A] text-sm block" dir="ltr">
+                    {product.code}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
                   <span className="text-slate-400 block text-[11px]">برند ثبت‌شده:</span>
-                  <span className="font-bold text-orange-600 text-sm block">{product.brand}</span>
+                  <span className="font-bold text-orange-600 text-sm block">{activeBrand}</span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">استاندارد مرجع تولید:</span>
-                  <span className="font-bold text-[#55565A] text-sm block">ثبت نشده</span>
+                  <span className="text-slate-400 block text-[11px]">تصاویر متصل به این کد:</span>
+                  <span className="font-bold text-[#55565A] text-sm block">
+                    {selectedVariantImagesCount > 0
+                      ? `${toPersianDigits(selectedVariantImagesCount)} تصویر اختصاصی`
+                      : 'استفاده از تصویر عمومی خانواده'}
+                  </span>
                 </div>
               </div>
 
@@ -676,8 +1038,7 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="space-y-1">
                   <h4 className="font-bold text-amber-950">تأییدیه اصالت کاتالوگ رسمی</h4>
                   <p className="text-[11.5px] leading-relaxed text-amber-900/90">
-                    تمامی ابعاد، تلرانس‌ها و مقادیر اسمی این قطعه با نسخه اصلی کاتالوگ ۱۴۰۴ بازرگانی تسمه و قطعات
-                    اطلس مطابقت کامل دارد. در صورت نیاز به نقشه دو بعدی یا سه بعدی CAD، با واحد مهندسی تماس بگیرید.
+                    تمامی ابعاد، کدهای فنی و مشخصات ثبت‌شده با کاتالوگ رسمی بازرگانی تسمه و قطعات صنعتی اطلس مطابقت دارد.
                   </p>
                 </div>
               </div>
@@ -718,9 +1079,9 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="w-9 h-9 rounded-xl bg-blue-100/80 text-blue-700 flex items-center justify-center">
                     <Award className="w-4 h-4" />
                   </div>
-                  <h4 className="font-bold text-slate-900">ضمانت اصالت و بازگشت</h4>
+                  <h4 className="font-bold text-slate-900">ضمانت اصالت و تطبیق کد</h4>
                   <p className="text-slate-500 text-[11.5px] leading-relaxed">
-                    پیش از ثبت سفارش، تطبیق کد کالا، سایز و مشخصات مورد نیاز را با واحد فروش بررسی کنید.
+                    پیش از ارسال، کد کالا، سایز و مشخصات فنی انتخاب‌شده توسط واحد کنترل کیفیت بررسی و تأیید می‌شود.
                   </p>
                 </div>
               </div>
@@ -750,38 +1111,29 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* 4. MOBILE / ANDROID STICKY BOTTOM ACTION BAR */}
+      {/* 4. MOBILE STICKY BOTTOM ACTION BAR */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 py-3 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <span className="block text-[11px] font-mono text-slate-500 truncate">{product.code}</span>
+          <span className="block text-[11px] font-mono text-slate-500 truncate" dir="ltr">
+            کد: {requestedProduct.code}
+          </span>
           <div className="text-xs font-black text-[#55565A] truncate">
-            {!currentUser ? (
-              <span className="text-amber-700">نیازمند استعلام رسمی</span>
-            ) : inquiryData ? (
+            {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
               <span className="text-emerald-700 font-mono">
-                {toPersianDigits(new Intl.NumberFormat('fa-IR').format(inquiryData.price * quantity))} تومان
+                {toPersianDigits(new Intl.NumberFormat('fa-IR').format(activeUnitPrice * quantity))} تومان
               </span>
             ) : (
-              <span className="text-amber-700">آماده استعلام</span>
+              <span className="text-amber-700">نیازمند استعلام</span>
             )}
           </div>
         </div>
 
         <div>
-          {!currentUser ? (
-            <button
-              type="button"
-              onClick={() => openAuthModal()}
-              className="h-11 px-5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
-            >
-              <PhoneCall className="w-4 h-4" />
-              <span>استعلام قیمت</span>
-            </button>
-          ) : inquiryData ? (
+          {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={!product.inquiryOnly && product.stock <= 0}
+              disabled={isSelectedStockKnown && activeStockCount <= 0}
               className="h-11 px-5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
@@ -791,11 +1143,10 @@ export const ProductDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={handleInquirePriceClick}
-              disabled={isInquiring}
               className="h-11 px-5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>{isInquiring ? 'محاسبه...' : 'استعلام قیمت'}</span>
+              <PhoneCall className="w-4 h-4" />
+              <span>استعلام قیمت</span>
             </button>
           )}
         </div>
@@ -805,21 +1156,24 @@ export const ProductDetailPage: React.FC = () => {
       <Modal
         isOpen={isInquiryModalOpen}
         onClose={() => setIsInquiryModalOpen(false)}
-        title={`استعلام قیمت و تحویل کالا: ${product.code}`}
+        title={`استعلام قیمت و موجودی کد: ${requestedProduct.code}`}
         size="md"
       >
         <form onSubmit={handleInquirySubmit} className="space-y-4 text-right">
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            <p className="font-semibold text-sm text-[#55565A]">{product.name}</p>
+            <p className="font-semibold text-sm text-[#55565A]">{requestedProduct.name}</p>
             <p className="text-xs text-slate-500 mt-1">
-              برند: {product.brand} | دسته‌بندی: {product.categoryName}
+              خانواده: {product.name} | برند: {activeBrand} | دسته‌بندی: {product.categoryName}
             </p>
           </div>
 
-          <p className="text-xs bg-orange-50 p-3 rounded-xl">{requestedProduct.name} — کد {requestedProduct.code}</p>
+          <p className="text-xs bg-orange-50 p-3 rounded-xl font-medium text-orange-950">
+            کد کالای انتخاب‌شده: <strong className="font-mono" dir="ltr">{requestedProduct.code}</strong>
+            {selectedVariant?.size ? ` — سایز: ${selectedVariant.size}` : ''}
+          </p>
           <div>
             <label className="block text-xs font-bold text-[#55565A] mb-1">
-              تعداد مورد نیاز ({product.unit}):
+              تعداد مورد نیاز ({activeUnit}):
             </label>
             <input
               type="number"
@@ -853,7 +1207,7 @@ export const ProductDetailPage: React.FC = () => {
               type="submit"
               className="w-full h-11 bg-[#E06518] hover:bg-[#C95210] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
             >
-              ارسال استعلام رسمی
+              ارسال استعلام رسمی برای کد {requestedProduct.code}
             </button>
           )}
         </form>

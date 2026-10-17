@@ -17,9 +17,9 @@
     "passwordHash": "5a7081304a0283cb54b866bfd1afe730f50aa5935dfe0922cb8b819c1d859fdcc3ccb9577d34a93d618bfcdb14b7e44dbcb7b6e991507f472aaa58f2c80cd60b",
     "passwordSalt": "atlas_system_salt_1366",
     "favoriteBrands": [
-      "forza",
       "swr",
-      "megadyne"
+      "forza",
+      "gates"
     ],
     "businessType": "factory",
     "onboardingCompleted": true,
@@ -29,7 +29,7 @@
     "approvedB2B": true,
     "smsSent": true,
     "createdAt": "1402/04/15",
-    "updatedAt": "1402/04/15"
+    "updatedAt": "2026-10-17T14:47:52.374Z"
   },
   {
     "id": "cust-2",
@@ -149,5 +149,36 @@
     "smsSent": true,
     "createdAt": "۱۴۰۵/۷/۱۳",
     "updatedAt": "2026-10-05T08:39:17.293Z"
+  },
+  {
+    "id": "cust-518391",
+    "firstName": "hossein",
+    "lastName": "کاربر",
+    "fullName": "hossein کاربر",
+    "companyName": "dddd",
+    "mobile": "09124454545",
+    "phone": "09124454545",
+    "email": "javanwebio@gmail.com",
+    "provinceId": "yazd",
+    "cityId": "yazd-yazd",
+    "province": "یزد",
+    "city": "یزد",
+    "activityField": "صنایع کاشی، سرامیک و لعاب",
+    "username": "dddd",
+    "passwordHash": "0e14d13d0876df7ba7d6509a709897ed105adeb51139ad180f99255177ff7f38d65eb131aebbdb3454adf351197d34ace453366c9d82bc804f555f333ba46bf0",
+    "passwordSalt": "96ee709deb8284dee72840cf901566b7",
+    "favoriteBrands": [
+      "swr",
+      "forza"
+    ],
+    "businessType": "store",
+    "onboardingCompleted": true,
+    "role": "retail",
+    "clubTier": "bronze",
+    "clubPoints": 50,
+    "approvedB2B": false,
+    "smsSent": true,
+    "createdAt": "۱۴۰۵/۷/۲۵",
+    "updatedAt": "2026-10-17T12:02:01.117Z"
   }
 ]

@@ -92,6 +92,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
         </div>
       </div>
 
+      {/* NEW: Content Studio & Dual Portal Control Quick Banner */}
+      <div className="p-5 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-md">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E06518] text-white text-[11px] font-bold">
+            <span>مدیریت یکپارچه دو پنل و تولید محتوا</span>
+          </div>
+          <h3 className="text-sm sm:text-base font-black text-white">
+            تولید محتوای جمعی و تکی، طراحی بنر تخفیف حجم سبد خرید و ویرایش منوها و دسترسی‌های هر دو پنل
+          </h3>
+          <p className="text-xs text-slate-300">
+            کنترل کامل «پنل مشتری» و «پنل خرید بالا» + تعریف نام کاربری و موبایل ورود مشتریان خرید بالا در بخش مشتریان و CRM.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigateTab('content_studio')}
+            className="px-4 py-2.5 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-black cursor-pointer transition-colors"
+          >
+            ورود به منوی تولید محتوا
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('crm')}
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold cursor-pointer transition-colors"
+          >
+            تعریف مشتریان پنل خرید بالا (CRM)
+          </button>
+        </div>
+      </div>
+
       {/* 2. KEY PERFORMANCE INDICATORS (کارتهای KPI) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">

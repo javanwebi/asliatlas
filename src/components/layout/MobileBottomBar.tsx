@@ -382,16 +382,24 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = () => {
           {/* 5. صنعت پیش من (My Sanat Pish / User Account & Portal) */}
           {currentUser ? (
             <Link
-              to={currentUser.role === 'dealer' ? '/dealer' : currentUser.role === 'admin' ? '/admin' : '/account'}
+              to={
+                currentUser.role === 'dealer'
+                  ? '/dealer'
+                  : currentUser.role === 'admin'
+                  ? '/admin'
+                  : currentUser.approvedB2B || currentUser.isLegacyCustomer || (currentUser.role && currentUser.role !== 'retail')
+                  ? '/account'
+                  : '/consumer-dashboard'
+              }
               className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
-                isActive('/account') || isActive('/dealer') || isActive('/admin')
+                isActive('/account') || isActive('/consumer-dashboard') || isActive('/dealer') || isActive('/admin')
                   ? 'text-[#E06518]'
                   : 'text-[#484344] hover:text-[#E06518]'
               }`}
             >
               <div className="relative">
                 <User className="w-5 h-5 transition-transform" />
-                {(isActive('/account') || isActive('/dealer') || isActive('/admin')) && (
+                {(isActive('/account') || isActive('/consumer-dashboard') || isActive('/dealer') || isActive('/admin')) && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#E06518] rounded-full shadow-[0_0_6px_#E06518]" />
                 )}
               </div>

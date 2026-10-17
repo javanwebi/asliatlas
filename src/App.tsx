@@ -119,7 +119,7 @@ export default function App() {
                   <Route
                     path="/consumer-dashboard/*"
                     element={
-                      <ProtectedRoute>
+                      <ProtectedRoute portalType="consumer">
                         <ConsumerDashboardPage />
                       </ProtectedRoute>
                     }
@@ -127,7 +127,7 @@ export default function App() {
                   <Route
                     path="/retail-account/*"
                     element={
-                      <ProtectedRoute>
+                      <ProtectedRoute portalType="consumer">
                         <ConsumerDashboardPage />
                       </ProtectedRoute>
                     }
@@ -135,7 +135,7 @@ export default function App() {
                   <Route
                     path="/account/*"
                     element={
-                      <ProtectedRoute>
+                      <ProtectedRoute portalType="high_volume">
                         <AccountPage />
                       </ProtectedRoute>
                     }

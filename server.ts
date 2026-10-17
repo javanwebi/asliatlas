@@ -388,6 +388,121 @@ app.post(['/api/ai/catalog-source', '/api/ai/catalog-summary'], (req, res) => {
 });
 
 // ============================================================================
+// ATLAS TWO-LEVEL CATALOG MANAGEMENT & OVERRIDES DATABASE (FAMILIES + SKUS)
+// ============================================================================
+
+const CATALOG_OVERRIDES_DB_PATH = path.join(process.cwd(), 'src', 'data', 'catalogOverridesDb.json');
+
+interface CatalogOverridesDb {
+  version: number;
+  updatedAt: string;
+  deletedCodes: string[];
+  families: Record<string, any>;
+}
+
+let CATALOG_OVERRIDES_CACHE: CatalogOverridesDb | null = null;
+
+function loadCatalogOverridesDb(): CatalogOverridesDb {
+  if (CATALOG_OVERRIDES_CACHE) return CATALOG_OVERRIDES_CACHE;
+  try {
+    if (fs.existsSync(CATALOG_OVERRIDES_DB_PATH)) {
+      const raw = fs.readFileSync(CATALOG_OVERRIDES_DB_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      CATALOG_OVERRIDES_CACHE = {
+        version: parsed.version || 1,
+        updatedAt: parsed.updatedAt || new Date().toISOString(),
+        deletedCodes: Array.isArray(parsed.deletedCodes) ? parsed.deletedCodes : [],
+        families: parsed.families && typeof parsed.families === 'object' ? parsed.families : {},
+      };
+      return CATALOG_OVERRIDES_CACHE;
+    }
+  } catch (err) {
+    console.warn('[CatalogOverridesDB] Error reading database file:', err);
+  }
+  CATALOG_OVERRIDES_CACHE = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    deletedCodes: [],
+    families: {},
+  };
+  return CATALOG_OVERRIDES_CACHE;
+}
+
+function saveCatalogOverridesDb(db: CatalogOverridesDb): void {
+  db.updatedAt = new Date().toISOString();
+  CATALOG_OVERRIDES_CACHE = db;
+  try {
+    fs.writeFileSync(CATALOG_OVERRIDES_DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[CatalogOverridesDB] Error writing database file:', err);
+  }
+}
+
+app.get('/api/catalog/overrides', (_req, res) => {
+  const db = loadCatalogOverridesDb();
+  return res.json({ status: 'ok', success: true, data: db });
+});
+
+app.post('/api/catalog/overrides/family', (req, res) => {
+  const family = req.body?.family;
+  if (!family || !family.code) {
+    return res.status(400).json({ status: 'error', message: 'کد خانواده محصول الزامی است.' });
+  }
+  const db = loadCatalogOverridesDb();
+  const code = String(family.code).trim();
+  db.families[code] = {
+    ...family,
+    code,
+    updatedAt: new Date().toISOString(),
+  };
+  db.deletedCodes = db.deletedCodes.filter((c) => c !== code);
+  saveCatalogOverridesDb(db);
+  return res.json({ status: 'ok', success: true, family: db.families[code], data: db });
+});
+
+app.delete('/api/catalog/overrides/family/:code', (req, res) => {
+  const code = decodeURIComponent(req.params.code || '').trim();
+  if (!code) {
+    return res.status(400).json({ status: 'error', message: 'کد خانواده نامعتبر است.' });
+  }
+  const db = loadCatalogOverridesDb();
+  delete db.families[code];
+  if (!db.deletedCodes.includes(code)) {
+    db.deletedCodes.push(code);
+  }
+  saveCatalogOverridesDb(db);
+  return res.json({ status: 'ok', success: true, data: db });
+});
+
+app.post('/api/catalog/overrides/reset-family/:code', (req, res) => {
+  const code = decodeURIComponent(req.params.code || '').trim();
+  if (!code) {
+    return res.status(400).json({ status: 'error', message: 'کد خانواده نامعتبر است.' });
+  }
+  const db = loadCatalogOverridesDb();
+  delete db.families[code];
+  db.deletedCodes = db.deletedCodes.filter((c) => c !== code);
+  saveCatalogOverridesDb(db);
+  return res.json({ status: 'ok', success: true, data: db });
+});
+
+app.post('/api/catalog/overrides/bulk', (req, res) => {
+  const incoming = req.body?.data;
+  if (!incoming || typeof incoming !== 'object') {
+    return res.status(400).json({ status: 'error', message: 'ساختار داده نامعتبر است.' });
+  }
+  const db = loadCatalogOverridesDb();
+  if (incoming.families && typeof incoming.families === 'object') {
+    db.families = { ...db.families, ...incoming.families };
+  }
+  if (Array.isArray(incoming.deletedCodes)) {
+    db.deletedCodes = incoming.deletedCodes;
+  }
+  saveCatalogOverridesDb(db);
+  return res.json({ status: 'ok', success: true, data: db });
+});
+
+// ============================================================================
 // ATLAS USER MANAGEMENT, REGISTRATION & AUTHENTICATION DATABASE
 // ============================================================================
 

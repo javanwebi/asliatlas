@@ -33,6 +33,7 @@ import { OrdersModule } from './modules/OrdersModule';
 import { CustomersCrmModule } from './modules/CustomersCrmModule';
 import { AgenciesAdminModule } from './modules/AgenciesAdminModule';
 import { CustomerGradingModule } from './modules/CustomerGradingModule';
+import { ContentStudioModule } from './modules/ContentStudioModule';
 import { SettingsSystemModule } from './modules/SettingsSystemModule';
 import { ClientsAdminModule } from './modules/ClientsAdminModule';
 import { pricingCreditService } from '../services/pricingCreditService';
@@ -61,6 +62,7 @@ export const AdminLayout: React.FC = () => {
     else if (path.includes('/admin/inquiries')) setActiveTab('inquiries');
     else if (path.includes('/admin/orders')) setActiveTab('orders');
     else if (path.includes('/admin/crm') || path.includes('/admin/customers')) setActiveTab('crm');
+    else if (path.includes('/admin/content')) setActiveTab('content_studio');
     else if (path.includes('/admin/clients')) setActiveTab('clients');
     else if (path.includes('/admin/agencies')) setActiveTab('agencies');
     else if (path.includes('/admin/grading') || path.includes('/admin/credit')) setActiveTab('customer_grading');
@@ -97,6 +99,20 @@ export const AdminLayout: React.FC = () => {
       label: 'داشبورد و گزارش‌ها',
       icon: LayoutDashboard,
       badge: null,
+    },
+    {
+      id: 'content_studio',
+      label: 'تولید محتوا (پنل مشتری و خرید بالا)',
+      icon: Sparkles,
+      badge: '۲ پنل',
+      badgeColor: 'bg-[#E06518] text-white',
+    },
+    {
+      id: 'crm',
+      label: 'مشتریان و CRM (پنل خرید بالا)',
+      icon: Users,
+      badge: openTickets.length > 0 ? toPersianDigits(openTickets.length) : null,
+      badgeColor: 'bg-purple-500 text-white',
     },
     {
       id: 'customer_grading',
@@ -139,13 +155,6 @@ export const AdminLayout: React.FC = () => {
       badgeColor: 'bg-blue-500 text-white',
     },
     {
-      id: 'crm',
-      label: 'مشتریان و CRM',
-      icon: Users,
-      badge: openTickets.length > 0 ? toPersianDigits(openTickets.length) : null,
-      badgeColor: 'bg-purple-500 text-white',
-    },
-    {
       id: 'clients',
       label: 'لوگوی مشتریان ما',
       icon: Building2,
@@ -170,11 +179,15 @@ export const AdminLayout: React.FC = () => {
               else if (tab === 'agencies') setActiveTab('agencies');
               else if (tab === 'products') setActiveTab('products');
               else if (tab === 'customer_grading') setActiveTab('customer_grading');
+              else if (tab === 'content_studio') setActiveTab('content_studio');
+              else if (tab === 'crm') setActiveTab('crm');
               else if (tab === 'clients') setActiveTab('clients');
               else setActiveTab(tab);
             }}
           />
         );
+      case 'content_studio':
+        return <ContentStudioModule />;
       case 'customer_grading':
         return <CustomerGradingModule />;
       case 'products':
