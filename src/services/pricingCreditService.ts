@@ -61,6 +61,7 @@ export interface CatalogUniqueSkuItem {
 export type CatalogSkuPriceItem = CatalogUniqueSkuItem & { basePrice: number };
 
 export interface CustomerRewardAssignment {
+  portal?: "consumer" | "high_volume";
   id: string;
   rewardTitle: string;
   rewardValue: string;
@@ -2022,7 +2023,7 @@ export const pricingCreditService = {
 
   getRewardsForCustomer(customer?: Customer): CustomerRewardAssignment[] {
     if (!customer || !customer.approvedB2B) return [];
-    return this.getRewardAssignments().filter(a => a.targetCustomerIds?.includes(customer.id));
+    return this.getRewardAssignments().filter(a => (a.portal || "high_volume") === (customer.approvedB2B ? "high_volume" : "consumer") && a.targetCustomerIds?.includes(customer.id));
   },
 
   recommendGradeByPurchaseVolume(volume: number): { code: string; customerTierLabel: string } {

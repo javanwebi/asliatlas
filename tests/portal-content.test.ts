@@ -55,6 +55,46 @@ test("portal content and campaign rules", async (t) => {
       true,
     );
   });
+  await t.test(
+    "club milestones are independent and old wholesale data is preserved",
+    () => {
+      const key = "atlas_portal_club_milestones_v1";
+      const legacy = cms.getClubMilestones("high_volume");
+      localStorage.setItem(key, JSON.stringify(legacy));
+      assert.notDeepEqual(cms.getClubMilestones("consumer"), legacy);
+      const consumer = cms
+        .getClubMilestones("consumer")
+        .map((m) => ({ ...m, minPurchaseVolume: m.minPurchaseVolume + 123 }));
+      cms.saveClubMilestones(consumer, "consumer");
+      assert.deepEqual(cms.getClubMilestones("high_volume"), legacy);
+      assert.deepEqual(cms.getClubMilestones("consumer"), consumer);
+      cms.saveClubMilestones([], "consumer");
+      assert.deepEqual(cms.getClubMilestones("consumer"), []);
+      assert.deepEqual(cms.getClubMilestones("high_volume"), legacy);
+    },
+  );
+  await t.test(
+    "appearance can be overridden without affecting another customer",
+    () => {
+      cms.saveCustomerOverride({
+        customerId: "visual-test",
+        customerName: "Test",
+        portal: "consumer",
+        appearanceOverride: { glass: "solid", density: "compact" },
+        updatedAt: "",
+      });
+      assert.equal(
+        cms.getResolvedConfigForCustomer("consumer", "visual-test").appearance
+          .glass,
+        "solid",
+      );
+      assert.equal(
+        cms.getResolvedConfigForCustomer("consumer", "another").appearance
+          .glass,
+        "subtle",
+      );
+    },
+  );
   await t.test("empty banners stay deleted", () => {
     localStorage.setItem("atlas_portal_content_banners_v1", "[]");
     assert.deepEqual(cms.getBanners(), []);

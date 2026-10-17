@@ -112,7 +112,9 @@ export const ContentStudioModule: React.FC = () => {
     active: true,
     createdAt: "",
   });
-  const [milestones, setMilestones] = useState(() => cms.getClubMilestones());
+  const [milestones, setMilestones] = useState(() =>
+    cms.getClubMilestones("consumer"),
+  );
   const [tick, setTick] = useState(0);
   const [labelSearch, setLabelSearch] = useState("");
   const [busy, setBusy] = useState(false);
@@ -129,7 +131,9 @@ export const ContentStudioModule: React.FC = () => {
       permissions: resolved.permissions,
       uiTexts: resolved.uiTexts,
       labels: resolved.labels,
+      appearance: resolved.appearance,
     });
+    setMilestones(cms.getClubMilestones(portal));
     setBanner(newBanner(portal));
     setAnnouncement({
       id: "",
@@ -170,6 +174,7 @@ export const ContentStudioModule: React.FC = () => {
             customers.find((c) => c.id === customerId)?.fullName || "",
           portal,
           menus: config.menus,
+          appearanceOverride: config.appearance,
           permissionsOverride: config.permissions,
           uiTextsOverride: config.uiTexts,
           labelsOverride: config.labels,
@@ -303,9 +308,7 @@ export const ContentStudioModule: React.FC = () => {
           ["banners", "بنرها", Image],
           ["layout", "منو، کادر و دسترسی", LayoutTemplate],
           ["announcements", "اطلاعیه‌ها", Megaphone],
-          ...(portal === "high_volume"
-            ? [["club", "مسیر باشگاه و جوایز", Award]]
-            : []),
+          ["club", "مسیر باشگاه و جوایز", Award],
         ].map(([id, label, Icon]: any) => (
           <button
             key={id}
@@ -326,8 +329,7 @@ export const ContentStudioModule: React.FC = () => {
           {message}
         </p>
       )}
-      {(section === "banners" ||
-        (section === "club" && portal === "consumer")) && (
+      {section === "banners" && (
         <div className="grid gap-6 xl:grid-cols-2">
           <div className={panel}>
             <h2 className="font-black">
@@ -581,13 +583,57 @@ export const ContentStudioModule: React.FC = () => {
               ))}
           </div>
           <div className={panel}>
+            <h2 className="font-black">ظاهر پنل و موبایل</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="جنس کادرها">
+                <select
+                  className={field}
+                  value={config.appearance?.glass || "subtle"}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      appearance: {
+                        density: config.appearance?.density || "comfortable",
+                        glass: e.target.value as "subtle" | "solid",
+                      },
+                    })
+                  }
+                >
+                  <option value="subtle">شیشه‌ای ظریف</option>
+                  <option value="solid">سفید ساده</option>
+                </select>
+              </Field>
+              <Field label="فاصله‌گذاری">
+                <select
+                  className={field}
+                  value={config.appearance?.density || "comfortable"}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      appearance: {
+                        glass: config.appearance?.glass || "subtle",
+                        density: e.target.value as "comfortable" | "compact",
+                      },
+                    })
+                  }
+                >
+                  <option value="comfortable">راحت و خلوت</option>
+                  <option value="compact">فشرده</option>
+                </select>
+              </Field>
+            </div>
+            <p className="text-xs text-slate-500">
+              سه منوی اولِ فعال در نوار پایین موبایل قرار می‌گیرند؛ بقیه از «همه
+              بخش‌ها» در دسترس‌اند. ترتیب را در فهرست منوها تغییر دهید.
+            </p>
+          </div>
+          <div className={panel}>
             <h2 className="font-black">کادرها و دسترسی‌ها</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Object.entries(permissions)
                 .filter(
                   ([key]) =>
-                    portal === "high_volume" ||
-                    !["showClubBarChart", "showCreditLimitCard"].includes(key),
+                    portal === "high_volume" || key !== "showCreditLimitCard",
                 )
                 .map(([key, label]) => (
                   <label
@@ -620,10 +666,7 @@ export const ContentStudioModule: React.FC = () => {
             <h2 className="font-black">عنوان‌ها و دکمه‌ها</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {Object.entries(textLabels)
-                .filter(
-                  ([key]) =>
-                    portal === "high_volume" || !key.startsWith("club"),
-                )
+                .filter(() => true)
                 .map(([key, label]) => (
                   <Field label={label} key={key}>
                     <input
@@ -810,116 +853,187 @@ export const ContentStudioModule: React.FC = () => {
           </div>
         </div>
       )}
-      {section === "club" && portal === "high_volume" && (
+      {section === "club" && (
         <div className="space-y-4">
           <p className="text-sm text-slate-500">
             سطح از حجم خرید ثبت‌شده محاسبه می‌شود. مشتری امکان انتخاب یا تغییر
-            سطح ندارد. این تنظیمات برای همه اعضای باشگاه است.
+            سطح ندارد. این تنظیمات مخصوص باشگاه پنل انتخاب‌شده است. برای انتشار
+            یا ویرایش مراحل، مخاطب «همه مشتریان» را انتخاب کنید.
           </p>
-          {milestones.map((m, index) => (
-            <div className={panel} key={m.code}>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field label="عنوان سطح">
-                  <input
-                    className={field}
-                    value={m.publicTitle}
-                    onChange={(e) =>
-                      setMilestones(
-                        milestones.map((x, i) =>
-                          i === index
-                            ? { ...x, publicTitle: e.target.value }
-                            : x,
-                        ),
-                      )
+          {customerId && (
+            <p className="rounded-xl bg-orange-50 p-4 text-sm">
+              مراحل باشگاه برای کل این پنل تعریف می‌شود. نمایش نمودار و دسترسی
+              باشگاه هر مشتری را در بخش «منو، کادر و دسترسی» تنظیم کنید.
+            </p>
+          )}
+          {!customerId && milestones.length === 0 && (
+            <button
+              className={button}
+              onClick={() =>
+                setMilestones([
+                  {
+                    code: "C",
+                    tierKey: "bronze",
+                    publicTitle: "همراه",
+                    minPurchaseVolume: 0,
+                    discountPercent: 0,
+                    barColor: "",
+                    badgeColor: "",
+                    summaryBenefit: "",
+                    rewardsList: [],
+                    specialEvents: [],
+                  },
+                  {
+                    code: "B",
+                    tierKey: "silver",
+                    publicTitle: "نقره‌ای",
+                    minPurchaseVolume: 10000000,
+                    discountPercent: 0,
+                    barColor: "",
+                    badgeColor: "",
+                    summaryBenefit: "",
+                    rewardsList: [],
+                    specialEvents: [],
+                  },
+                  {
+                    code: "A",
+                    tierKey: "gold",
+                    publicTitle: "طلایی",
+                    minPurchaseVolume: 50000000,
+                    discountPercent: 0,
+                    barColor: "",
+                    badgeColor: "",
+                    summaryBenefit: "",
+                    rewardsList: [],
+                    specialEvents: [],
+                  },
+                  {
+                    code: "D",
+                    tierKey: "diamond",
+                    publicTitle: "پلاتینیوم",
+                    minPurchaseVolume: 100000000,
+                    discountPercent: 0,
+                    barColor: "",
+                    badgeColor: "",
+                    summaryBenefit: "",
+                    rewardsList: [],
+                    specialEvents: [],
+                  },
+                ])
+              }
+            >
+              تعریف مسیر باشگاه این پنل
+            </button>
+          )}
+          {!customerId &&
+            milestones.map((m, index) => (
+              <div className={panel} key={m.code}>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Field label="عنوان سطح">
+                    <input
+                      className={field}
+                      value={m.publicTitle}
+                      onChange={(e) =>
+                        setMilestones(
+                          milestones.map((x, i) =>
+                            i === index
+                              ? { ...x, publicTitle: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field label="حداقل خرید (تومان)">
+                    <input
+                      className={field}
+                      type="number"
+                      min="0"
+                      value={m.minPurchaseVolume}
+                      onChange={(e) =>
+                        setMilestones(
+                          milestones.map((x, i) =>
+                            i === index
+                              ? {
+                                  ...x,
+                                  minPurchaseVolume: Number(e.target.value),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field label="تخفیف سطح (درصد)">
+                    <input
+                      className={field}
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={m.discountPercent}
+                      onChange={(e) =>
+                        setMilestones(
+                          milestones.map((x, i) =>
+                            i === index
+                              ? {
+                                  ...x,
+                                  discountPercent: Number(e.target.value),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </Field>
+                </div>
+                {(
+                  ["summaryBenefit", "rewardsList", "specialEvents"] as const
+                ).map((key) => (
+                  <Field
+                    key={key}
+                    label={
+                      {
+                        summaryBenefit: "خلاصه مزایا",
+                        rewardsList: "جوایز (هر مورد در یک خط)",
+                        specialEvents: "برنامه‌ها و خدمات (هر مورد در یک خط)",
+                      }[key]
                     }
-                  />
-                </Field>
-                <Field label="حداقل خرید (تومان)">
-                  <input
-                    className={field}
-                    type="number"
-                    min="0"
-                    value={m.minPurchaseVolume}
-                    onChange={(e) =>
-                      setMilestones(
-                        milestones.map((x, i) =>
-                          i === index
-                            ? {
-                                ...x,
-                                minPurchaseVolume: Number(e.target.value),
-                              }
-                            : x,
-                        ),
-                      )
-                    }
-                  />
-                </Field>
-                <Field label="تخفیف سطح (درصد)">
-                  <input
-                    className={field}
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={m.discountPercent}
-                    onChange={(e) =>
-                      setMilestones(
-                        milestones.map((x, i) =>
-                          i === index
-                            ? { ...x, discountPercent: Number(e.target.value) }
-                            : x,
-                        ),
-                      )
-                    }
-                  />
-                </Field>
+                  >
+                    <textarea
+                      className={field}
+                      rows={3}
+                      value={
+                        Array.isArray(m[key])
+                          ? (m[key] as string[]).join("\n")
+                          : m[key]
+                      }
+                      onChange={(e) =>
+                        setMilestones(
+                          milestones.map((x, i) =>
+                            i === index
+                              ? {
+                                  ...x,
+                                  [key]:
+                                    key === "summaryBenefit"
+                                      ? e.target.value
+                                      : e.target.value.split("\n"),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </Field>
+                ))}
               </div>
-              {(
-                ["summaryBenefit", "rewardsList", "specialEvents"] as const
-              ).map((key) => (
-                <Field
-                  key={key}
-                  label={
-                    {
-                      summaryBenefit: "خلاصه مزایا",
-                      rewardsList: "جوایز (هر مورد در یک خط)",
-                      specialEvents: "برنامه‌ها و خدمات (هر مورد در یک خط)",
-                    }[key]
-                  }
-                >
-                  <textarea
-                    className={field}
-                    rows={3}
-                    value={
-                      Array.isArray(m[key])
-                        ? (m[key] as string[]).join("\n")
-                        : m[key]
-                    }
-                    onChange={(e) =>
-                      setMilestones(
-                        milestones.map((x, i) =>
-                          i === index
-                            ? {
-                                ...x,
-                                [key]:
-                                  key === "summaryBenefit"
-                                    ? e.target.value
-                                    : e.target.value.split("\n"),
-                              }
-                            : x,
-                        ),
-                      )
-                    }
-                  />
-                </Field>
-              ))}
-            </div>
-          ))}
+            ))}
           <button
-            disabled={busy}
+            disabled={busy || !!customerId}
             className={button}
             onClick={() =>
               save(() => {
                 if (
+                  customerId ||
                   milestones.some(
                     (m) =>
                       m.minPurchaseVolume < 0 ||
@@ -932,6 +1046,7 @@ export const ContentStudioModule: React.FC = () => {
                   [...milestones].sort(
                     (a, b) => a.minPurchaseVolume - b.minPurchaseVolume,
                   ),
+                  portal,
                 );
               })
             }

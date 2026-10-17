@@ -102,7 +102,13 @@ export interface PortalUiTextsConfig {
     "navy_orange" | "charcoal_gold" | "slate_emerald" | "deep_royal";
 }
 
+export interface PortalAppearanceConfig {
+  glass: "subtle" | "solid";
+  density: "comfortable" | "compact";
+}
+
 export interface PortalLayoutConfig {
+  appearance?: PortalAppearanceConfig;
   portal: PortalTargetType;
   labels?: Record<string, string>;
   menus: PortalMenuItemConfig[];
@@ -121,6 +127,7 @@ export interface CustomerIndividualOverride {
     discountPercent: number;
     description: string;
   };
+  appearanceOverride?: PortalAppearanceConfig;
   permissionsOverride?: Partial<PortalPermissionsConfig>;
   disabledMenuIds?: string[];
   menus?: PortalMenuItemConfig[];
@@ -221,6 +228,17 @@ const DEFAULT_CLUB_MILESTONES: ClubTierMilestoneConfig[] = [
   },
 ];
 
+const DEFAULT_CONSUMER_CLUB_MILESTONES: ClubTierMilestoneConfig[] =
+  DEFAULT_CLUB_MILESTONES.map((m, index) => ({
+    ...m,
+    publicTitle: ["همراه", "نقره‌ای", "طلایی", "پلاتینیوم"][index],
+    minPurchaseVolume: [0, 10000000, 50000000, 100000000][index],
+    discountPercent: 0,
+    summaryBenefit: "",
+    rewardsList: [],
+    specialEvents: [],
+  }));
+
 const DEFAULT_BANNERS: PortalBannerItem[] = [
   {
     id: "bnr-consumer-1",
@@ -302,6 +320,12 @@ const DEFAULT_PORTAL_CONFIGS: Record<PortalTargetType, PortalLayoutConfig> = {
         order: 2,
       },
       { id: "quick_buy", label: "ثبت سفارش سریع", enabled: true, order: 3 },
+      {
+        id: "club_rewards",
+        label: "باشگاه مشتریان",
+        enabled: true,
+        order: 2.5,
+      },
       { id: "receipts", label: "فاکتورها و رسیدها", enabled: true, order: 4 },
       {
         id: "addresses",
@@ -317,7 +341,7 @@ const DEFAULT_PORTAL_CONFIGS: Record<PortalTargetType, PortalLayoutConfig> = {
       showKpi4: true,
       showAnnouncements: true,
       allowExcelPriceListDownload: true,
-      showClubBarChart: false,
+      showClubBarChart: true,
       allowQuickSkuOrder: true,
       showCreditLimitCard: false,
       allowQuickReorder: true,
@@ -325,13 +349,13 @@ const DEFAULT_PORTAL_CONFIGS: Record<PortalTargetType, PortalLayoutConfig> = {
       showPromotionalBanners: true,
     },
     uiTexts: {
-      heroWelcomePrefix: "خوش آمدید،",
+      heroWelcomePrefix: "حساب خرید شما",
       heroSubtitle:
         "سفارش‌ها، فاکتورها و آدرس‌های خود را از اینجا مدیریت کنید.",
       primaryCtaLabel: "مشاهده کاتالوگ محصولات",
       excelDownloadButtonLabel: "دانلود اکسل لیست قیمت من",
-      clubChartTitle: "وضعیت خریدهای من",
-      clubChartSubtitle: "",
+      clubChartTitle: "مسیر رشد شما",
+      clubChartSubtitle: "با خریدهای ثبت‌شده، به مزایای بیشتری دست پیدا کنید.",
       clubDetailsButtonLabel: "مشاهده مزایا",
       ordersSectionTitle: "سفارشات من و رهگیری مرسولات",
       priceListSectionTitle: "ثبت سفارش سریع قطعات",
@@ -565,24 +589,35 @@ export const portalContentService = {
   },
 
   // --- CLUB TIER MILESTONES & REWARDS (نمودار میله‌ای و جوایز سطوح باشگاه) ---
-  getClubMilestones(): ClubTierMilestoneConfig[] {
+  getClubMilestones(
+    portal: PortalTargetType = "high_volume",
+  ): ClubTierMilestoneConfig[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.CLUB_MILESTONES);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && portal === "high_volume") return parsed;
+        if (Array.isArray(parsed?.[portal])) return parsed[portal];
       }
     } catch {}
-    return DEFAULT_CLUB_MILESTONES;
+    // Independent consumer milestones never inherit wholesale discounts or rewards.
+    return portal === "consumer"
+      ? DEFAULT_CONSUMER_CLUB_MILESTONES
+      : DEFAULT_CLUB_MILESTONES;
   },
 
   saveClubMilestones(
     milestones: ClubTierMilestoneConfig[],
+    portal: PortalTargetType = "high_volume",
   ): ClubTierMilestoneConfig[] {
     try {
       persistPortalCache(
         STORAGE_KEYS.CLUB_MILESTONES,
-        JSON.stringify(milestones),
+        JSON.stringify({
+          consumer: this.getClubMilestones("consumer"),
+          high_volume: this.getClubMilestones("high_volume"),
+          [portal]: milestones,
+        }),
       );
     } catch {}
     emitPortalContentUpdate();
@@ -600,6 +635,22 @@ export const portalContentService = {
             consumer: {
               ...DEFAULT_PORTAL_CONFIGS.consumer,
               ...parsed.consumer,
+              menus:
+                parsed.consumer?.menus &&
+                !parsed.consumer.menus.some(
+                  (m: PortalMenuItemConfig) => m.id === "club_rewards",
+                )
+                  ? [
+                      ...parsed.consumer.menus,
+                      {
+                        id: "club_rewards",
+                        label: "باشگاه مشتریان",
+                        enabled: true,
+                        order: 2.5,
+                      },
+                    ]
+                  : parsed.consumer?.menus ||
+                    DEFAULT_PORTAL_CONFIGS.consumer.menus,
               permissions: {
                 ...DEFAULT_PORTAL_CONFIGS.consumer.permissions,
                 ...(parsed.consumer?.permissions || {}),
@@ -701,6 +752,7 @@ export const portalContentService = {
     portal: PortalTargetType,
     customerId?: string,
   ): {
+    appearance: PortalAppearanceConfig;
     labels: Record<string, string>;
     menus: PortalMenuItemConfig[];
     permissions: PortalPermissionsConfig;
@@ -735,6 +787,12 @@ export const portalContentService = {
     };
 
     return {
+      appearance: {
+        glass: "subtle",
+        density: "comfortable",
+        ...base.appearance,
+        ...ov?.appearanceOverride,
+      },
       labels: { ...base.labels, ...ov?.labelsOverride },
       menus,
       permissions,

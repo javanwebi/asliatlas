@@ -1,3 +1,5 @@
+import { PortalShell } from "../components/portal/PortalShell";
+import { PortalClub } from "../components/portal/PortalClub";
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -312,53 +314,8 @@ export const ConsumerDashboardPage: React.FC = () => {
 
   const totalSpent = orders.reduce((acc, o) => acc + o.totalAmount, 0);
 
-  const getBannerThemeClasses = (theme: PortalBannerItem["theme"]) => {
-    switch (theme) {
-      case "royal_gold":
-        return "from-slate-900 via-amber-950 to-slate-900 border-amber-400/40 text-white";
-      case "emerald_trust":
-        return "from-emerald-950 via-teal-900 to-slate-900 border-emerald-400/40 text-white";
-      case "titanium_blue":
-        return "from-slate-900 via-blue-950 to-indigo-950 border-sky-400/40 text-white";
-      case "ruby_crimson":
-        return "from-rose-950 via-slate-900 to-slate-950 border-rose-400/40 text-white";
-      default:
-        return "from-[#55565A] via-[#646569] to-[#55565A] border-[#E06518]/50 text-white";
-    }
-  };
-
-  const getHeaderThemeClasses = () => {
-    switch (resolvedConfig.uiTexts.headerAccentTheme) {
-      case "charcoal_gold":
-        return "from-slate-950 via-slate-900 to-amber-950/80 border-amber-500/30";
-      case "slate_emerald":
-        return "from-slate-950 via-emerald-950/70 to-slate-900 border-emerald-500/30";
-      case "deep_royal":
-        return "from-indigo-950 via-slate-900 to-slate-950 border-indigo-500/30";
-      default:
-        return "from-[#55565A] via-[#646569] to-[#55565A] border-orange-300/30";
-    }
-  };
-
-  const getMenuIcon = (id: string) => {
-    switch (id) {
-      case "overview":
-        return ShoppingBag;
-      case "orders":
-        return Truck;
-      case "quick_buy":
-        return Zap;
-      case "receipts":
-        return FileText;
-      case "addresses":
-        return MapPin;
-      default:
-        return Package;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#F3F5F8] pb-16 text-right" dir="rtl">
+    <div dir="rtl">
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-5 left-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/40 flex items-center gap-2.5 text-xs font-bold">
@@ -367,337 +324,52 @@ export const ConsumerDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Top Hero Header */}
-      <div
-        className={`bg-gradient-to-l ${getHeaderThemeClasses()} text-white border-b`}
+      <PortalShell
+        user={user!}
+        menus={enabledMenus}
+        activeTab={activeTab}
+        onTab={setActiveTab}
+        onLogout={() => {
+          logout();
+          navigate("/");
+        }}
+        texts={resolvedConfig.uiTexts}
+        labels={resolvedConfig.labels}
+        appearance={resolvedConfig.appearance}
+        discountRule={
+          resolvedConfig.permissions.showPromotionalBanners
+            ? resolvedConfig.customCartDiscountRule
+            : undefined
+        }
+        banners={
+          resolvedConfig.permissions.showPromotionalBanners ? activeBanners : []
+        }
+        onBanner={handleBannerAction}
+        metrics={[
+          {
+            label: resolvedConfig.uiTexts.kpi1Title,
+            value: "فعال",
+            visible: resolvedConfig.permissions.showKpi1,
+          },
+          {
+            label: resolvedConfig.uiTexts.kpi2Title,
+            value: toPersianDigits(orders.length),
+            visible: resolvedConfig.permissions.showKpi2,
+          },
+          {
+            label: resolvedConfig.uiTexts.kpi3Title,
+            value: `${formatPrice(totalSpent)} تومان`,
+            visible: resolvedConfig.permissions.showKpi3,
+          },
+          {
+            label: resolvedConfig.uiTexts.kpi4Title,
+            value: "همراه شما",
+            visible: resolvedConfig.permissions.showKpi4,
+          },
+        ]}
       >
-        <div className="max-w-7xl mx-auto px-4 py-7 sm:py-9">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 text-amber-400 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-[#E06518]" />
-                <span>{portalLabel("پنل کاربری و مدیریت هوشمند سفارشات")}</span>
-                {user?.companyName && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-slate-300">{user.companyName}</span>
-                  </>
-                )}
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-snug">
-                {resolvedConfig.uiTexts.heroWelcomePrefix}{" "}
-                <span className="text-[#E06518]">
-                  {user?.fullName || "مشتری گرامی"}
-                </span>
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-                {resolvedConfig.uiTexts.heroSubtitle}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {resolvedConfig.permissions.allowExcelPriceListDownload && (
-                <button
-                  type="button"
-                  onClick={handleDownloadMyPriceListExcel}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-2 shadow-lg transition cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{resolvedConfig.uiTexts.excelDownloadButtonLabel}</span>
-                </button>
-              )}
-              <Link
-                to="/products"
-                className="px-4 py-2.5 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-orange-600/20 transition"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>{resolvedConfig.uiTexts.primaryCtaLabel}</span>
-              </Link>
-              <Link
-                to="/cart"
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold flex items-center gap-2 transition"
-              >
-                <ShoppingCart className="w-4 h-4 text-amber-400" />
-                <span>
-                  {portalLabel("سبد خرید من (")}
-                  {toPersianDigits((cartItems || []).length)})
-                </span>
-              </Link>
-            </div>
-          </div>
-
-          {/* 4 KPI Summary Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-7">
-            <div
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs"
-              hidden={!resolvedConfig.permissions.showKpi1}
-            >
-              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-                <span>{resolvedConfig.uiTexts.kpi1Title}</span>
-                <CreditCard className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-sm sm:text-base font-black text-emerald-400">
-                {portalLabel("حساب کاربری فعال")}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                {portalLabel("نام کاربری:")}
-                <span className="font-mono">
-                  {user?.username || user?.phone || "فعال"}
-                </span>
-              </div>
-            </div>
-
-            <div
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs"
-              hidden={!resolvedConfig.permissions.showKpi2}
-            >
-              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-                <span>{resolvedConfig.uiTexts.kpi2Title}</span>
-                <Package className="w-4 h-4 text-[#E06518]" />
-              </div>
-              <div className="text-base sm:text-lg font-black text-white font-mono">
-                {toPersianDigits(orders.length)}
-                {portalLabel("سفارش")}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                {toPersianDigits(
-                  orders.filter((o) => o.status === "shipped").length,
-                )}
-                {portalLabel("مرسوله در مسیر تحویل")}
-              </div>
-            </div>
-
-            <div
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs"
-              hidden={!resolvedConfig.permissions.showKpi3}
-            >
-              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-                <span>{resolvedConfig.uiTexts.kpi3Title}</span>
-                <FileText className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="text-base sm:text-lg font-black text-white font-mono">
-                {formatPrice(totalSpent)}{" "}
-                <span className="text-xs font-normal">
-                  {portalLabel("تومان")}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                {portalLabel("همراه با فاکتور و رسید رسمی")}
-              </div>
-            </div>
-
-            <div
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs"
-              hidden={!resolvedConfig.permissions.showKpi4}
-            >
-              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-                <span>{resolvedConfig.uiTexts.kpi4Title}</span>
-                <ShieldCheck className="w-4 h-4 text-sky-400" />
-              </div>
-              <div className="text-sm sm:text-base font-black text-white">
-                {portalLabel("تضمین ۱۰۰٪ اصالت کالا")}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                {portalLabel("ارسال مستقیم از انبار مرکزی یزد")}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* =====================================================================
-          DEDICATED BANNER SLOT (جایگاه ویژه طراحی بنر و کمپین‌های جمعی و تکی)
-         ===================================================================== */}
-      {resolvedConfig.permissions.showPromotionalBanners &&
-        (activeBanners.length > 0 || resolvedConfig.customCartDiscountRule) && (
-          <div className="max-w-7xl mx-auto px-4 mt-6 space-y-3">
-            {resolvedConfig.customCartDiscountRule && (
-              <div className="p-5 rounded-3xl bg-gradient-to-l from-emerald-900 via-teal-900 to-slate-900 text-white border border-emerald-400/40 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <div className="inline-flex items-center gap-1.5 text-emerald-300 text-xs font-bold">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{portalLabel("طرح تشویقی ویژه حساب شما")}</span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-white">
-                    {portalLabel("با رسیدن حجم خرید شما به")}{" "}
-                    {formatPrice(
-                      resolvedConfig.customCartDiscountRule.minVolume,
-                    )}
-                    {portalLabel("تومان،")}{" "}
-                    {toPersianDigits(
-                      resolvedConfig.customCartDiscountRule.discountPercent,
-                    )}
-                    {portalLabel("٪ تخفیف به کل سبد خرید شما اضافه می‌شود")}
-                  </h3>
-                  <p className="text-xs text-emerald-100/90">
-                    {resolvedConfig.customCartDiscountRule.description}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("quick_buy")}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shrink-0 cursor-pointer transition"
-                >
-                  {portalLabel("ثبت سفارش و دریافت تخفیف")}
-                </button>
-              </div>
-            )}
-
-            {activeBanners.map((banner) => (
-              <div
-                key={banner.id}
-                className={`relative overflow-hidden rounded-3xl border bg-gradient-to-l ${getBannerThemeClasses(
-                  banner.theme,
-                )} p-5 sm:p-7 shadow-lg`}
-              >
-                {banner.backgroundImage && (
-                  <img
-                    src={banner.backgroundImage}
-                    alt={banner.title}
-                    className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
-                  />
-                )}
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                  <div className="space-y-2 max-w-3xl">
-                    <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-amber-300">
-                      <Tag className="w-3.5 h-3.5 text-[#E06518]" />
-                      <span>{banner.badgeText}</span>
-                      {banner.minCartVolume && banner.cartDiscountPercent ? (
-                        <>
-                          <span className="text-white/40">•</span>
-                          <span className="text-emerald-300">
-                            {portalLabel("خرید بالای")}
-                            {formatPrice(banner.minCartVolume)}
-                            {portalLabel("ت =")}{" "}
-                            {toPersianDigits(banner.cartDiscountPercent)}
-                            {portalLabel("٪ تخفیف کل سبد خرید")}
-                          </span>
-                        </>
-                      ) : null}
-                    </div>
-                    <h2 className="text-lg sm:text-xl font-black text-white leading-relaxed">
-                      {banner.title}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                      {banner.subtitle}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleBannerAction(banner)}
-                      className="px-5 py-3 rounded-2xl bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-black flex items-center gap-2 shadow-lg cursor-pointer transition"
-                    >
-                      <span>{banner.ctaText || "مشاهده و ثبت سفارش"}</span>
-                      <ArrowLeft className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      {/* Main Content Layout */}
-      <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Right Navigation Sidebar */}
-        <aside className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 p-4 shadow-xs space-y-2 lg:sticky lg:top-24">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#E06518] to-amber-600 text-white flex items-center justify-center font-black text-base shrink-0 shadow-xs">
-              <User className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-black text-xs text-slate-900 truncate">
-                {user?.fullName || "مشتری گرامی"}
-              </div>
-              <div className="text-[11px] font-mono text-slate-500 mt-0.5">
-                {user?.phone || "—"}
-              </div>
-              <div className="text-[10px] font-bold text-emerald-700 mt-1">
-                {portalLabel("پنل کاربری من")}
-              </div>
-            </div>
-          </div>
-
-          <nav
-            aria-label="بخش‌های حساب"
-            className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible"
-          >
-            {enabledMenus.map((item) => {
-              const Icon = getMenuIcon(item.id);
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  className={`shrink-0 lg:w-full px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-all ${
-                    isActive
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon
-                      className={`w-4 h-4 ${isActive ? "text-[#E06518]" : "text-slate-400"}`}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  <ArrowLeft className="w-3.5 h-3.5 opacity-60" />
-                </button>
-              );
-            })}
-          </nav>
-          {/* Category Quick Links in Menu */}
-          <div
-            hidden={
-              !resolvedConfig.permissions.allowQuickSkuOrder ||
-              !enabledMenus.some((m) => m.id === "quick_buy")
-            }
-            className="hidden lg:block pt-3 mt-3 border-t border-slate-100 space-y-2"
-          >
-            <div className="px-2 text-[11px] font-black text-slate-500 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#E06518]" />
-              <span>{portalLabel("دسترسی سریع دسته‌بندی کالاها")}</span>
-            </div>
-            <div className="space-y-1">
-              {CATEGORIES.slice(0, 5).map((cat) => (
-                <button
-                  key={cat.slug}
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategorySlug(cat.slug);
-                    setActiveTab("quick_buy");
-                  }}
-                  className="w-full text-right px-3 py-1.5 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-orange-50 hover:text-[#E06518] transition flex items-center justify-between cursor-pointer"
-                >
-                  <span className="truncate">{cat.name}</span>
-                  <ArrowLeft className="w-3 h-3 opacity-40 shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {user && (
-            <div className="pt-3 mt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                  navigate("/");
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>{portalLabel("خروج از حساب کاربری")}</span>
-              </button>
-            </div>
-          )}
-        </aside>
-
         {/* Left Main Area */}
-        <main className="lg:col-span-9 space-y-6">
+        <div className="space-y-6">
           {/* Active Announcements */}
           {resolvedConfig.permissions.showAnnouncements &&
             activeAnnouncements.length > 0 &&
@@ -747,6 +419,16 @@ export const ConsumerDashboardPage: React.FC = () => {
              =============================================================== */}
           {activeTab === "overview" && (
             <div className="space-y-6">
+              {resolvedConfig.permissions.showClubBarChart &&
+                enabledMenus.some((m) => m.id === "club_rewards") && (
+                  <PortalClub
+                    portal="consumer"
+                    user={user!}
+                    texts={resolvedConfig.uiTexts}
+                    labels={resolvedConfig.labels}
+                    onDetails={() => setActiveTab("club_rewards")}
+                  />
+                )}
               {/* Active Shipment Live Tracker */}
               {orders[0] && (
                 <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">
@@ -1003,6 +685,16 @@ export const ConsumerDashboardPage: React.FC = () => {
           {/* ===============================================================
               TAB 2: ORDERS & MY PRICE LIST DOWNLOAD
              =============================================================== */}
+          {activeTab === "club_rewards" && (
+            <PortalClub
+              portal="consumer"
+              user={user!}
+              texts={resolvedConfig.uiTexts}
+              labels={resolvedConfig.labels}
+              details
+              showChart={resolvedConfig.permissions.showClubBarChart}
+            />
+          )}
           {activeTab === "orders" && (
             <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -1441,102 +1133,104 @@ export const ConsumerDashboardPage: React.FC = () => {
               </div>
             </div>
           )}
-        </main>
-      </div>
+        </div>
 
-      {/* Printable Invoice Modal */}
-      {selectedReceiptOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h4 className="text-sm font-black">
-                {portalLabel("فاکتور و رسید خرید —")}
-                {selectedReceiptOrder.orderNumber}
-              </h4>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-lg bg-[#E06518] text-white text-xs font-bold cursor-pointer"
-                >
-                  {portalLabel("چاپ فاکتور")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedReceiptOrder(null)}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold cursor-pointer"
-                >
-                  {portalLabel("بستن")}
-                </button>
-              </div>
-            </div>
-            <div className="p-6 space-y-4 text-xs">
-              <div className="flex justify-between pb-3 border-b border-slate-200">
-                <div>
-                  <div className="font-black text-sm text-slate-900">
-                    {portalLabel("فروشگاه و بازرگانی هایپرصنعت اطلس یزد")}
-                  </div>
-                  <div className="text-slate-500 mt-0.5">
-                    {portalLabel("خریدار:")}
-                    {selectedReceiptOrder.receiverName}
-                  </div>
+        {/* Printable Invoice Modal */}
+        {selectedReceiptOrder && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-2xl rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+              <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <h4 className="text-sm font-black">
+                  {portalLabel("فاکتور و رسید خرید —")}
+                  {selectedReceiptOrder.orderNumber}
+                </h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 rounded-lg bg-[#E06518] text-white text-xs font-bold cursor-pointer"
+                  >
+                    {portalLabel("چاپ فاکتور")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReceiptOrder(null)}
+                    className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold cursor-pointer"
+                  >
+                    {portalLabel("بستن")}
+                  </button>
                 </div>
-                <div className="text-left">
+              </div>
+              <div className="p-6 space-y-4 text-xs">
+                <div className="flex justify-between pb-3 border-b border-slate-200">
                   <div>
-                    {portalLabel("تاریخ:")}
-                    {selectedReceiptOrder.date}
+                    <div className="font-black text-sm text-slate-900">
+                      {portalLabel("فروشگاه و بازرگانی هایپرصنعت اطلس یزد")}
+                    </div>
+                    <div className="text-slate-500 mt-0.5">
+                      {portalLabel("خریدار:")}
+                      {selectedReceiptOrder.receiverName}
+                    </div>
                   </div>
-                  <div className="text-emerald-700 font-bold mt-0.5">
-                    {portalLabel("وضعیت: تسویه کامل")}
+                  <div className="text-left">
+                    <div>
+                      {portalLabel("تاریخ:")}
+                      {selectedReceiptOrder.date}
+                    </div>
+                    <div className="text-emerald-700 font-bold mt-0.5">
+                      {portalLabel("وضعیت: تسویه کامل")}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <table className="w-full text-right border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-600">
-                    <th className="py-2">{portalLabel("کد کالا")}</th>
-                    <th className="py-2">{portalLabel("شرح کالا")}</th>
-                    <th className="py-2">{portalLabel("تعداد")}</th>
-                    <th className="py-2">{portalLabel("قیمت واحد (تومان)")}</th>
-                    <th className="py-2">{portalLabel("جمع (تومان)")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {selectedReceiptOrder.items.map((it, i) => (
-                    <tr key={i}>
-                      <td
-                        className="py-2.5 font-mono font-bold text-[#E06518]"
-                        dir="ltr"
-                      >
-                        {it.code}
-                      </td>
-                      <td className="py-2.5 font-bold">{it.name}</td>
-                      <td className="py-2.5">
-                        {toPersianDigits(it.quantity)} {it.unit}
-                      </td>
-                      <td className="py-2.5 font-mono">
-                        {formatPrice(it.unitPrice)}
-                      </td>
-                      <td className="py-2.5 font-mono font-bold">
-                        {formatPrice(it.unitPrice * it.quantity)}
-                      </td>
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-600">
+                      <th className="py-2">{portalLabel("کد کالا")}</th>
+                      <th className="py-2">{portalLabel("شرح کالا")}</th>
+                      <th className="py-2">{portalLabel("تعداد")}</th>
+                      <th className="py-2">
+                        {portalLabel("قیمت واحد (تومان)")}
+                      </th>
+                      <th className="py-2">{portalLabel("جمع (تومان)")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selectedReceiptOrder.items.map((it, i) => (
+                      <tr key={i}>
+                        <td
+                          className="py-2.5 font-mono font-bold text-[#E06518]"
+                          dir="ltr"
+                        >
+                          {it.code}
+                        </td>
+                        <td className="py-2.5 font-bold">{it.name}</td>
+                        <td className="py-2.5">
+                          {toPersianDigits(it.quantity)} {it.unit}
+                        </td>
+                        <td className="py-2.5 font-mono">
+                          {formatPrice(it.unitPrice)}
+                        </td>
+                        <td className="py-2.5 font-mono font-bold">
+                          {formatPrice(it.unitPrice * it.quantity)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between font-black text-sm text-emerald-950">
-                <span>{portalLabel("جمع کل پرداخت‌شده:")}</span>
-                <span className="font-mono">
-                  {formatPrice(selectedReceiptOrder.totalAmount)}
-                  {portalLabel("تومان")}
-                </span>
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between font-black text-sm text-emerald-950">
+                  <span>{portalLabel("جمع کل پرداخت‌شده:")}</span>
+                  <span className="font-mono">
+                    {formatPrice(selectedReceiptOrder.totalAmount)}
+                    {portalLabel("تومان")}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PortalShell>
     </div>
   );
 };

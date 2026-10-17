@@ -230,8 +230,10 @@ function scopedState(db: Database, user: Row) {
         m.id === (p === "consumer" ? "orders" : "orders_pricelist"),
     );
   const canClub =
-    p === "high_volume" &&
-    (!menus || menus.some((m: Row) => m.enabled && m.id === "club_rewards"));
+    !override?.disabledMenuIds?.includes("club_rewards") &&
+    (!menus ||
+      (p === "consumer" && !menus.some((m: Row) => m.id === "club_rewards")) ||
+      menus.some((m: Row) => m.enabled && m.id === "club_rewards"));
   for (const key of keys) {
     const value = db.values[key];
     if (value === undefined) continue;
@@ -265,7 +267,12 @@ function scopedState(db: Database, user: Row) {
           )
         : [];
     else if (key === "atlas_portal_club_milestones_v1") {
-      if (canClub) result[key] = value;
+      if (canClub)
+        result[key] = Array.isArray(value)
+          ? p === "high_volume"
+            ? value
+            : { consumer: [] }
+          : { [p]: value[p] || [] };
     } else if (key === "atlas_customers_approval_v2")
       result[key] = value.filter((r: Row) => r.phone === user.phone);
     else if (
@@ -276,6 +283,7 @@ function scopedState(db: Database, user: Row) {
         ? value
             .filter(
               (r: Row) =>
+                (r.portal || "high_volume") === p &&
                 (key !== "atlas_customer_reward_assignments_v1"
                   ? r.active
                   : r.targetCustomerIds?.includes(user.id)) &&
@@ -590,7 +598,24 @@ export default async function handler(
           }
           db.users = users;
         } else {
-          if (key !== "atlas_portal_layout_configs_v1" && !Array.isArray(value))
+          if (
+            key === "atlas_portal_club_milestones_v1" &&
+            !Array.isArray(value)
+          ) {
+            if (
+              !value ||
+              typeof value !== "object" ||
+              Object.entries(value).some(
+                ([portal, items]) =>
+                  !["consumer", "high_volume"].includes(portal) ||
+                  !Array.isArray(items),
+              )
+            )
+              fail(400, "ساختار مسیر باشگاه معتبر نیست.");
+          } else if (
+            key !== "atlas_portal_layout_configs_v1" &&
+            !Array.isArray(value)
+          )
             fail(400, "ساختار تنظیمات معتبر نیست.");
           db.values[key] = value;
         }
@@ -612,15 +637,28 @@ export default async function handler(
 }
 
 // Shared authorization for Express-only catalog mutations on persistent hosting.
-export async function requirePortalAdmin(req: IncomingMessage, res: ServerResponse, next: () => void) {
+export async function requirePortalAdmin(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+) {
   try {
     const auth = await session(req, await readDb());
-    if (!auth.admin) fail(403, 'فقط مدیر اجازه ویرایش دارد.');
-    if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) fail(403, 'مبدأ درخواست معتبر نیست.');
+    if (!auth.admin) fail(403, "فقط مدیر اجازه ویرایش دارد.");
+    if (
+      req.headers.origin &&
+      new URL(req.headers.origin).host !== req.headers.host
+    )
+      fail(403, "مبدأ درخواست معتبر نیست.");
     next();
   } catch (error: any) {
     res.statusCode = error.status || 503;
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.end(JSON.stringify({ success: false, message: error.status ? error.message : 'بررسی دسترسی ممکن نشد.' }));
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(
+      JSON.stringify({
+        success: false,
+        message: error.status ? error.message : "بررسی دسترسی ممکن نشد.",
+      }),
+    );
   }
 }

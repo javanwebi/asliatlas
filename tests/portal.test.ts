@@ -221,6 +221,10 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
         { id: "a", code: "A" },
         { id: "b", code: "B" },
       ],
+      atlas_portal_club_milestones_v1: {
+        consumer: [{ code: "C", publicTitle: "retail-path" }],
+        high_volume: [{ code: "A", publicTitle: "factory-path" }],
+      },
       atlas_customer_reward_assignments_v1: [
         { id: "r1", targetCustomerIds: ["crm-b2b"], notes: "admin-only-note" },
         { id: "r2", targetCustomerIds: ["another-b2b"] },
@@ -283,7 +287,17 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
           high.values.atlas_customer_reward_assignments_v1[0].notes,
           undefined,
         );
+        assert.deepEqual(high.values.atlas_portal_club_milestones_v1, {
+          high_volume: [{ code: "A", publicTitle: "factory-path" }],
+        });
         const retail = (await request(undefined, consumer)).data;
+        assert.deepEqual(retail.values.atlas_portal_club_milestones_v1, {
+          consumer: [{ code: "C", publicTitle: "retail-path" }],
+        });
+        assert.deepEqual(
+          retail.values.atlas_customer_reward_assignments_v1,
+          [],
+        );
         assert.deepEqual(
           retail.values[bannerKey].map((r: any) => r.id),
           ["consumer-all", "consumer-single"],

@@ -49,3 +49,26 @@ Browser acceptance: administrator creates a CRM account and publishes a banner; 
 The `asliatlas` Railway project runs the full Express process (including WebSocket `/api/live`), not a static-only Vite server. `railway.json` declares the Docker build, start command and health check. The Dockerfile installs from package-lock.json once, builds assets, then removes development-only packages. Node 24 and a single replica are used. The `/data` persistent volume holds `PORTAL_DATA_PATH=/data/portal.json`, `IMAGE_AI_DIR=/data/imageai`, and `CATALOG_OVERRIDES_DB_PATH=/data/catalogOverridesDb.json`. The session secret and administrator password are generated independently and stored as Railway service variables, never committed. Catalog write endpoints also require the administrator's signed portal session.
 
 The public site is `https://sanatpish-production.up.railway.app`; admin login is `/admin`. Retrieve `PORTAL_ADMIN_PASSWORD` from the service Variables in Railway. AI model API keys, Worker tokens and a real SMS provider have not been supplied; these remain separate integrations and are not fabricated by deployment.
+
+### Minimal customer portals and dedicated mobile layout
+
+Both customer portals now share `PortalShell` (white/orange industrial palette,
+subtle glass surfaces, company heading and surname in the upper left). Desktop
+uses a sidebar; mobile uses the first three enabled menus and an accessible
+native dialog for all remaining sections. Menu order in Content Studio controls
+both layouts. Mobile tables display the same records as labelled cards, without
+requiring horizontal page scrolling. Reduced-motion preferences are respected;
+blur is limited to navigation surfaces.
+
+Content Studio → each portal → Layout controls glass/solid surfaces and spacing,
+with collective defaults and individual overrides. Titles, buttons, banners,
+announcements, menu labels/order, permissions and KPI visibility remain editable.
+Customer identity and purchase totals remain account data controlled by the server.
+
+Both portals have a customer club. Milestones are independently stored under
+`consumer` and `high_volume` in the existing club key; old array data migrates to
+the high-volume club without overwriting it. Consumer defaults have no promised
+financial discount or rewards: publish these explicitly in Content Studio →
+Customer portal → Club. Levels are derived from recorded purchases, never chosen
+by customers. Customer club membership does not assign wholesale pricing or CRM
+access. Legacy reward assignments remain scoped to high-volume customers.
