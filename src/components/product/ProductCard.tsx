@@ -49,6 +49,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (product.variants?.length) { navigate(`/product/${encodeURIComponent(product.code)}`); return; }
     if (!currentUser) {
       openAuthModal();
       return;
@@ -89,6 +90,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (product.variants?.length) { navigate(`/product/${encodeURIComponent(product.code)}`); return; }
     if (!currentUser) {
       openAuthModal();
       return;

@@ -371,10 +371,10 @@ export const ProductDetailPage: React.FC = () => {
                   <span className="text-xs font-bold text-slate-800 mt-1">{product.unit}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium">اصالت کالا:</span>
+                  <span className="text-[11px] text-slate-400 font-medium">وضعیت قیمت:</span>
                   <span className="text-xs font-bold text-emerald-700 mt-1 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    ۱۰۰٪ اورجینال
+                    نیازمند استعلام
                   </span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
@@ -384,7 +384,7 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between">
                   <span className="text-[11px] text-slate-400 font-medium">مستندات مهندسی:</span>
                   <span className="text-xs font-bold text-slate-800 mt-1">
-                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'استاندارد DIN'}
+                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'هنوز ثبت نشده'}
                   </span>
                 </div>
               </div>
@@ -543,7 +543,7 @@ export const ProductDetailPage: React.FC = () => {
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>مشخصات فنی و استانداردهای DIN</span>
+            <span>اطلاعات فنی ثبت‌شده</span>
           </button>
 
           <button
@@ -579,9 +579,9 @@ export const ProductDetailPage: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-[#55565A]">شاخص‌های فنی و استانداردهای مهندسی قطعه</h3>
+                  <h3 className="text-sm font-bold text-[#55565A]">مشخصات خانواده محصول</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    استخراج‌شده از مستندات رسمی تولیدکننده و آزمایشگاه‌های مرجع
+                    مشخصات ثبت‌شده در فهرست محصولات
                   </p>
                 </div>
                 {product.cataloguePage && (
@@ -597,7 +597,7 @@ export const ProductDetailPage: React.FC = () => {
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
                         <th className="py-3.5 px-4 font-bold w-1/3">شاخص فنی و مهندسی</th>
-                        <th className="py-3.5 px-4 font-bold">مقدار اسمی طبق استاندارد کاتالوگ</th>
+                        <th className="py-3.5 px-4 font-bold">اطلاعات ثبت‌شده</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -638,32 +638,32 @@ export const ProductDetailPage: React.FC = () => {
           {activeTab === 'catalogue' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-[#55565A]">شناسنامه رسمی تطبیق با کاتالوگ کارخانه</h3>
+                <h3 className="text-sm font-bold text-[#55565A]">شناسه‌ها و مدارک محصول</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  کدها و مراجع استاندارد بین‌المللی جهت تطبیق توسط مهندسین خرید و دفاتر فنی کارخانجات
+                  برای تطبیق دقیق، کد کالا و سایز انتخاب‌شده را به واحد فروش اعلام کنید.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">کد رسمی کاتالوگ:</span>
+                  <span className="text-slate-400 block text-[11px]">کد کالای انتخاب‌شده:</span>
                   <span className="font-mono font-bold text-[#55565A] text-sm block">
-                    {product.forzaCode || product.code}
+                    {selectedVariant?.code || product.forzaCode || product.code}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
                   <span className="text-slate-400 block text-[11px]">صفحه در کاتالوگ مرجع:</span>
                   <span className="font-bold text-[#55565A] text-sm block">
-                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'آرشیو مرکزی'}
+                    {product.cataloguePage ? `صفحه ${toPersianDigits(product.cataloguePage)}` : 'ثبت نشده'}
                   </span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
-                  <span className="text-slate-400 block text-[11px]">برند / تولیدکننده انحصاری:</span>
+                  <span className="text-slate-400 block text-[11px]">برند ثبت‌شده:</span>
                   <span className="font-bold text-orange-600 text-sm block">{product.brand}</span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
                   <span className="text-slate-400 block text-[11px]">استاندارد مرجع تولید:</span>
-                  <span className="font-bold text-[#55565A] text-sm block">DIN ISO 9001 / CE</span>
+                  <span className="font-bold text-[#55565A] text-sm block">ثبت نشده</span>
                 </div>
               </div>
 
@@ -716,7 +716,7 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
                   <h4 className="font-bold text-slate-900">ضمانت اصالت و بازگشت</h4>
                   <p className="text-slate-500 text-[11.5px] leading-relaxed">
-                    تضمین ۱۰۰٪ انطباق با کاتالوگ رسمی کارخانه با قابلیت مرجوعی در صورت هرگونه مغایرت ابعادی یا فنی.
+                    پیش از ثبت سفارش، تطبیق کد کالا، سایز و مشخصات مورد نیاز را با واحد فروش بررسی کنید.
                   </p>
                 </div>
               </div>

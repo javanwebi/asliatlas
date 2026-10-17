@@ -1,7 +1,7 @@
 import { matchesProductSearch, CATALOGUE_SKU_COUNT } from '../data/userProducts';
 import { ProductImage } from '../components/product/ProductImage';
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getAllProducts } from '../data/mockGenerator';
 import { CATEGORIES, findCatalogCategory, matchesCatalogCategory, resolveCategorySlug } from '../data/categories';
 import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
@@ -50,6 +50,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 };
 
 export const ProductsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, openAuthModal } = useAuth();
   const { addToCart } = useCart();
@@ -190,6 +191,7 @@ export const ProductsPage: React.FC = () => {
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (product.variants?.length) { navigate(`/product/${encodeURIComponent(product.code)}`); return; }
     if (!currentUser) {
       openAuthModal();
       return;
@@ -620,7 +622,7 @@ export const ProductsPage: React.FC = () => {
 
                       <button
                         onClick={e => handleAddToCart(product, e)}
-                        title="ثبت در سبد استعلام"
+                        title="انتخاب سایز و استعلام"
                         className={`p-2 rounded-xl border transition-all cursor-pointer ${
                           isAdded
                             ? 'bg-emerald-500 border-emerald-500 text-white'
