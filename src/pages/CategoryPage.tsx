@@ -1,3 +1,4 @@
+import { matchesProductSearch } from '../data/userProducts';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, findCatalogCategory, matchesCatalogCategory } from '../data/categories';
@@ -68,6 +69,7 @@ export const CategoryPage: React.FC = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(p => 
+        matchesProductSearch(p, q) ||
         p.name.toLowerCase().includes(q) ||
         p.code.toLowerCase().includes(q) ||
         (p.subcategory && p.subcategory.toLowerCase().includes(q))

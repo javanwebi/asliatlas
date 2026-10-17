@@ -31,6 +31,11 @@ export interface TechnicalSpec {
 }
 
 export interface Product {
+  submenu?: string;
+  variants?: ProductVariant[];
+  sourceRow?: number;
+  stockKnown?: boolean;
+  imageScope?: 'family-example';
   code: string;               // e.g. "AT-751", "SWR-230", "FORZA-A45"
   name: string;               // نام فارسی محصول
   nameEn?: string;            // نام لاتین
@@ -57,6 +62,12 @@ export interface Product {
   forzaCode?: string;         // کد رسمی کاتالوگ فورزا اطلس مثل "FORZACODE: 1000 0 1"
   cataloguePage?: number;     // شماره صفحه کاتالوگ رسمی ۱۴۰۴ اطلس
   hasCatalogueImage?: boolean;// آیا دارای تصویر مستقیم و ثبت‌شده از کاتالوگ است
+}
+
+export interface ProductVariant {
+  code: string;
+  size: string;
+  name: string;
 }
 
 export interface Category {

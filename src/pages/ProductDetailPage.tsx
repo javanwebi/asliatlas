@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import { ProductVariants } from '../components/product/ProductVariants';
+import { ProductImage } from '../components/product/ProductImage';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductByCode, getSimilarProducts } from '../data/mockGenerator';
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +43,8 @@ export const ProductDetailPage: React.FC = () => {
 
   const product = code ? getProductByCode(decodeURIComponent(code)) : undefined;
 
+  const [selectedVariantCode, setSelectedVariantCode] = useState('');
+  useEffect(() => { setSelectedVariantCode(product?.variants?.find(v => v.code === code)?.code || product?.variants?.[0]?.code || ''); setActiveImageIndex(0); }, [code, product?.code]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -94,10 +98,12 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const stockInfo = getStockStatus(product.stock);
+  const stockInfo = product.stockKnown === false ? { text: 'موجودی نیازمند استعلام', badgeBg: '#94a3b8' } : getStockStatus(product.stock);
+  const selectedVariant = product.variants?.find(v => v.code === selectedVariantCode);
+  const requestedProduct = selectedVariant ? { ...product, code: selectedVariant.code, name: selectedVariant.name, technicalSpecs: [...product.technicalSpecs, { key: 'سایز انتخاب‌شده', value: selectedVariant.size }] } : product;
   const isFavorited = isInWishlist(product.code);
   const similarProducts = getSimilarProducts(product, 4);
-  const imageLabels = ['نمای اصلی قطعه', 'مقطع و نقشه فنی DIN', 'تأییدیه و بسته‌بندی'];
+  const imageLabels = product.images.map(() => 'تصویر نمونه خانواده محصول');
 
   const handleInquirePriceClick = () => {
     if (!currentUser) {
@@ -105,6 +111,7 @@ export const ProductDetailPage: React.FC = () => {
       return;
     }
 
+    if (product.inquiryOnly && product.prices.retail <= 0) { setIsInquiryModalOpen(true); return; }
     setIsInquiring(true);
     setTimeout(() => {
       let approval = pricingCreditService.getCustomerByPhone(currentUser.phone);
@@ -147,14 +154,14 @@ export const ProductDetailPage: React.FC = () => {
       return;
     }
 
-    addToCart(product, quantity);
+    addToCart(requestedProduct, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   const handleInquirySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    submitInquiry(product, quantity, inquiryNotes);
+    submitInquiry(requestedProduct, quantity, inquiryNotes);
     setInquirySubmitted(true);
     setTimeout(() => {
       setInquirySubmitted(false);
@@ -163,7 +170,7 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   const copyProductCode = () => {
-    navigator.clipboard.writeText(product.code);
+    navigator.clipboard.writeText(requestedProduct.code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
@@ -245,16 +252,17 @@ export const ProductDetailPage: React.FC = () => {
           {/* Left: Gallery (Sticky on Desktop) */}
           <div className="lg:col-span-5 space-y-3.5 lg:sticky lg:top-24">
             <div className="relative w-full pt-[82%] bg-gradient-to-b from-slate-50/70 to-white border border-slate-200/90 rounded-2xl overflow-hidden group flex items-center justify-center">
-              <img
+              <ProductImage
                 src={product.images[activeImageIndex] || product.images[0]}
-                alt={`${product.name} - ${imageLabels[activeImageIndex]}`}
+                alt={product.name}
                 className="absolute inset-0 w-full h-full object-contain p-6 sm:p-8 group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute bottom-3 right-3 bg-slate-900/75 backdrop-blur-xs text-white text-[10.5px] px-3 py-1 rounded-lg font-medium shadow-xs">
-                {imageLabels[activeImageIndex]} ({toPersianDigits(activeImageIndex + 1)} از ۳)
-              </div>
+              {product.images.length > 0 && <div className="absolute bottom-3 right-3 bg-slate-900/75 backdrop-blur-xs text-white text-[10.5px] px-3 py-1 rounded-lg font-medium shadow-xs">
+                {imageLabels[activeImageIndex]} ({toPersianDigits(activeImageIndex + 1)} از {toPersianDigits(product.images.length)})
+              </div>}
             </div>
 
+            {product.imageScope === 'family-example' && <p className="text-xs text-slate-500 leading-6">تصویر نمونهٔ این خانواده است؛ تصویر اختصاصی هر سایز و کد کالا هنوز ثبت نشده است.</p>}
             {/* Thumbnails */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {product.images.map((imgUrl, idx) => (
@@ -331,7 +339,7 @@ export const ProductDetailPage: React.FC = () => {
 
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-medium">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>موجود در انبار یزد ({toPersianDigits(product.stock)} عدد)</span>
+                  <span>{product.stockKnown === false ? 'موجودی نیازمند استعلام' : `موجود در انبار یزد (${toPersianDigits(product.stock)} عدد)`}</span>
                 </div>
               </div>
 
@@ -349,6 +357,8 @@ export const ProductDetailPage: React.FC = () => {
                 <span className="text-slate-700 font-bold">{stockInfo.text}</span>
               </div>
 
+              {product.variants?.length ? <ProductVariants key={product.code} variants={product.variants} selected={selectedVariantCode} onSelect={setSelectedVariantCode} /> : null}
+              {selectedVariant && <p className="rounded-xl bg-orange-50 p-3 text-xs text-orange-900" aria-live="polite">کالای انتخاب‌شده برای استعلام: {selectedVariant.name} — کد {selectedVariant.code}</p>}
               {/* Description */}
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {product.description}
@@ -462,9 +472,9 @@ export const ProductDetailPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleAddToCart}
-                      disabled={product.stock <= 0}
+                      disabled={!product.inquiryOnly && product.stock <= 0}
                       className={`h-12 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 ${
-                        product.stock <= 0
+                        !product.inquiryOnly && product.stock <= 0
                           ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                           : added
                           ? 'bg-emerald-600 text-white'
@@ -498,9 +508,9 @@ export const ProductDetailPage: React.FC = () => {
                 /* Logged In, needs instant click to inquire */
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <span className="text-sm font-bold text-[#55565A] block">محاسبه نرخ بر مبنای پروفایل اعتباری</span>
+                    <span className="text-sm font-bold text-[#55565A] block">استعلام قیمت و موجودی کد انتخاب‌شده</span>
                     <p className="text-[11px] text-slate-500">
-                      جهت دریافت قیمت قطعی بر مبنای فهرست قیمت و سطح اعتباری شما، کلیک کنید.
+                      کد و سایز انتخاب‌شده همراه درخواست شما ثبت می‌شود.
                     </p>
                   </div>
                   <button
@@ -510,7 +520,7 @@ export const ProductDetailPage: React.FC = () => {
                     className="h-11 sm:h-12 px-6 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-98"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>{isInquiring ? 'در حال استعلام نرخ...' : 'استعلام آنی قیمت'}</span>
+                    <span>{isInquiring ? 'در حال استعلام نرخ...' : 'درخواست قیمت و موجودی'}</span>
                   </button>
                 </div>
               )}
@@ -767,7 +777,7 @@ export const ProductDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={product.stock <= 0}
+              disabled={!product.inquiryOnly && product.stock <= 0}
               className="h-11 px-5 bg-[#E06518] hover:bg-[#C95210] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
@@ -802,6 +812,7 @@ export const ProductDetailPage: React.FC = () => {
             </p>
           </div>
 
+          <p className="text-xs bg-orange-50 p-3 rounded-xl">{requestedProduct.name} — کد {requestedProduct.code}</p>
           <div>
             <label className="block text-xs font-bold text-[#55565A] mb-1">
               تعداد مورد نیاز ({product.unit}):

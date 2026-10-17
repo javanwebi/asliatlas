@@ -1,3 +1,5 @@
+import { matchesProductSearch, CATALOGUE_SKU_COUNT } from '../data/userProducts';
+import { ProductImage } from '../components/product/ProductImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getAllProducts } from '../data/mockGenerator';
@@ -81,7 +83,7 @@ export const ProductsPage: React.FC = () => {
   useEffect(() => {
     setSelectedCategory(categoryParam);
     setSelectedSubcategory(subParam);
-    if (queryParam) setSearchQuery(queryParam);
+    setSearchQuery(queryParam);
     setCurrentPage(1);
   }, [categoryParam, subParam, queryParam]);
 
@@ -130,6 +132,7 @@ export const ProductsPage: React.FC = () => {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
         p =>
+          matchesProductSearch(p, q) ||
           p.code.toLowerCase().includes(q) ||
           p.name.toLowerCase().includes(q) ||
           (p.nameEn && p.nameEn.toLowerCase().includes(q)) ||
@@ -247,7 +250,7 @@ export const ProductsPage: React.FC = () => {
                 محصولات و قطعات صنعتی
               </h1>
               <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                مشاهده و استعلام تمامی {toPersianDigits(allProducts.length)} قطعه ثبت‌شده کاتالوگ شامل انواع تسمه‌های انتقال قدرت، غلتک‌های سرامیکی، پولی‌های بالانس‌شده، بلبرینگ و زنجیرهای صنعتی با تصاویر و مشخصات فنی دقیق.
+                مشاهده {toPersianDigits(allProducts.length)} خانواده محصول و {toPersianDigits(CATALOGUE_SKU_COUNT)} کد کالا. سایزها و شرح هر کد در صفحه محصول قابل جستجو و انتخاب است.
               </p>
             </div>
 
@@ -257,7 +260,7 @@ export const ProductsPage: React.FC = () => {
                 <span className="block text-2xl font-black text-orange-400 font-mono">
                   {toPersianDigits(allProducts.length)}
                 </span>
-                <span className="text-[11px] text-slate-300">کل محصولات</span>
+                <span className="text-[11px] text-slate-300">خانواده محصول</span>
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10 text-center min-w-[100px]">
                 <span className="block text-2xl font-black text-white font-mono">
@@ -411,7 +414,7 @@ export const ProductsPage: React.FC = () => {
                   className="rounded text-emerald-600 focus:ring-emerald-500"
                 />
                 <ImageIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>دارای تصویر کاتالوگ ({toPersianDigits(countWithImages)})</span>
+                <span>دارای تصویر خانواده ({toPersianDigits(countWithImages)})</span>
               </label>
 
               {/* View Mode Toggle (Grid vs List) */}
@@ -497,7 +500,7 @@ export const ProductsPage: React.FC = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-colors shadow-sm cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>مشاهده تمام ۳۱۸ قطعه</span>
+              <span>مشاهده تمام محصولات</span>
             </button>
           </div>
         ) : viewMode === 'grid' ? (
@@ -526,7 +529,7 @@ export const ProductsPage: React.FC = () => {
                       {product.hasCatalogueImage && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                          <span>تصویر کاتالوگ</span>
+                          <span>تصویر خانواده</span>
                         </span>
                       )}
                     </div>
@@ -553,7 +556,7 @@ export const ProductsPage: React.FC = () => {
                     to={`/product/${encodeURIComponent(product.code)}`}
                     className="relative block w-full pt-[68%] bg-slate-50/50 overflow-hidden"
                   >
-                    <img
+                    <ProductImage
                       src={product.images[0]}
                       alt={product.name}
                       loading="lazy"
@@ -586,6 +589,7 @@ export const ProductsPage: React.FC = () => {
                       {product.name}
                     </Link>
 
+                    {product.variants && <p className="text-xs text-slate-500 mb-2">{toPersianDigits(product.variants.length)} کد و سایز قابل انتخاب</p>}
                     {/* Brand line */}
                     <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-2">
                       <span className="text-slate-400">سازنده:</span>
@@ -652,7 +656,7 @@ export const ProductsPage: React.FC = () => {
                     to={`/product/${encodeURIComponent(product.code)}`}
                     className="w-full sm:w-28 h-28 bg-slate-50 rounded-xl overflow-hidden shrink-0 flex items-center justify-center p-2 border border-slate-100 group-hover:border-orange-200"
                   >
-                    <img
+                    <ProductImage
                       src={product.images[0]}
                       alt={product.name}
                       loading="lazy"
@@ -669,7 +673,7 @@ export const ProductsPage: React.FC = () => {
                       {product.hasCatalogueImage && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                          <span>تصویر کاتالوگ</span>
+                          <span>تصویر خانواده</span>
                         </span>
                       )}
                       <Link

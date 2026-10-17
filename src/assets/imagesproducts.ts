@@ -15,16 +15,15 @@ export const TOTAL_OFFICIAL_IMAGES_COUNT = 869;
  * available in the javanweb/imagesatlas repository.
  */
 export function normalizeImageFileName(imageName?: string | null): string {
-  if (!imageName) return 'e(1).png';
+  if (!imageName) return '';
   const clean = imageName.trim();
   const match = clean.match(/(?:e\(?|at-e)?(\d+)\)?(?:\.(png|jpe?g|webp|svg))?/i);
   if (match) {
     const num = parseInt(match[1], 10);
     // 869 images in the repository: e(1).png through e(869).png
-    const normalizedNum = ((Math.abs(num) - 1) % 869) + 1;
-    return `e(${normalizedNum}).png`;
+    return num >= 1 && num <= 869 ? `e(${num}).png` : '';
   }
-  return 'e(1).png';
+  return '';
 }
 
 /**
@@ -47,7 +46,7 @@ export function isVerifiedCatalogueImage(imageName?: string | null): boolean {
  */
 export function getProductImageUrl(imageName?: string | null): string {
   if (!imageName) {
-    return `${GITHUB_RAW_BASE}/e(1).png`;
+    return '';
   }
 
   const clean = imageName.trim();
@@ -63,7 +62,7 @@ export function getProductImageUrl(imageName?: string | null): string {
   }
 
   const fileName = normalizeImageFileName(clean);
-  return `${GITHUB_RAW_BASE}/${fileName}`;
+  return fileName ? `${GITHUB_RAW_BASE}/${fileName}` : '';
 }
 
 export default getProductImageUrl;

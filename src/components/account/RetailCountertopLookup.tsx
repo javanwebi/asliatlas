@@ -1,3 +1,4 @@
+import { ProductImage } from '../product/ProductImage';
 import React, { useState, useMemo } from 'react';
 import {
   Search,
@@ -212,7 +213,7 @@ export const RetailCountertopLookup: React.FC = () => {
               {/* Product Thumbnail in White Glossy Tile */}
               <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/80 p-2 flex items-center justify-center shrink-0 relative overflow-hidden group shadow-sm">
                 {activeProduct.images[0] ? (
-                  <img
+                  <ProductImage
                     src={activeProduct.images[0]}
                     alt={activeProduct.name}
                     className="w-full h-full object-contain filter drop-shadow group-hover:scale-105 transition-transform"

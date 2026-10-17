@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, flattenCategoryNodes } from '../data/categories';
 import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
-import { USER_PRODUCTS } from '../data/userProducts';
+import { USER_PRODUCTS, CATALOGUE_SKU_COUNT } from '../data/userProducts';
 import { 
   Layers, 
   Cpu, 
@@ -78,7 +78,7 @@ export const AllCategoriesPage: React.FC = () => {
                 تمام دسته‌بندی‌های قطعات و تجهیزات صنعتی
               </h1>
               <p className="text-slate-300 text-sm sm:text-base max-w-3xl leading-relaxed">
-                دسته‌بندی جامع تمامی ۸۶۴ قطعه صنعتی خطوط تولید، انواع تسمه‌ها، کوپلینگ‌ها، غلتک‌های سرامیکی، پولی‌ها، یاتاقان‌ها و اتصالات تخصصی به همراه مشخصات فنی دقیق، کد پارت‌نامبر و تصاویر مستقیم قطعات.
+                دسته‌بندی محصولات بر اساس گروه، زیرگروه و نوع فنی؛ همراه با خانواده‌های محصول، سایزها و کدهای کالا.
               </p>
             </div>
 
@@ -94,13 +94,13 @@ export const AllCategoriesPage: React.FC = () => {
                 <span className="block text-2xl font-black text-white font-mono">
                   {toPersianDigits(USER_PRODUCTS.length)}
                 </span>
-                <span className="text-xs text-slate-300 font-medium">قطعه تصویری ثبت‌شده</span>
+                <span className="text-xs text-slate-300 font-medium">خانواده محصول</span>
               </div>
               <div className="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 text-center">
                 <span className="block text-2xl font-black text-emerald-400 font-mono">
-                  ۱۰۰٪
+                  {toPersianDigits(CATALOGUE_SKU_COUNT)}
                 </span>
-                <span className="text-xs text-slate-300 font-medium">گارانتی اصالت کالا</span>
+                <span className="text-xs text-slate-300 font-medium">کد کالا و سایز</span>
               </div>
             </div>
           </div>

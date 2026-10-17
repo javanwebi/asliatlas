@@ -399,6 +399,7 @@ export const pricingCreditService = {
     settlementDays: number;
   } | null {
     const baseRetail = product.prices.retail;
+    if (product.inquiryOnly && baseRetail <= 0) return null;
     if (!priceListId && !gradeId) return null;
 
     let targetPriceList: DynamicPriceList | undefined;

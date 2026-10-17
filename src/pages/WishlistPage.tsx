@@ -1,3 +1,4 @@
+import { ProductImage } from '../components/product/ProductImage';
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
@@ -240,7 +241,7 @@ export const WishlistPage: React.FC = () => {
               const isAvailable = product.stock > 0;
               const isAdded = addedItemCode === product.code;
               const isRemoving = removingCode === product.code;
-              const productImage = (product.images && product.images[0]) || product.image || '/images/placeholder-part.png';
+              const productImage = (product.images && product.images[0]) || product.image || '';
 
               return (
                 <div
@@ -265,7 +266,7 @@ export const WishlistPage: React.FC = () => {
                     to={`/product/${encodeURIComponent(product.code)}`}
                     className="relative block h-44 p-4 flex items-center justify-center bg-white group-hover:scale-[1.02] transition-transform duration-200"
                   >
-                    <img
+                    <ProductImage
                       src={productImage}
                       alt={product.name}
                       className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-xs"

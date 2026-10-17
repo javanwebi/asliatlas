@@ -14,6 +14,7 @@ type Props = {
 
 /** One recursive view preserves every level of the catalogue taxonomy. */
 export const CategoryNavigation: React.FC<Props> = ({ nodes, categorySlug, onNavigate, onSelect, selected, expanded = false }) => {
+  const containsSelected = (node: CategoryNode): boolean => node.name === selected || Boolean(node.children?.some(containsSelected));
   const renderNode = (node: CategoryNode, depth: number): React.ReactNode => {
     const labelClass = `block w-full text-right rounded-lg px-2.5 py-2 text-xs leading-6 transition-colors ${selected === node.name ? 'bg-orange-50 text-[#E06518] font-bold' : 'text-[#55565A] hover:bg-orange-50 hover:text-[#E06518]'} ${depth === 0 ? 'font-bold' : ''}`;
     const label = onSelect ? (
@@ -24,7 +25,7 @@ export const CategoryNavigation: React.FC<Props> = ({ nodes, categorySlug, onNav
     return (
       <li key={node.name}>
         {node.children?.length ? (
-          <details open={expanded && depth === 0} className="rounded-xl border border-slate-200/70 bg-white">
+          <details open={(expanded && depth === 0) || containsSelected(node)} className="rounded-xl border border-slate-200/70 bg-white">
             <summary className="cursor-pointer flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold leading-6 text-[#484344] hover:text-[#E06518] rounded-xl focus-visible:outline-2 focus-visible:outline-orange-500">
               <span>{node.name}</span><ChevronDown className="w-3.5 h-3.5 shrink-0" />
             </summary>

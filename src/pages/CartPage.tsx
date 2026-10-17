@@ -1,3 +1,4 @@
+import { ProductImage } from '../components/product/ProductImage';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart, SHIPPING_METHODS } from '../context/CartContext';
@@ -185,7 +186,7 @@ export const CartPage: React.FC = () => {
                       <div className="flex items-start gap-3.5 flex-1">
                         <div className="w-16 h-16 rounded-xl bg-slate-50 border border-[#CBD2D8] shrink-0 overflow-hidden flex items-center justify-center p-1">
                           {item.product.images[0] ? (
-                            <img
+                            <ProductImage
                               src={item.product.images[0]}
                               alt={item.product.name}
                               className="w-full h-full object-contain"

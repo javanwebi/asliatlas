@@ -1,3 +1,4 @@
+import { ProductImage } from '../components/product/ProductImage';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -552,7 +553,7 @@ export const DealerPortalPage: React.FC = () => {
                 >
                   <div className="space-y-3">
                     <div className="relative rounded-xl overflow-hidden bg-slate-100 aspect-video flex items-center justify-center">
-                      <img
+                      <ProductImage
                         src={product.images[0]}
                         alt={product.name}
                         className="object-contain w-full h-full p-2"

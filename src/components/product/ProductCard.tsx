@@ -1,5 +1,6 @@
+import { ProductImage } from './ProductImage';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -14,6 +15,7 @@ export interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const navigate = useNavigate();
   const { currentUser, openAuthModal } = useAuth();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -40,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     return null;
   });
 
-  const stockInfo = getStockStatus(product.stock);
+  const stockInfo = product.stockKnown === false ? { text: 'موجودی نیازمند استعلام', badgeBg: '#94a3b8' } : getStockStatus(product.stock);
   const isFavorited = isInWishlist(product.code);
 
   const handleInquirePriceClick = (e: React.MouseEvent) => {
@@ -52,6 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       return;
     }
 
+    if (product.inquiryOnly && product.prices.retail <= 0) { navigate(`/product/${encodeURIComponent(product.code)}`); return; }
     setIsInquiring(true);
     setTimeout(() => {
       let approval = pricingCreditService.getCustomerByPhone(currentUser.phone);
@@ -112,7 +115,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.hasCatalogueImage && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#DEE2E5] text-[#55565A] border border-[#CBD2D8]">
               <Sparkles className="w-2.5 h-2.5 text-[#E06518]" />
-              <span>تصویر کاتالوگ</span>
+              <span>تصویر خانواده</span>
             </span>
           )}
         </div>
@@ -147,7 +150,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         to={`/product/${encodeURIComponent(product.code)}`}
         className="relative block w-full pt-[62%] bg-[#DEE2E5] overflow-hidden"
       >
-        <img
+        <ProductImage
           src={product.images[0]}
           alt={product.name}
           loading="lazy"
@@ -189,6 +192,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
+        {product.variants && <span className="text-xs text-slate-500 mb-2">{toPersianDigits(product.variants.length)} کد و سایز قابل انتخاب</span>}
         {/* Stock Indicator */}
         <div className="flex items-center gap-1.5 text-xs mb-3">
           <span
@@ -208,7 +212,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <span>مشاهده قیمت منوط به استعلام</span>
               </div>
               <p className="text-[10px] text-[#777A7D]">
-                قیمت‌ها بر اساس گرید اعتباری و لیست قیمت پس از ورود محاسبه می‌شوند.
+                سایز و کد کالا را برای استعلام قیمت و موجودی انتخاب کنید.
               </p>
             </div>
           ) : inquiryResult ? (
@@ -241,7 +245,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 استعلام نرخ اختصاصی برای شما
               </span>
               <span className="text-[10px] text-[#777A7D]">
-                جهت استخراج قیمت بر حسب گرید خود کلیک کنید
+                برای انتخاب سایز و ثبت استعلام کلیک کنید
               </span>
             </div>
           )}

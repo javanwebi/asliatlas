@@ -1,3 +1,4 @@
+import { ProductImage } from '../components/product/ProductImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -1744,7 +1745,7 @@ export const AccountPage: React.FC = () => {
                       >
                         <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-200 shrink-0 overflow-hidden p-1 flex items-center justify-center">
                           {prod.images[0] ? (
-                            <img src={prod.images[0]} alt={prod.name} className="w-full h-full object-contain" />
+                            <ProductImage src={prod.images[0]} alt={prod.name} className="w-full h-full object-contain" />
                           ) : (
                             <Layers className="w-6 h-6 text-slate-300" />
                           )}

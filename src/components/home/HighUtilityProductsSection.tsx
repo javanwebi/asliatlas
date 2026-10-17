@@ -1,3 +1,4 @@
+import { ProductImage } from '../product/ProductImage';
 import React, { useRef, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -183,7 +184,7 @@ export const HighUtilityProductsSection: React.FC = () => {
                   to={`/product/${encodeURIComponent(product.code)}`}
                   className="w-full aspect-square rounded-xl overflow-hidden bg-[#F8F9FA] border border-slate-100 flex items-center justify-center p-2 mb-2 cursor-pointer group-hover:scale-105 group-hover:bg-orange-50/40 transition-all duration-200"
                 >
-                  <img
+                  <ProductImage
                     src={product.images[0]}
                     alt={product.name}
                     loading="lazy"
@@ -295,7 +296,7 @@ export const HighUtilityProductsSection: React.FC = () => {
           ) : (
             <form onSubmit={handleInquirySubmit} className="space-y-4" dir="rtl">
               <div className="flex items-center gap-3 p-3 bg-[#DEE2E5] rounded-xl border border-[#CBD2D8]">
-                <img
+                <ProductImage
                   src={selectedProduct.images[0]}
                   alt={selectedProduct.name}
                   className="w-14 h-14 object-contain bg-white rounded-lg p-1 border border-[#CBD2D8]"

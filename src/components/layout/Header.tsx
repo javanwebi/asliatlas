@@ -1,3 +1,4 @@
+import { ProductImage } from '../product/ProductImage';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -342,7 +343,7 @@ export const Header: React.FC = () => {
                           className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors group"
                         >
                           <div className="flex items-center gap-2.5">
-                            <img
+                            <ProductImage
                               src={p.images[0]}
                               alt={p.name}
                               className="w-8 h-8 rounded border border-slate-200 object-contain p-0.5 bg-white"
@@ -690,7 +691,7 @@ export const Header: React.FC = () => {
                     </Link>
                     <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-[#777A7D] border-b border-slate-200/80 mb-1">
                       <span>دسته‌بندی‌های اصلی تجهیزات صنعتی</span>
-                      <span className="text-[10px] font-mono text-[#E06518]">۱۰ دسته اصلی</span>
+                      <span className="text-[10px] font-mono text-[#E06518]">{toPersianDigits(CATEGORIES.length)} دسته اصلی</span>
                     </div>
                     {PRIMARY_CATALOG_CATEGORIES.map((cat, idx) => (
                       <button
@@ -771,29 +772,6 @@ export const Header: React.FC = () => {
                       <CategoryNavigation key={selectedCategoryObj.slug} nodes={selectedCategoryObj.children} categorySlug={selectedCategoryObj.slug} onNavigate={() => setIsMegaMenuOpen(false)} expanded />
                     </div>
 
-
-                    {/* Top Models & Product Codes */}
-                    {selectedCategoryObj.topModels && selectedCategoryObj.topModels.length > 0 && (
-                      <div className="pt-2 border-t border-slate-100">
-                        <div className="text-[11px] font-bold text-[#777A7D] mb-2 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#E06518]" />
-                          <span>کدهای فنی و مدل‌های پرمصرف:</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedCategoryObj.topModels.map(model => (
-                            <Link
-                              key={model}
-                              to={`/products?search=${encodeURIComponent(model)}`}
-                              onClick={() => setIsMegaMenuOpen(false)}
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#E06518] hover:text-white text-[#2B313A] text-[11px] font-mono font-bold transition-all border border-slate-200/80 shadow-2xs"
-                              title={`جستجوی مدل فنی ${model}`}
-                            >
-                              {model}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Authorized Brands & Quick Consult Link */}
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">

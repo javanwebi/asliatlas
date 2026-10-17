@@ -1,7 +1,7 @@
 import { Product } from '../types';
 import { CATEGORIES, matchesCatalogCategory, flattenCategoryNodes } from './categories';
 import { BRANDS } from './brands';
-import { USER_PRODUCTS } from './userProducts';
+import { USER_PRODUCTS, matchesProductSearch } from './userProducts';
 
 let cachedProducts: Product[] | null = null;
 let cachedMap: Map<string, Product> | null = null;
@@ -17,6 +17,7 @@ export function generateMockProducts(): Product[] {
   cachedMap = new Map();
 
   for (const p of cachedProducts) {
+    p.variants?.forEach(v => cachedMap!.set(v.code.toLowerCase(), p));
     cachedMap.set(p.code, p);
     cachedMap.set(p.code.toLowerCase(), p);
     cachedMap.set(p.code.replace(/-/g, '').toLowerCase(), p);
@@ -63,7 +64,7 @@ export function getBestSellingBelts(limit: number = 8): Product[] {
   return all
     .filter(
       p =>
-        p.categorySlug === 'industrial-belts' ||
+        matchesCatalogCategory(p, 'industrial-belts') ||
         p.brand.includes('SWR') ||
         p.brand.includes('FORZA') ||
         p.subcategory.includes('تسمه')
@@ -73,7 +74,7 @@ export function getBestSellingBelts(limit: number = 8): Product[] {
 
 export function getDemandedCeramicParts(limit: number = 8): Product[] {
   const all = generateMockProducts();
-  return all.filter(p => p.categorySlug === 'ceramic-tiles').slice(0, limit);
+  return all.filter(p => matchesCatalogCategory(p, 'ceramic-tiles')).slice(0, limit);
 }
 
 export function getLatestProducts(limit: number = 8): Product[] {
@@ -128,6 +129,7 @@ export function searchProducts(query: string, limit: number = 30): Product[] {
   return all
     .filter(
       p =>
+        matchesProductSearch(p, q) ||
         p.code.toLowerCase().includes(q) ||
         p.code.replace(/-/g, '').toLowerCase().includes(q.replace(/-/g, '')) ||
         p.name.toLowerCase().includes(q) ||
@@ -154,6 +156,7 @@ export function getInstantSearchResults(query: string) {
   const products = allProducts
     .filter(
       p =>
+        matchesProductSearch(p, q) ||
         p.code.toLowerCase().includes(q) ||
         p.code.replace(/-/g, '').toLowerCase().includes(q.replace(/-/g, '')) ||
         p.name.toLowerCase().includes(q) ||

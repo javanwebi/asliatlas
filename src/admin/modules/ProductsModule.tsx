@@ -168,7 +168,7 @@ export const ProductsModule: React.FC<ProductsModuleProps> = ({ onQuickImportCli
       unit: product.unit || 'عدد',
       description: product.description || '',
       tags: (product.tags || []).join(', '),
-      imageUrl: (product.images && product.images[0]) || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80',
+      imageUrl: (product.images && product.images[0]) || '',
       specs: specEntries.length > 0 ? specEntries : [{ key: 'جنس روکش', value: 'پلی‌یورتان ضدسایش' }],
     });
     setIsProductModalOpen(true);
