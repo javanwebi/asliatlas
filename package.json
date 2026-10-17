@@ -37,7 +37,8 @@
     "three": "^0.186.1",
     "vite": "^8.3.0",
     "ws": "^8.22.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
@@ -49,7 +50,9 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.27.0",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.21.0",
     "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }

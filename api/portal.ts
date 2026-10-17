@@ -610,3 +610,17 @@ export default async function handler(
     release();
   }
 }
+
+// Shared authorization for Express-only catalog mutations on persistent hosting.
+export async function requirePortalAdmin(req: IncomingMessage, res: ServerResponse, next: () => void) {
+  try {
+    const auth = await session(req, await readDb());
+    if (!auth.admin) fail(403, 'فقط مدیر اجازه ویرایش دارد.');
+    if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) fail(403, 'مبدأ درخواست معتبر نیست.');
+    next();
+  } catch (error: any) {
+    res.statusCode = error.status || 503;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.end(JSON.stringify({ success: false, message: error.status ? error.message : 'بررسی دسترسی ممکن نشد.' }));
+  }
+}

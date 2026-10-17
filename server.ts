@@ -10,7 +10,7 @@ import { GoogleGenAI, Modality, type LiveServerMessage } from '@google/genai';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
-import portalHandler from './api/portal';
+import portalHandler, { requirePortalAdmin } from './api/portal';
 
 dotenv.config();
 if (!process.env.GEMINI_API_KEY) {
@@ -129,7 +129,7 @@ async function generateWithModelCascade(
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const IMAGE_AI_DIR = path.join(process.cwd(), 'imageai');
+const IMAGE_AI_DIR = process.env.IMAGE_AI_DIR || path.join(process.cwd(), 'imageai');
 if (!fs.existsSync(IMAGE_AI_DIR)) {
   fs.mkdirSync(IMAGE_AI_DIR, { recursive: true });
 }
@@ -293,6 +293,10 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 app.all('/api/portal', (req, res) => { void portalHandler(req, res); });
+app.use('/api/catalog', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  void requirePortalAdmin(req, res, next);
+});
 app.use('/api/auth', (_req, res) => res.status(410).json({ success: false, message: 'از مسیر ورود جدید استفاده کنید.' }));
 
 interface CachedCustomerImage {
@@ -394,7 +398,7 @@ app.post(['/api/ai/catalog-source', '/api/ai/catalog-summary'], (req, res) => {
 // ATLAS TWO-LEVEL CATALOG MANAGEMENT & OVERRIDES DATABASE (FAMILIES + SKUS)
 // ============================================================================
 
-const CATALOG_OVERRIDES_DB_PATH = path.join(process.cwd(), 'src', 'data', 'catalogOverridesDb.json');
+const CATALOG_OVERRIDES_DB_PATH = process.env.CATALOG_OVERRIDES_DB_PATH || path.join(process.cwd(), 'src', 'data', 'catalogOverridesDb.json');
 
 interface CatalogOverridesDb {
   version: number;
@@ -435,6 +439,7 @@ function saveCatalogOverridesDb(db: CatalogOverridesDb): void {
   db.updatedAt = new Date().toISOString();
   CATALOG_OVERRIDES_CACHE = db;
   try {
+    fs.mkdirSync(path.dirname(CATALOG_OVERRIDES_DB_PATH), { recursive: true });
     fs.writeFileSync(CATALOG_OVERRIDES_DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
   } catch (err) {
     console.warn('[CatalogOverridesDB] Error writing database file:', err);

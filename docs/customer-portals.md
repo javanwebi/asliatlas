@@ -43,3 +43,9 @@ npm run dev
 The automated suite exercises guest denial, forged sessions, role escalation, missing passwords and OTP bypass, CRM creation/login, cross-customer/portal targeting, assigned price-list isolation, reward isolation, deletion of all banners, stale revisions, persisted password hashes, role revocation, serverless storage failure, individual overrides and campaign thresholds.
 
 Browser acceptance: administrator creates a CRM account and publishes a banner; a separate ordinary user sees only their portal and targeted content; a separate CRM user enters `/account`; direct access to the other portal redirects; changed content survives reload; disabled menus and downloads stay unavailable; inspect both 1440px and 390px layouts. Brand section is restored byte-for-byte from commit `50be2ee`; footer categories are limited to four primary items.
+
+## Railway production
+
+The `asliatlas` Railway project runs the full Express process (including WebSocket `/api/live`), not a static-only Vite server. `railway.json` declares the build, start command and health check. Node 24 and a single replica are used. The `/data` persistent volume holds `PORTAL_DATA_PATH=/data/portal.json`, `IMAGE_AI_DIR=/data/imageai`, and `CATALOG_OVERRIDES_DB_PATH=/data/catalogOverridesDb.json`. The session secret and administrator password are generated independently and stored as Railway service variables, never committed. Catalog write endpoints also require the administrator's signed portal session.
+
+The public site is `https://sanatpish-production.up.railway.app`; admin login is `/admin`. Retrieve `PORTAL_ADMIN_PASSWORD` from the service Variables in Railway. AI model API keys, Worker tokens and a real SMS provider have not been supplied; these remain separate integrations and are not fabricated by deployment.
