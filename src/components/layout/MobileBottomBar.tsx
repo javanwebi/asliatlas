@@ -30,6 +30,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { STORE_ASSETS } from '../../assets/images';
 import { CATEGORIES, PRIMARY_CATALOG_CATEGORIES } from '../../data/categories';
+import { CategoryNavigation } from '../catalog/CategoryNavigation';
 
 interface MobileBottomBarProps {
   onOpenMobileMenu?: () => void;
@@ -237,28 +238,9 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = () => {
                   </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  {activeCat.subcategories?.map((sub) => (
-                    <button
-                      key={sub}
-                      type="button"
-                      onClick={() => {
-                        setIsMegaMenuOpen(false);
-                        navigate(`/category/${activeCat.slug}?sub=${encodeURIComponent(sub)}`);
-                      }}
-                      className="w-full bg-[#FAFBFB] hover:bg-orange-50/60 border border-slate-200/80 hover:border-orange-300 rounded-xl p-2.5 transition-all shadow-2xs flex items-center justify-between text-right cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2 flex-1 pr-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E06518] group-hover:scale-125 transition-transform shrink-0" />
-                        <span className="text-xs font-bold text-[#484344] group-hover:text-[#E06518] transition-colors leading-snug">
-                          {sub}
-                        </span>
-                      </div>
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-[#E06518] group-hover:-translate-x-0.5 transition-transform shrink-0" />
-                    </button>
-                  ))}
-                </div>
+                <CategoryNavigation key={activeCat.slug} nodes={activeCat.children} categorySlug={activeCat.slug} onNavigate={() => setIsMegaMenuOpen(false)} />
               </div>
+
 
               {/* Top Models & Product Codes */}
               {activeCat.topModels && activeCat.topModels.length > 0 && (

@@ -1,5 +1,5 @@
 import { Product } from '../types';
-import { CATEGORIES } from './categories';
+import { CATEGORIES, matchesCatalogCategory, flattenCategoryNodes } from './categories';
 import { BRANDS } from './brands';
 import { USER_PRODUCTS } from './userProducts';
 
@@ -109,90 +109,9 @@ export function getProductsByCategory(
   let filtered: Product[];
 
   if (categorySlug === 'swr-forza-exclusive') {
-    filtered = all.filter(
-      p =>
-        p.categorySlug === 'swr-forza-exclusive' ||
-        p.brand.includes('SWR') ||
-        p.brand.includes('FORZA')
-    );
-  } else if (categorySlug === 'belts-timing' || categorySlug === 'industrial-belts' || categorySlug === 'v-belts' || categorySlug === 'timing-belts') {
-    const subs = ['تسمه V-Belt ساده و دنده‌ای', 'تسمه تایمینگ صنعتی', 'تسمه جوشی پلی‌یورتان'];
-    filtered = all.filter(
-      p =>
-        subs.includes(p.subcategory) ||
-        p.categorySlug === 'industrial-belts' ||
-        p.name.includes('تسمه') ||
-        p.name.includes('V-Belt')
-    );
-  } else if (categorySlug === 'profiles-rails') {
-    const subs = ['پروفیل‌های خطوط تولید و کانوایر', 'ریل و شاسی هدایت تسمه'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('پروفیل') || p.name.includes('ریل')
-    );
-  } else if (categorySlug === 'glaze-brushes') {
-    const subs = ['قطعات خط لعاب و چاپ', 'برس و تمیزکننده‌های خطوط کاشی'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('برس') || p.name.includes('لعاب')
-    );
-  } else if (categorySlug === 'pulleys-idlers') {
-    const subs = ['فولی و هرزگرد تفلونی', 'چرخ‌ها و هرزگردهای پلی‌یورتان'];
-    filtered = all.filter(
-      p =>
-        subs.includes(p.subcategory) ||
-        p.categorySlug === 'pulleys-idlers' ||
-        p.name.includes('فولی') ||
-        p.name.includes('پولی') ||
-        p.name.includes('چرخ')
-    );
-  } else if (categorySlug === 'supports-brackets') {
-    const subs = ['ساپورت و پایه‌های خط لعاب', 'اهرم و بازوهای نگهدارنده', 'پایه‌های رگلاژ'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('ساپورت') || p.name.includes('اهرم') || p.name.includes('پایه')
-    );
-  } else if (categorySlug === 'impellers-pumps') {
-    const subs = ['پروانه و همزن‌های لعاب', 'قطعات پمپ دیافراگمی'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('پروانه') || p.name.includes('پمپ') || p.name.includes('دیافراگم')
-    );
-  } else if (categorySlug === 'vacuum-cleaners') {
-    const subs = ['لاستیک‌های وکیوم و مکنده', 'تسمه پاک کن خطوط لعاب'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('مکنده') || p.name.includes('وکیوم') || p.name.includes('پاک کن')
-    );
-  } else if (categorySlug === 'bearings-bushings') {
-    const subs = ['پایه یاتاقان و هوزینگ', 'بوش‌های سر رولیک', 'بلبرینگ‌های شیار عمیق'];
-    filtered = all.filter(
-      p =>
-        subs.includes(p.subcategory) ||
-        p.categorySlug === 'bearings-bushings' ||
-        p.name.includes('بلبرینگ') ||
-        p.name.includes('یاتاقان') ||
-        p.name.includes('رولیک')
-    );
-  } else if (categorySlug === 'kiln-roller-pins') {
-    const subs = ['قطعات کوره رولری', 'پین و واسطه‌های محرک'];
-    filtered = all.filter(
-      p => subs.includes(p.subcategory) || p.name.includes('کوره') || p.name.includes('پین')
-    );
-  } else if (categorySlug === 'couplings-elastomers' || categorySlug === 'power-transmission') {
-    const subs = ['بوش و اتصالات الاستومری', 'کوپلینگ و اتصالات'];
-    filtered = all.filter(
-      p =>
-        subs.includes(p.subcategory) ||
-        p.categorySlug === 'power-transmission' ||
-        p.name.includes('کوپلینگ') ||
-        p.name.includes('الاستومر') ||
-        p.name.includes('بوش')
-    );
-  } else if (categorySlug === 'ceramic-tiles') {
-    filtered = all.filter(p => p.categorySlug === 'ceramic-tiles');
+    filtered = all.filter(p => p.brand.includes('SWR') || p.brand.includes('FORZA'));
   } else {
-    filtered = all.filter(p => p.categorySlug === categorySlug);
-  }
-
-  // If specific filter resulted in very few, gracefully fill with best matches
-  if (filtered.length === 0) {
-    filtered = all.slice(0, 24);
+    filtered = all.filter(product => matchesCatalogCategory(product, categorySlug));
   }
 
   return {
@@ -246,7 +165,7 @@ export function getInstantSearchResults(query: string) {
   const matchedCategories = CATEGORIES.filter(
     c =>
       c.name.toLowerCase().includes(q) ||
-      c.subcategories.some(s => s.toLowerCase().includes(q))
+      flattenCategoryNodes(c.children).some(node => node.name.toLowerCase().includes(q))
   ).slice(0, 4);
 
   const matchedBrands = BRANDS.filter(

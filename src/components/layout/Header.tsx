@@ -35,6 +35,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { CATEGORIES, PRIMARY_CATALOG_CATEGORIES } from '../../data/categories';
+import { CategoryNavigation } from '../catalog/CategoryNavigation';
 import { BRANDS } from '../../data/brands';
 import { getInstantSearchResults } from '../../data/mockGenerator';
 import { toPersianDigits, formatPrice } from '../../utils/formatters';
@@ -622,7 +623,7 @@ export const Header: React.FC = () => {
             {/* Quick Categories Bar on Mobile */}
             <div className="flex items-center gap-1.5 overflow-x-auto py-2 scrollbar-none text-[10px]" style={{ scrollbarWidth: 'none' }}>
               <span className="text-[#777A7D] shrink-0 font-bold">دسته‌ها:</span>
-              {PRIMARY_CATALOG_CATEGORIES.slice(0, 6).map((cat) => (
+              {PRIMARY_CATALOG_CATEGORIES.map((cat) => (
                 <button
                   key={cat.slug}
                   type="button"
@@ -695,6 +696,7 @@ export const Header: React.FC = () => {
                       <button
                         key={cat.slug}
                         onMouseEnter={() => setActiveMegaCategory(cat.slug)}
+                        onFocus={() => setActiveMegaCategory(cat.slug)}
                         onClick={() => {
                           setIsMegaMenuOpen(false);
                           navigate(`/category/${cat.slug}`);
@@ -766,22 +768,9 @@ export const Header: React.FC = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#E06518]" />
                         <span>زیرمجموعه‌ها و گروه‌های تخصصی:</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {selectedCategoryObj.subcategories.map(sub => (
-                          <Link
-                            key={sub}
-                            to={`/products?category=${selectedCategoryObj.slug}&sub=${encodeURIComponent(sub)}`}
-                            onClick={() => setIsMegaMenuOpen(false)}
-                            className="p-3 rounded-xl hover:bg-orange-50/70 hover:text-[#E06518] text-xs font-bold text-[#3A3D42] transition-all block border border-slate-100 hover:border-orange-200/80 group shadow-2xs"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="group-hover:translate-x-0.5 transition-transform">{sub}</span>
-                              <ChevronLeft className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity text-[#E06518]" />
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
+                      <CategoryNavigation key={selectedCategoryObj.slug} nodes={selectedCategoryObj.children} categorySlug={selectedCategoryObj.slug} onNavigate={() => setIsMegaMenuOpen(false)} expanded />
                     </div>
+
 
                     {/* Top Models & Product Codes */}
                     {selectedCategoryObj.topModels && selectedCategoryObj.topModels.length > 0 && (

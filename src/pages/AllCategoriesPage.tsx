@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CATEGORIES } from '../data/categories';
-import { USER_PRODUCTS, USER_PRODUCTS_BY_CATEGORY } from '../data/userProducts';
+import { CATEGORIES, flattenCategoryNodes } from '../data/categories';
+import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
+import { USER_PRODUCTS } from '../data/userProducts';
 import { 
   Layers, 
   Cpu, 
@@ -47,7 +48,7 @@ export const AllCategoriesPage: React.FC = () => {
       cat.name.toLowerCase().includes(q) ||
       cat.nameEn.toLowerCase().includes(q) ||
       cat.description.toLowerCase().includes(q) ||
-      cat.subcategories.some(sub => sub.toLowerCase().includes(q))
+      flattenCategoryNodes(cat.children).some(node => node.name.toLowerCase().includes(q))
     );
   });
 
@@ -128,8 +129,7 @@ export const AllCategoriesPage: React.FC = () => {
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCategories.map((category) => {
-            const productsInCat = USER_PRODUCTS_BY_CATEGORY.get(category.slug) || [];
-            const count = productsInCat.length > 0 ? productsInCat.length : category.count;
+            const count = category.count;
 
             return (
               <div
@@ -184,27 +184,7 @@ export const AllCategoriesPage: React.FC = () => {
                     {category.description}
                   </p>
 
-                  {/* Subcategories Chips */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-bold text-slate-400 block">
-                      زیردسته‌های این گروه:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {category.subcategories.slice(0, 4).map((sub, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[11px] font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200/60 hover:bg-orange-50 hover:text-orange-700 transition-colors"
-                        >
-                          {sub}
-                        </span>
-                      ))}
-                      {category.subcategories.length > 4 && (
-                        <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
-                          +{toPersianDigits(category.subcategories.length - 4)} مورد دیگر
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <CategoryNavigation nodes={category.children} categorySlug={category.slug} />
 
                   {/* Action Link Button */}
                   <div className="pt-2 mt-auto border-t border-slate-100">

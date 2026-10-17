@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { CATEGORIES } from '../data/categories';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { CATEGORIES, findCatalogCategory, matchesCatalogCategory } from '../data/categories';
+import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
 import { getProductsByCategory } from '../data/mockGenerator';
 import { ProductCard } from '../components/product/ProductCard';
 import { toPersianDigits } from '../utils/formatters';
@@ -22,16 +23,30 @@ import {
 export const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
 
-  const category = CATEGORIES.find(c => c.slug === slug) || CATEGORIES[0];
+  const category = findCatalogCategory(slug || '') || CATEGORIES[0];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const subParam = searchParams.get('sub') || 'all';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubcat, setSelectedSubcat] = useState<string>('all');
+  const [selectedSubcat, setSelectedSubcat] = useState<string>(subParam);
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [inquiryOnlyFilter, setInquiryOnlyFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'code'>('default');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 24;
+  useEffect(() => {
+    setSelectedSubcat(subParam);
+    setPage(1);
+  }, [category.slug, subParam]);
+  const selectSubcategory = (name: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (name === 'all') params.delete('sub');
+    else params.set('sub', name);
+    setSearchParams(params);
+    setSelectedSubcat(name);
+    setPage(1);
+  };
 
   const rawData = useMemo(() => {
     return getProductsByCategory(category.slug, 1000, 0);
@@ -60,7 +75,7 @@ export const CategoryPage: React.FC = () => {
     }
 
     if (selectedSubcat !== 'all') {
-      list = list.filter(p => p.subcategory === selectedSubcat);
+      list = list.filter(p => matchesCatalogCategory(p, category.slug, selectedSubcat));
     }
     if (selectedBrand !== 'all') {
       list = list.filter(p => p.brand === selectedBrand);
@@ -81,14 +96,14 @@ export const CategoryPage: React.FC = () => {
     }
 
     return list;
-  }, [rawData, searchQuery, selectedSubcat, selectedBrand, inStockOnly, inquiryOnlyFilter, sortBy]);
+  }, [rawData, category.slug, searchQuery, selectedSubcat, selectedBrand, inStockOnly, inquiryOnlyFilter, sortBy]);
 
   const paginated = filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
 
   const handleResetFilters = () => {
     setSearchQuery('');
-    setSelectedSubcat('all');
+    selectSubcategory('all');
     setSelectedBrand('all');
     setInStockOnly(false);
     setInquiryOnlyFilter(false);
@@ -176,7 +191,7 @@ export const CategoryPage: React.FC = () => {
             {selectedSubcat !== 'all' && (
               <button
                 onClick={() => {
-                  setSelectedSubcat('all');
+                  selectSubcategory('all');
                   setPage(1);
                 }}
                 className="text-xs font-bold text-[#E06518] hover:underline flex items-center gap-1 cursor-pointer"
@@ -186,52 +201,11 @@ export const CategoryPage: React.FC = () => {
             )}
           </div>
 
-          {/* Subcategory Pills Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            <button
-              onClick={() => {
-                setSelectedSubcat('all');
-                setPage(1);
-              }}
-              className={`p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col justify-between text-xs font-bold ${
-                selectedSubcat === 'all'
-                  ? 'bg-[#484344] text-white border-[#484344] shadow-md ring-2 ring-slate-400/20'
-                  : 'bg-slate-50 text-[#484344] border-slate-200 hover:border-[#E06518] hover:bg-orange-50/50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] opacity-75 font-mono">کل کالاها</span>
-                {selectedSubcat === 'all' && <CheckCircle2 className="w-3.5 h-3.5 text-[#E06518]" />}
-              </div>
-              <span>همه محصولات</span>
-            </button>
-
-            {category.subcategories.map(sub => {
-              const isActive = selectedSubcat === sub;
-              return (
-                <button
-                  key={sub}
-                  onClick={() => {
-                    setSelectedSubcat(sub);
-                    setPage(1);
-                  }}
-                  className={`p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col justify-between text-xs font-bold ${
-                    isActive
-                      ? 'bg-[#E06518] text-white border-[#C95210] shadow-md ring-2 ring-orange-500/30'
-                      : 'bg-white text-[#484344] border-slate-200 hover:border-[#E06518] hover:bg-orange-50/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-[#E06518]'}`} />
-                    {isActive && <Check className="w-3.5 h-3.5 text-white" />}
-                  </div>
-                  <span className="line-clamp-2 leading-tight">{sub}</span>
-                </button>
-              );
-            })}
-          </div>
+          <button type="button" onClick={() => selectSubcategory('all')} className="mb-3 px-4 py-2 rounded-xl bg-slate-100 text-xs font-bold text-[#484344] hover:text-[#E06518]">همه محصولات این دسته</button>
+          <CategoryNavigation key={category.slug} nodes={category.children} categorySlug={category.slug} selected={selectedSubcat} onSelect={selectSubcategory} />
         </div>
       )}
+
 
       {/* In-Category Search & Sorting Toolbar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">

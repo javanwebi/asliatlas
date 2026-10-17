@@ -17,6 +17,7 @@ import {
   Award,
 } from 'lucide-react';
 import { STORE_ASSETS } from '../../assets/images';
+import { CATEGORIES } from '../../data/categories';
 import { AiConsultModal } from '../search/AiConsultModal';
 
 // Minimalist Two-tone Geometric Brand Mark
@@ -325,42 +326,14 @@ export const Footer: React.FC = () => {
               </button>
 
               <ul className={`space-y-1.5 text-[11px] text-[#55565A] pt-1.5 md:pt-0 ${openAccordion === 'products' ? 'block' : 'hidden'} md:block animate-in fade-in`}>
-                <li>
-                  <Link to="/category/industrial-belts" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>تسمه‌های خط تولید و کانوایر</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/category/pulleys-idlers" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>پولی، فلکه و بوش تیپرلاک</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/category/bearings-bushings" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>بلبرینگ، رولبرینگ و یاتاقان</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/category/chains-sprockets" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>زنجیر و چرخ زنجیر صنعتی</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/category/power-transmission" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>سیستم‌های انتقال قدرت</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/category/swr-forza-exclusive" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
-                    <span>محصولات انحصاری SWR و FORZA</span>
-                    <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
-                  </Link>
-                </li>
+                {CATEGORIES.map(category => (
+                  <li key={category.slug}>
+                    <Link to={`/category/${category.slug}`} className="hover:text-[#E06518] transition-colors flex items-center justify-between gap-2 group">
+                      <span>{category.name}</span>
+                      <ChevronLeft className="w-3 h-3 shrink-0 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 

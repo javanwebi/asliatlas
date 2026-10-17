@@ -1,380 +1,206 @@
-import { Category } from '../types';
+import type { Category, Product } from '../types';
 import { getProductImageUrl } from '../assets/imagesproducts';
 import { USER_PRODUCTS } from './userProducts';
 
+export interface CategoryNode {
+  name: string;
+  children?: CategoryNode[];
+}
 export interface EnhancedCategory extends Category {
+  children: CategoryNode[];
   image?: string;
   topModels?: string[];
   brands?: string[];
   featuredBadge?: string;
 }
+const leaves = (names: string): CategoryNode[] => names.split('|').map(name => ({ name }));
+const group = (name: string, names: string): CategoryNode => ({ name, children: leaves(names) });
 
-// Compute dynamic counts based on subcategories in USER_PRODUCTS
-const countsBySubcategory: Record<string, number> = {};
-USER_PRODUCTS.forEach(p => {
-  if (p.subcategory) {
-    countsBySubcategory[p.subcategory] = (countsBySubcategory[p.subcategory] || 0) + 1;
-  }
-});
-
-const sumCounts = (subs: string[]) => {
-  return subs.reduce((acc, sub) => acc + (countsBySubcategory[sub] || 0), 0);
-};
-
-export const CATEGORIES: EnhancedCategory[] = [
-  // ۱. تسمه‌ها و انتقال نیرو
+// Shared taxonomy for desktop, mobile, category pages and product filters.
+const definitions = [
   {
-    id: 1,
-    slug: 'belts-power-transmission',
-    name: 'تسمه‌ها و انتقال نیرو',
-    nameEn: 'Belts & Power Transmission',
-    description: 'انواع تسمه‌های صنعتی، تایمینگ، پلی‌یورتان و انتقال نیرو برای تجهیزات و ماشین‌آلات',
-    subcategories: [
-      'انواع تسمه انتقال نیرو و مکانیکی',
-      'تسمه تایم و تسمه‌های دندانه‌دار',
-      'تسمه‌های پلی‌یورتان',
-      'انواع تسمه جوشی',
-      'نوار گریپ سبز پشت پله استر',
-      'تسمه‌های پاک‌کن و محصولات مرتبط'
+    slug: 'belts-power-transmission', name: 'تسمه و انتقال نیرو', nameEn: 'Belts & Power Transmission', icon: 'Cpu', image: 'e(001).png',
+    children: [
+      group('تسمه V شکل (کلاسیک)', 'تسمه A|تسمه B|تسمه C|تسمه D|تسمه E|تسمه Z|تسمه M'),
+      group('تسمه پروفیل باریک', 'تسمه SPA|تسمه SPB|تسمه SPC|تسمه XPA|تسمه XPB|تسمه XPC'),
+      { name: 'تسمه تایمینگ', children: [group('تایمینگ اینچی', 'XL|L|H'), group('تایمینگ متریک', 'T5|T10'), group('تایمینگ AT', 'AT5|AT10|AT20')] },
+      group('تسمه چندشیاری', 'PJ|PK|PL'),
+      group('تسمه‌های صنعتی خاص', 'تسمه روکش‌دار|تسمه سیم‌دار|تسمه گریپ‌دار|تسمه ضدسایش'),
+      group('متعلقات انتقال نیرو', 'پولی صنعتی|پولی تایمینگ|کوپلینگ'),
     ],
-    topModels: ['1000 0 1', 'B105', 'SPB 2500', '50AT10', '8M*1120'],
-    brands: ['فورزا (FORZA)', 'SWR آلمان', 'MEGADYNE', 'BANDO'],
-    featuredBadge: 'تسمه‌های انتقال نیرو و تایمینگ',
-    icon: 'Cpu',
-    count: sumCounts([
-      'انواع تسمه انتقال نیرو و مکانیکی',
-      'تسمه تایم و تسمه‌های دندانه‌دار',
-      'تسمه‌های پلی‌یورتان',
-      'انواع تسمه جوشی',
-      'نوار گریپ سبز پشت پله استر',
-      'تسمه‌های پاک‌کن و محصولات مرتبط',
-      'تسمه V-Belt ساده و دنده‌ای',
-      'تسمه تایمینگ صنعتی',
-      'تسمه جوشی پلی‌یورتان'
-    ]) || 185,
-    image: getProductImageUrl('e(001).png'),
   },
-
-  // ۲. پروفیل، ریل و ساپورت‌های صنعتی
   {
-    id: 2,
-    slug: 'profiles-rails-supports',
-    name: 'پروفیل، ریل و ساپورت‌های صنعتی',
-    nameEn: 'Profiles, Rails & Industrial Supports',
-    description: 'پروفیل‌های آلومینیوم، ریل‌های زیرتسمه، ساپورت‌های خطوط و گایدهای هدایت',
-    subcategories: [
-      'پروفیل‌های آلومینیوم',
-      'ریل زیر تسمه‌ای',
-      'قطعات ابتدایی و انتهایی ریل',
-      'ساپورت‌های نگهدارنده خط انتقال',
-      'ساپورت‌های نگهدارنده نوار و تسمه',
-      'گاید تک‌لبه و دو‌لبه'
+    slug: 'conveyors-industrial-chains', name: 'نوار نقاله و زنجیر صنعتی', nameEn: 'Conveyors & Industrial Chains', icon: 'Link', image: 'e(220).png',
+    children: [
+      group('نوار نقاله', 'نوار نقاله PVC|نوار نقاله PU|نوار نقاله لاستیکی|نوار نقاله صنعتی خاص'),
+      group('نوارهای صنعتی', 'نوار سیلیکونی|نوار گریپ|نوار ضدسایش'),
+      group('زنجیر صنعتی', 'زنجیر انتقال نیرو|زنجیر انتقال مواد|زنجیر صنعتی خاص'),
+      group('تجهیزات نقاله', 'رولر نقاله|غلتک صنعتی|قطعات نقاله'),
     ],
-    topModels: ['1000 1 1', '1000 1 2', '1000 2 1', '1000 5 1'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'هدایت خطوط کانوایر و شاسی گالوانیزه',
-    icon: 'Package',
-    count: sumCounts([
-      'پروفیل‌های آلومینیوم',
-      'ریل زیر تسمه‌ای',
-      'قطعات ابتدایی و انتهایی ریل',
-      'ساپورت‌های نگهدارنده خط انتقال',
-      'ساپورت‌های نگهدارنده نوار و تسمه',
-      'گاید تک‌لبه و دو‌لبه',
-      'پروفیل‌های خطوط تولید و کانوایر',
-      'ریل و شاسی هدایت تسمه',
-      'ساپورت و پایه‌های خط لعاب'
-    ]) || 240,
-    image: getProductImageUrl('e(026).png'),
   },
-
-  // ۳. رولر، چرخ و قطعات گردان
   {
-    id: 3,
-    slug: 'rollers-wheels-gears',
-    name: 'رولر، چرخ و قطعات گردان',
-    nameEn: 'Rollers, Wheels & Rotating Parts',
-    description: 'انواع رولرها، چرخ‌های پلی‌یورتان، چرخ‌دنده‌ها، رول‌های گردان و چرخ‌دنده‌های مدولار',
-    subcategories: [
-      'انواع رولر',
-      'رولر و روکش رولر',
-      'بوش، پین و فنر سر رولر',
-      'چرخ با روکش پلی‌یورتان',
-      'چرخ‌دنده و رول گردان',
-      'چرخ‌دنده پالت‌آیزر',
-      'چرخ‌دنده مدولار'
+    slug: 'mechanical-motion-parts', name: 'قطعات مکانیکی و حرکتی', nameEn: 'Mechanical & Motion Parts', icon: 'Cpu', image: 'e(102).png',
+    children: [
+      group('بلبرینگ و یاتاقان', 'بلبرینگ صنعتی|رولبرینگ|یاتاقان'),
+      group('شفت و محور', 'شفت صنعتی|محور انتقال نیرو|میله صنعتی'),
+      group('بوش و توپی', 'بوش صنعتی|توپی صنعتی'),
+      group('چرخ‌دنده', 'چرخ‌دنده صنعتی|چرخ‌دنده انتقال نیرو'),
+      group('قطعات مکانیکی', 'فنر|خار|پین|صفحه صنعتی|ساپورت'),
     ],
-    topModels: ['1000 17 1', '1000 17 2', '1000 16 1', '1000 66 1'],
-    brands: ['فورزا (FORZA)', 'SWR آلمان'],
-    featuredBadge: 'چرخ‌های پلی‌یورتان و دنده‌های مدولار',
-    icon: 'Layers',
-    count: sumCounts([
-      'انواع رولر',
-      'رولر و روکش رولر',
-      'بوش، پین و فنر سر رولر',
-      'چرخ با روکش پلی‌یورتان',
-      'چرخ‌دنده و رول گردان',
-      'چرخ‌دنده پالت‌آیزر',
-      'چرخ‌دنده مدولار',
-      'چرخ‌ها و هرزگردهای پلی‌یورتان',
-      'بوش‌های سر رولیک'
-    ]) || 195,
-    image: getProductImageUrl('e(102).png'),
   },
-
-  // ۴. قطعات لاستیکی، پلی‌یورتان و مکنده
   {
-    id: 4,
-    slug: 'rubber-pu-suction',
-    name: 'قطعات لاستیکی، پلی‌یورتان و مکنده',
-    nameEn: 'Rubber, Polyurethane & Suction Parts',
-    description: 'لاستیک‌های مکنده استکر، لاستیک پمپ‌های دیافراگمی و پیستونی، کوپلینگ و نوارهای لاستیکی',
-    subcategories: [
-      'لاستیک‌های مکنده',
-      'لاستیک استکر',
-      'لاستیک پمپ دیافراگمی',
-      'لاستیک پمپ پیستونی',
-      'لاستیک پلی‌یورتان پمپ',
-      'لاستیک اینکوپ',
-      'کوپلینگ و لاستیک کوپلینگ',
-      'قطعات و نوارهای لاستیکی'
+    slug: 'wheels-rollers-guides', name: 'چرخ، رولر و تجهیزات هدایت', nameEn: 'Wheels, Rollers & Guides', icon: 'Layers', image: 'e(102).png',
+    children: [
+      group('چرخ صنعتی', 'چرخ پلی‌یورتان|چرخ لاستیکی|چرخ استاکر|چرخ صنعتی خاص'),
+      group('رولر و غلتک', 'رولر صنعتی|غلتک روکش‌دار|غلتک انتقال مواد'),
+      group('ریل صنعتی', 'ریل هدایت|سر ریل|پایه ریل'),
+      group('تجهیزات هدایت', 'گاید صنعتی|راهنمای دستگاه'),
     ],
-    topModels: ['1000 18 1', '1000 18 2', '1000 13 1', '1000 21 1'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'وکیوم استکر کاشی و دیافراگم ضداسید',
-    icon: 'Shield',
-    count: sumCounts([
-      'لاستیک‌های مکنده',
-      'لاستیک استکر',
-      'لاستیک پمپ دیافراگمی',
-      'لاستیک پمپ پیستونی',
-      'لاستیک پلی‌یورتان پمپ',
-      'لاستیک اینکوپ',
-      'کوپلینگ و لاستیک کوپلینگ',
-      'قطعات و نوارهای لاستیکی',
-      'لاستیک‌های وکیوم و مکنده',
-      'قطعات پمپ دیافراگمی'
-    ]) || 165,
-    image: getProductImageUrl('e(345).png'),
   },
-
-  // ۵. برس‌های صنعتی
   {
-    id: 5,
-    slug: 'industrial-brushes',
-    name: 'برس‌های صنعتی',
-    nameEn: 'Industrial Brushes',
-    description: 'انواع برس مویی و برس خشک جهت گردگیری، تمیزکاری و آماده‌سازی سطوح خطوط تولید',
-    subcategories: [
-      'برس مویی',
-      'برس خشک'
+    slug: 'rubber-seals-dampers', name: 'لاستیک، آب‌بندی و ضربه‌گیر', nameEn: 'Rubber, Seals & Dampers', icon: 'Shield', image: 'e(345).png',
+    children: [
+      group('لاستیک صنعتی', 'لاستیک بالمیل|لاستیک دیافراگم|لاستیک فلنج|لاستیک کوپلینگ'),
+      group('تجهیزات آب‌بندی', 'اورینگ|واشر|پکینگ|کاسه‌نمد|درزگیر صنعتی'),
+      group('ضربه‌گیر صنعتی', 'ضربه‌گیر لاستیکی|ضربه‌گیر پلی‌یورتان|ضربه‌گیر استاکر|ضربه‌گیر دستگاه'),
+      group('قطعات لاستیکی', 'ضربه‌زن|نوار لاستیکی|قطعات لاستیکی سفارشی'),
     ],
-    topModels: ['1000 7 1', '1000 7 2', '1000 7 3'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'تمیزکاری و گردگیری خطوط کاشی و سرامیک',
-    icon: 'Grid',
-    count: sumCounts([
-      'برس مویی',
-      'برس خشک',
-      'برس و تمیزکننده‌های خطوط کاشی'
-    ]) || 48,
-    image: getProductImageUrl('e(098).png'),
   },
-
-  // ۶. شیلنگ و کانال‌های انتقال
   {
-    id: 6,
-    slug: 'hoses-channels',
-    name: 'شیلنگ و کانال‌های انتقال',
-    nameEn: 'Hoses & Transfer Channels',
-    description: 'انواع کانال خطی، شیلنگ‌های انتقال مواد صنعتی و شیلنگ‌های خرطومی تقویت‌شده',
-    subcategories: [
-      'انواع کانال خطی',
-      'شیلنگ‌های انتقال مواد',
-      'شیلنگ‌های خرطومی و تقویت‌شده'
+    slug: 'polymers-industrial-sheets', name: 'مواد پلیمری و ورق صنعتی', nameEn: 'Polymers & Industrial Sheets', icon: 'Package', image: 'e(169).png',
+    children: [
+      group('ورق‌های پلیمری', 'ورق تفلون|ورق پلی‌یورتان|ورق پلی‌آمید|ورق پلاستیک صنعتی'),
+      group('ورق‌های صنعتی', 'ورق فلزی|ورق ضدسایش|ورق صنعتی خاص'),
+      group('مواد پلیمری', 'زلامید|پلی‌یورتان|تفلون'),
+      group('فوم و منسوجات صنعتی', 'ابر صنعتی|فوم صنعتی|اسفنج صنعتی|پارچه صنعتی'),
     ],
-    topModels: ['HOSE-PU-50', 'HOSE-PVC-75', 'CANAL-100'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'انتقال سیالات، مواد گرانول و پودر',
-    icon: 'Flame',
-    count: sumCounts([
-      'انواع کانال خطی',
-      'شیلنگ‌های انتقال مواد',
-      'شیلنگ‌های خرطومی و تقویت‌شده'
-    ]) || 55,
-    image: getProductImageUrl('e(220).png'),
   },
-
-  // ۷. نوارهای درزگیر، فوم و محصولات نسوز
   {
-    id: 7,
-    slug: 'seals-foam-refractory',
-    name: 'نوارهای درزگیر، فوم و محصولات نسوز',
-    nameEn: 'Sealing Strips, Foam & Refractory Products',
-    description: 'نوارهای درزگیر و اسفنجی، اسفنج‌های سیلیکونی، پارچه‌های نسوز و نوارهای سنگی حرارتی',
-    subcategories: [
-      'نوارهای درزگیر',
-      'نوارهای اسفنجی',
-      'انواع اسفنج سیلیکونی و معمولی',
-      'پارچه‌های نسوز',
-      'انواع نوار سنگی'
+    slug: 'pumps-fluids-pneumatics', name: 'پمپ، سیالات و پنوماتیک', nameEn: 'Pumps, Fluids & Pneumatics', icon: 'Flame', image: 'e(220).png',
+    children: [
+      group('قطعات پمپ', 'قطعات یدکی پمپ|پروانه پمپ|قطعات پمپ صنعتی'),
+      group('شیلنگ و لوله', 'شیلنگ صنعتی|شیلنگ PVC|لوله صنعتی|مجرای انتقال سیالات'),
+      group('تجهیزات پنوماتیک', 'سیلندر صنعتی|سیلندر پنوماتیک|قطعات پنوماتیک'),
+      group('تجهیزات وکیوم', 'مکنده صنعتی|قطعات وکیوم'),
     ],
-    topModels: ['1000 19 1', 'SILICONE-PAD', 'REFRACTORY-CLOTH'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'عایق‌بندی حرارتی و مقاومت به دمای بالا',
-    icon: 'Shield',
-    count: sumCounts([
-      'نوارهای درزگیر',
-      'نوارهای اسفنجی',
-      'انواع اسفنج سیلیکونی و معمولی',
-      'پارچه‌های نسوز',
-      'انواع نوار سنگی'
-    ]) || 62,
-    image: getProductImageUrl('e(169).png'),
   },
-
-  // ۸. قطعات تخصصی استکر و خطوط انتقال
   {
-    id: 8,
-    slug: 'stacker-conveyor-parts',
-    name: 'قطعات تخصصی استکر و خطوط انتقال',
-    nameEn: 'Specialized Stacker & Conveyor Parts',
-    description: 'قطعات پایه و نگهدارنده، تیغ و پارویی استکر، تیغ خاک‌پرس، تسمه‌پاک‌کن و ضربه‌گیرها',
-    subcategories: [
-      'قطعات پایه و نگهدارنده',
-      'تیغ و پارویی استکر',
-      'تیغ خاک‌پرس',
-      'تسمه پاک‌کن',
-      'قطعات ضربه‌زن و ضربه‌گیر',
-      'قطعات حفاظ و هدایت خط'
+    slug: 'production-ceramic-equipment', name: 'تجهیزات خطوط تولید و کاشی و سرامیک', nameEn: 'Production Lines & Ceramic Equipment', icon: 'Wrench', image: 'e(253).png',
+    children: [
+      group('تجهیزات کوره', 'قطعات کوره|متعلقات کوره'),
+      group('تجهیزات استاکر', 'قطعات استاکر|ضربه‌گیر استاکر|چرخ استاکر'),
+      group('تجهیزات چاپ و دکور', 'قطعات دستگاه چاپ|قطعات دستگاه دکور'),
+      group('قطعات ماشین‌آلات', 'راهنمای دستگاه|قطعات خطوط کاشی|قالب صنعتی|پوسته صنعتی|محافظ دستگاه'),
+      group('قطعات سفارشی', 'قطعات ساخته‌شده|قطعات خاص ماشین‌آلات'),
     ],
-    topModels: ['1000 4 1', '1000 18 2', '1000 19 2', '1000 39 1'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'تجهیزات تخصصی استکر و خطوط کاشی',
-    icon: 'Wrench',
-    count: sumCounts([
-      'قطعات پایه و نگهدارنده',
-      'تیغ و پارویی استکر',
-      'تیغ خاک‌پرس',
-      'تسمه پاک‌کن',
-      'قطعات ضربه‌زن و ضربه‌گیر',
-      'قطعات حفاظ و هدایت خط',
-      'قطعات خط لعاب و چاپ',
-      'تسمه پاک کن خطوط لعاب'
-    ]) || 130,
-    image: getProductImageUrl('e(253).png'),
   },
-
-  // ۹. قطعات پلیمری و تفلونی
   {
-    id: 9,
-    slug: 'polymer-teflon-parts',
-    name: 'قطعات پلیمری و تفلونی',
-    nameEn: 'Polymer & Teflon Engineering Parts',
-    description: 'پولی‌های تفلونی، قطعات پلاستیکی مهندسی، بوش‌ها و پلیمرهای ضدسایش ماشین‌کاری‌شده',
-    subcategories: [
-      'پولی تفلون',
-      'قطعات تفلونی',
-      'قطعات پلاستیکی مهندسی',
-      'بوش‌ها و قطعات پلیمری'
+    slug: 'brushes-filtration-tools', name: 'برس، فیلتراسیون و ابزار صنعتی', nameEn: 'Brushes, Filtration & Tools', icon: 'Grid', image: 'e(098).png',
+    children: [
+      group('برس صنعتی', 'برس استوانه‌ای|برس نواری|برس کف|برس ساب|برس لبه‌گیر'),
+      group('فیلتراسیون صنعتی', 'توری صنعتی|فیلتر صنعتی|توری فیلتر'),
+      group('ابزار برش', 'تیغه صنعتی|ابزار برش صنعتی'),
+      group('ابزار و ملزومات', 'اسپاتول|ماژیک صنعتی'),
     ],
-    topModels: ['1000 9 1', '1000 9 2', 'POM-BUSHING-30'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'تفلون ضدسایش POM و پلیمرهای مهندسی',
-    icon: 'Package',
-    count: sumCounts([
-      'پولی تفلون',
-      'قطعات تفلونی',
-      'قطعات پلاستیکی مهندسی',
-      'بوش‌ها و قطعات پلیمری',
-      'فولی و هرزگرد تفلونی'
-    ]) || 110,
-    image: getProductImageUrl('e(102).png'),
   },
-
-  // ۱۰. قطعات پمپ، شیر و تجهیزات مکانیکی
   {
-    id: 10,
-    slug: 'pumps-valves-mechanical',
-    name: 'قطعات پمپ، شیر و تجهیزات مکانیکی',
-    nameEn: 'Pumps, Valves & Mechanical Equipment Parts',
-    description: 'قطعات پمپ و آب‌بندی، دریچه ساکشن، نازل شعله‌پخش‌کن، پروانه‌های همزن و پایه‌های تنظیم‌کننده',
-    subcategories: [
-      'قطعات پمپ و آب‌بندی',
-      'دریچه ساکشن',
-      'نازل شعله‌پخش‌کن',
-      'پروانه‌های همزن',
-      'قطعات کوپلینگ',
-      'گلوله و زیرگلوله‌ای',
-      'ضربهگیر و ضربه‌زن',
-      'پایه تنظیم‌کننده و پیچ فلکه‌ای',
-      'قطعات حفاظ موتور'
+    slug: 'industrial-fasteners-accessories', name: 'اتصالات و ملزومات صنعتی', nameEn: 'Industrial Fasteners & Accessories', icon: 'Package', image: 'e(026).png',
+    children: [
+      group('پیچ و مهره', 'پیچ صنعتی|مهره صنعتی'),
+      group('بست و اتصالات', 'بست صنعتی|بست U شکل|اتصالات صنعتی'),
+      group('پایه و نگهدارنده', 'پایه صنعتی|براکت|نگهدارنده صنعتی'),
+      group('تجهیزات الکتریکی', 'ترانس صنعتی|قطعات الکتریکی'),
     ],
-    topModels: ['1000 12 1', '1000 21 1', '1000 11 1', '1000 14 1'],
-    brands: ['فورزا (FORZA)', 'اطلس صنعت'],
-    featuredBadge: 'پروانه‌های استیل، دیافراگم و تجهیزات مکانیکی',
-    icon: 'Cpu',
-    count: sumCounts([
-      'قطعات پمپ و آب‌بندی',
-      'دریچه ساکشن',
-      'نازل شعله‌پخش‌کن',
-      'پروانه‌های همزن',
-      'قطعات کوپلینگ',
-      'گلوله و زیرگلوله‌ای',
-      'ضربهگیر و ضربه‌زن',
-      'پایه تنظیم‌کننده و پیچ فلکه‌ای',
-      'قطعات حفاظ موتور',
-      'پروانه و همزن‌های لعاب',
-      'قطعات پمپ دیافراگمی',
-      'پایه‌های رگلاژ',
-      'اهرم و بازوهای نگهدارنده'
-    ]) || 145,
-    image: getProductImageUrl('e(220).png'),
   },
-
-  // -------------------------------------------------------------
-  // Aliases for Backward Compatibility with existing URLs / queries
-  // -------------------------------------------------------------
-  {
-    id: 11,
-    slug: 'power-transmission',
-    name: 'تسمه‌ها و انتقال نیرو',
-    nameEn: 'Belts & Power Transmission',
-    description: 'انواع تسمه‌ها و قطعات انتقال نیرو',
-    subcategories: ['انواع تسمه انتقال نیرو و مکانیکی', 'تسمه تایم و تسمه‌های دندانه‌دار'],
-    topModels: ['1000 0 1'],
-    brands: ['فورزا (FORZA)'],
-    icon: 'Cpu',
-    count: 185,
-    image: getProductImageUrl('e(001).png'),
-  },
-  {
-    id: 12,
-    slug: 'industrial-belts',
-    name: 'تسمه‌ها و انتقال نیرو',
-    nameEn: 'Belts & Power Transmission',
-    description: 'تسمه‌های صنعتی',
-    subcategories: ['انواع تسمه انتقال نیرو و مکانیکی'],
-    topModels: ['1000 0 1'],
-    brands: ['فورزا (FORZA)'],
-    icon: 'Cpu',
-    count: 185,
-    image: getProductImageUrl('e(001).png'),
-  },
-  {
-    id: 13,
-    slug: 'ceramic-tiles',
-    name: 'قطعات تخصصی استکر و خطوط انتقال',
-    nameEn: 'Stacker & Conveyor Parts',
-    description: 'قطعات خطوط انتقال',
-    subcategories: ['قطعات پایه و نگهدارنده'],
-    topModels: ['1000 4 1'],
-    brands: ['فورزا (FORZA)'],
-    icon: 'Wrench',
-    count: 130,
-    image: getProductImageUrl('e(026).png'),
-  }
 ];
 
-// Primary categories list (10 categories)
-export const PRIMARY_CATALOG_CATEGORIES = CATEGORIES.filter(c => c.id <= 10);
+export const flattenCategoryNodes = (nodes: CategoryNode[]): CategoryNode[] =>
+  nodes.flatMap(node => [node, ...flattenCategoryNodes(node.children || [])]);
+
+const normalize = (value: string) => value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\u200f]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+// Compatibility vocabulary uses existing catalogue labels; source product records stay intact.
+const vocabulary: Record<string, string[]> = {
+  'تسمه V شکل (کلاسیک)': ['تسمه V-Belt ساده و دنده‌ای', 'انواع تسمه انتقال نیرو و مکانیکی'],
+  'تسمه تایمینگ': ['تسمه تایمینگ صنعتی', 'تسمه تایم و تسمه‌های دندانه‌دار'],
+  'تسمه‌های صنعتی خاص': ['تسمه جوشی پلی‌یورتان', 'انواع تسمه جوشی', 'تسمه‌های پلی‌یورتان', 'تسمه پاک کن خطوط لعاب'],
+  'پولی صنعتی': ['پولی', 'فولی'], 'کوپلینگ': ['کوپلینگ و اتصالات', 'بوش و اتصالات الاستومری'],
+  'نوار نقاله': ['نوار نقاله', 'کانوایر'], 'نوار گریپ': ['نوار گریپ سبز پشت پله استر'],
+  'زنجیر صنعتی': ['زنجیر'], 'تجهیزات نقاله': ['قطعات نقاله'],
+  'بلبرینگ صنعتی': ['بلبرینگ', 'بلبرینگ‌های شیار عمیق'], 'یاتاقان': ['پایه یاتاقان و هوزینگ'],
+  'شفت صنعتی': ['شفت'], 'بوش صنعتی': ['بوش', 'بوش‌های سر رولیک'], 'توپی صنعتی': ['توپی'],
+  'چرخ‌دنده': ['چرخ دنده', 'چرخ‌دنده مدولار', 'چرخ‌دنده پالت‌آیزر'],
+  'صفحه صنعتی': ['صفحه'], 'ساپورت': ['ساپورت و پایه‌های خط لعاب'],
+  'چرخ پلی‌یورتان': ['چرخ با روکش پلی‌یورتان', 'چرخ‌ها و هرزگردهای پلی‌یورتان'],
+  'چرخ استاکر': ['چرخ استکر'], 'رولر صنعتی': ['رولر', 'رولیک', 'انواع رولر'],
+  'غلتک روکش‌دار': ['رولر و روکش رولر'], 'ریل صنعتی': ['ریل', 'ریل و شاسی هدایت تسمه', 'ریل زیر تسمه‌ای'],
+  'گاید صنعتی': ['گاید', 'گاید تک‌لبه و دو‌لبه'],
+  'لاستیک دیافراگم': ['لاستیک پمپ دیافراگمی'], 'ضربه‌گیر صنعتی': ['ضربهگیر', 'ضربه گیر'],
+  'ضربه‌گیر استاکر': ['ضربهگیر استکر', 'ضربه گیر استکر'], 'ضربه‌زن': ['ضربه زن'],
+  'کاسه‌نمد': ['کاسه نمد'], 'درزگیر صنعتی': ['درزگیر', 'نوارهای درزگیر'],
+  'پلی‌یورتان': ['پلی یورتان'], 'اسفنج صنعتی': ['اسفنج', 'انواع اسفنج سیلیکونی و معمولی'],
+  'فوم صنعتی': ['فوم'], 'ابر صنعتی': ['ابر'], 'پارچه صنعتی': ['پارچه', 'پارچه‌های نسوز'],
+  'قطعات پمپ': ['پمپ', 'پروانه و همزن‌های لعاب', 'قطعات پمپ دیافراگمی'],
+  'شیلنگ صنعتی': ['شیلنگ'], 'لوله صنعتی': ['لوله'], 'سیلندر صنعتی': ['سیلندر'],
+  'مکنده صنعتی': ['مکنده', 'لاستیک‌های وکیوم و مکنده'], 'قطعات وکیوم': ['وکیوم'],
+  'تجهیزات کوره': ['کوره', 'قطعات کوره رولری'], 'تجهیزات استاکر': ['استاکر', 'استکر'],
+  'تجهیزات چاپ و دکور': ['چاپ', 'دکور', 'قطعات خط لعاب و چاپ'],
+  'برس صنعتی': ['برس', 'برس مویی', 'برس خشک', 'برس و تمیزکننده‌های خطوط کاشی'],
+  'توری صنعتی': ['توری'], 'فیلتر صنعتی': ['فیلتر'], 'تیغه صنعتی': ['تیغه', 'تیغ خاک‌پرس'],
+  'پیچ صنعتی': ['پیچ'], 'مهره صنعتی': ['مهره'], 'بست صنعتی': ['بست'],
+  'بست U شکل': ['بست U'], 'پایه صنعتی': ['پایه', 'پایه‌های رگلاژ'],
+  'نگهدارنده صنعتی': ['نگهدارنده'], 'ترانس صنعتی': ['ترانس'],
+};
+const nodeMatchesProduct = (product: Product, node: CategoryNode): boolean => {
+  const sub = normalize(product.subcategory || '');
+  const name = normalize(product.name || '');
+  const label = normalize(node.name);
+  const profile = node.name.match(/^(?:تسمه )?([A-Z]+\d*)$/)?.[1];
+  let direct: boolean;
+  if (profile) {
+    direct = sub === label || /تسمه|تایم|timing/.test(name) && new RegExp(`(?:^|[^a-z0-9])${profile.toLowerCase()}(?=\\d|[^a-z]|$)`).test(name);
+  } else {
+    direct = sub === label || name.includes(label) || (vocabulary[node.name] || []).some(term => {
+      const normalized = normalize(term);
+      return sub === normalized || name.includes(normalized);
+    });
+  }
+  return direct || (node.children || []).some(child => nodeMatchesProduct(product, child));
+};
+
+export const CATEGORY_ALIASES: Record<string, string> = {
+  'chains-sprockets': 'conveyors-industrial-chains',
+  'power-transmission': 'belts-power-transmission', 'industrial-belts': 'belts-power-transmission',
+  'belts-timing': 'belts-power-transmission', 'v-belts': 'belts-power-transmission', 'timing-belts': 'belts-power-transmission',
+  'pulleys-idlers': 'belts-power-transmission', 'couplings-elastomers': 'belts-power-transmission',
+  'profiles-rails-supports': 'wheels-rollers-guides', 'profiles-rails': 'wheels-rollers-guides',
+  'rollers-wheels-gears': 'wheels-rollers-guides', 'rubber-pu-suction': 'rubber-seals-dampers',
+  'industrial-brushes': 'brushes-filtration-tools', 'glaze-brushes': 'brushes-filtration-tools',
+  'hoses-channels': 'pumps-fluids-pneumatics', 'pumps-valves-mechanical': 'pumps-fluids-pneumatics',
+  'impellers-pumps': 'pumps-fluids-pneumatics', 'vacuum-cleaners': 'pumps-fluids-pneumatics',
+  'seals-foam-refractory': 'rubber-seals-dampers', 'polymer-teflon-parts': 'polymers-industrial-sheets',
+  'stacker-conveyor-parts': 'production-ceramic-equipment', 'ceramic-tiles': 'production-ceramic-equipment',
+  'kiln-roller-pins': 'production-ceramic-equipment', 'bearings-bushings': 'mechanical-motion-parts',
+  'bearings': 'mechanical-motion-parts', 'supports-brackets': 'industrial-fasteners-accessories',
+};
+export const resolveCategorySlug = (slug: string) => CATEGORY_ALIASES[slug] || slug;
+
+export function matchesCatalogCategory(product: Product, slug: string, selection = 'all'): boolean {
+  const category = definitions.find(c => c.slug === resolveCategorySlug(slug));
+  if (!category) return selection === 'all' ? product.categorySlug === slug : product.subcategory === selection;
+  if (selection !== 'all') {
+    const node = flattenCategoryNodes(category.children).find(n => n.name === selection);
+    return node ? nodeMatchesProduct(product, node) : product.subcategory === selection;
+  }
+  return product.categorySlug === category.slug || category.children.some(node => nodeMatchesProduct(product, node));
+}
+
+export const CATEGORIES: EnhancedCategory[] = definitions.map((definition, index) => ({
+  ...definition,
+  id: index + 1,
+  description: definition.children.map(node => node.name).join('، '),
+  subcategories: definition.children.map(node => node.name),
+  image: getProductImageUrl(definition.image),
+  count: USER_PRODUCTS.filter(product => matchesCatalogCategory(product, definition.slug)).length,
+}));
+export const PRIMARY_CATALOG_CATEGORIES = CATEGORIES;
+export const findCatalogCategory = (slug: string) => CATEGORIES.find(category => category.slug === resolveCategorySlug(slug));

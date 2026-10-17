@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getAllProducts } from '../data/mockGenerator';
-import { CATEGORIES } from '../data/categories';
+import { CATEGORIES, findCatalogCategory, matchesCatalogCategory, resolveCategorySlug } from '../data/categories';
+import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
 import { Product } from '../types';
 import { toPersianDigits } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
@@ -53,7 +54,7 @@ export const ProductsPage: React.FC = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   // URL-driven or local state
-  const categoryParam = searchParams.get('category') || 'all';
+  const categoryParam = resolveCategorySlug(searchParams.get('category') || 'all');
   const subParam = searchParams.get('sub') || 'all';
   const queryParam = searchParams.get('q') || '';
 
@@ -93,48 +94,19 @@ export const ProductsPage: React.FC = () => {
 
   // Active category object
   const activeCategoryObj = useMemo(() => {
-    return CATEGORIES.find(c => c.slug === selectedCategory);
+    return findCatalogCategory(selectedCategory);
   }, [selectedCategory]);
-
-  // Subcategories for current category
-  const availableSubcategories = useMemo(() => {
-    if (!activeCategoryObj) {
-      const subSet = new Set<string>();
-      allProducts.forEach(p => subSet.add(p.subcategory));
-      return Array.from(subSet).slice(0, 10);
-    }
-    return activeCategoryObj.subcategories;
-  }, [activeCategoryObj, allProducts]);
 
   // Filtered products
   const filteredProducts = useMemo(() => {
     let result = [...allProducts];
 
-    // 1. Category Filter
-    if (selectedCategory !== 'all') {
-      if (selectedCategory === 'swr-forza-exclusive') {
-        result = result.filter(
-          p =>
-            p.categorySlug === 'swr-forza-exclusive' ||
-            p.brand.includes('SWR') ||
-            p.brand.includes('FORZA')
-        );
-      } else {
-        const catObj = CATEGORIES.find(c => c.slug === selectedCategory);
-        if (catObj && catObj.subcategories && catObj.subcategories.length > 0) {
-          result = result.filter(
-            p =>
-              p.categorySlug === selectedCategory ||
-              catObj.subcategories.includes(p.subcategory)
-          );
-        } else {
-          result = result.filter(p => p.categorySlug === selectedCategory);
-        }
-      }
-    }
-
-    // 2. Subcategory Filter
-    if (selectedSubcategory !== 'all') {
+    // Match the selected branch together with all of its descendants.
+    if (selectedCategory === 'swr-forza-exclusive') {
+      result = result.filter(p => p.brand.includes('SWR') || p.brand.includes('FORZA'));
+    } else if (selectedCategory !== 'all') {
+      result = result.filter(p => matchesCatalogCategory(p, selectedCategory, selectedSubcategory));
+    } else if (selectedSubcategory !== 'all') {
       result = result.filter(p => p.subcategory === selectedSubcategory);
     }
 
@@ -202,6 +174,7 @@ export const ProductsPage: React.FC = () => {
   const handleCategorySelect = (slug: string) => {
     setSelectedCategory(slug);
     setSelectedSubcategory('all');
+    searchParams.delete('sub');
     setCurrentPage(1);
     if (slug === 'all') {
       searchParams.delete('category');
@@ -477,42 +450,20 @@ export const ProductsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Subcategory Chips if available */}
-          {availableSubcategories.length > 0 && (
-            <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none" style={{ scrollbarWidth: 'none' }}>
-              <span className="text-[11px] font-bold text-slate-400 shrink-0">زیرگروه‌ها:</span>
-              <button
-                onClick={() => {
-                  setSelectedSubcategory('all');
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
-                  selectedSubcategory === 'all'
-                    ? 'bg-slate-800 text-white font-bold'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                همه زیرگروه‌ها
-              </button>
-              {availableSubcategories.map(sub => (
-                <button
-                  key={sub}
-                  onClick={() => {
-                    setSelectedSubcategory(sub);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
-                    selectedSubcategory === sub
-                      ? 'bg-orange-500 text-white font-bold'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {sub}
-                </button>
-              ))}
+          {activeCategoryObj && (
+            <div className="pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <span className="text-xs font-bold text-[#484344]">زیرگروه‌های {activeCategoryObj.name}</span>
+                <button type="button" className="text-xs text-[#E06518] font-bold" onClick={() => { searchParams.delete('sub'); setSearchParams(searchParams); }}>همه زیرگروه‌ها</button>
+              </div>
+              <CategoryNavigation key={activeCategoryObj.slug} nodes={activeCategoryObj.children} categorySlug={activeCategoryObj.slug} selected={selectedSubcategory} onSelect={name => {
+                searchParams.set('sub', name);
+                setSearchParams(searchParams);
+              }} />
             </div>
           )}
         </div>
+
 
         {/* Results Count & Active Status */}
         <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
