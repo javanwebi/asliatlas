@@ -122,11 +122,6 @@ export const AiForzaCallExperience: React.FC<AiForzaCallExperienceProps> = ({ on
     setStatusState(s);
   }, []);
 
-  // Real-time audio noise/frequency monitoring using Web Audio API
-  useEffect(() => {
-    let active = true;
-    const dataArray = new Uint8Array(128);
-
   // Start/Stop voice listening helpers
   const startListening = useCallback(() => {
     if (!isCallActive || isAiSpeakingRef.current || statusRef.current === 'thinking' || isProcessingTurnRef.current) {
@@ -909,20 +904,6 @@ export const AiForzaCallExperience: React.FC<AiForzaCallExperienceProps> = ({ on
       stopAudio();
     };
   }, [ensureCtx, initSpeechRecognition, isMicMuted, setStatus, setupMediaRecorder, speakText, startListening, stopAudio, stopListening]);
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          /* noop */
-        }
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      stopAudio();
-    };
-  }, [ensureCtx, initSpeechRecognition, setStatus, speakText, stopAudio]);
 
   const endCall = useCallback(() => {
     stopAudio();
