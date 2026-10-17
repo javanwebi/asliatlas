@@ -110,7 +110,7 @@ export const HighUtilityProductsSection: React.FC = () => {
         {/* Right Title */}
         <div className="flex items-center gap-2">
           <h2 className="text-xl sm:text-2xl font-black text-[#55565A] tracking-tight">
-            محصولات پرکاربرد
+            محصولات کاربردی
           </h2>
           <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E06518] bg-[#F8F9FA] px-2.5 py-0.5 rounded-md border border-slate-200">
             <Wrench className="w-3.5 h-3.5 text-[#E06518]" />

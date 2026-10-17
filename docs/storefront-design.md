@@ -1,11 +1,5 @@
-# Public website rollback
+# Storefront design
 
-The homepage, header, footer, mobile navigation, public catalogue, product detail
-and cart presentation have been restored exactly to commit 2729360, before the
-site-wide visual redesign. The public HTML and global CSS are restored as well.
+Restores the visual product catalogue and SKU detail layout from 921719a, including image/code/specification/price grouping and mobile purchase controls. Keeps the existing Header and Footer components and their colors. Palette overrides apply only inside main.
 
-The newer customer dashboards, independent clubs, recent orders, saved products,
-bulk purchasing and Content Studio controls are retained. Their product cards,
-font and supporting styles are now isolated within the customer portal so they
-do not restyle public pages. Account data isolation and removal of demo inquiries
-are retained.
+Homepage retains the cinematic hero, original brands, categories and industries, adds an illustrated service story explaining supply, manufacturing and technical selection, a purchase path, and image-based assistance. Shared self-hosted Vazirmatn matches customer portals. Portal access controls and content management remain intact.
