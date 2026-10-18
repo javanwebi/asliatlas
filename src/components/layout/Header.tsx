@@ -1,3 +1,6 @@
+import { ReferenceMegaMenu } from "../catalog/ReferenceMegaMenu";
+import { IndustryNavigation } from "../storefront/IndustryTools";
+import {AboutNavigation} from '../../pages/DiscoveryPages';
 import { ProductImage } from '../product/ProductImage';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -112,14 +115,17 @@ export const Header: React.FC = () => {
       setTimeout(() => mobileSearchInputRef.current?.focus(), 100);
     };
     const handleOpenConsult = () => navigate('/ai-consult');
-    const handleOpenForza = () => navigate('/ai-forza');
+    const handleOpenForza = () => navigate('/ai-consult?voice=1');
 
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setIsMegaMenuOpen(false); setActiveDropdown(null); setIsSearchDropdownOpen(false); setIsUserMenuOpen(false); } };
+    document.addEventListener('keydown', handleEscape);
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('open-mobile-search', handleOpenSearch);
     window.addEventListener('open-ai-consult', handleOpenConsult);
     window.addEventListener('open-forza-face-to-face', handleOpenForza);
 
     return () => {
+      document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('open-mobile-search', handleOpenSearch);
       window.removeEventListener('open-ai-consult', handleOpenConsult);
@@ -358,11 +364,7 @@ export const Header: React.FC = () => {
                             </div>
                           </div>
                           <div className="font-bold text-[#2B313A] shrink-0 text-left">
-                            {p.inquiryOnly ? (
-                              <span className="text-amber-600 text-[11px]">استعلام قیمت</span>
-                            ) : (
-                              formatPrice(p.prices.retail)
-                            )}
+                            <span className="text-[11px] text-[#777A7D]">مشاهده مشخصات</span>
                           </div>
                         </Link>
                       ))}
@@ -504,27 +506,9 @@ export const Header: React.FC = () => {
                       <p className="text-[11px] text-[#777A7D] font-mono mt-0.5">{currentUser?.phone}</p>
                     </div>
                     <div className="py-1 text-xs">
-                      {currentUser?.role === 'dealer' ? (
+                      {currentUser?.approvedB2B === true ? (
                         <Link
-                          to="/dealer"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold border-b border-slate-100"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>ورود به پنل اختصاصی نمایندگی</span>
-                        </Link>
-                      ) : currentUser?.role === 'admin' ? (
-                        <Link
-                          to="/admin"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold border-b border-slate-100"
-                        >
-                          <Building className="w-4 h-4" />
-                          <span>ورود به پنل مدیریت ارشد</span>
-                        </Link>
-                      ) : (currentUser?.approvedB2B || currentUser?.isLegacyCustomer || (currentUser?.role && currentUser?.role !== 'retail')) ? (
-                        <Link
-                          to="/account"
+                          to={currentUser?.approvedB2B === true ? "/account" : "/consumer-dashboard"}
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-[#E06518] font-bold"
                         >
@@ -570,11 +554,12 @@ export const Header: React.FC = () => {
                 onClick={() => openAuthModal(undefined, 'login')}
                 className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 px-2 sm:px-3.5 rounded-xl border border-[#CBD2D8] bg-white hover:border-[#E06518] hover:bg-orange-50/30 text-[#2B313A] hover:text-[#E06518] transition-all text-xs font-bold cursor-pointer shadow-2xs group shrink-0 active:scale-95"
                 title="ورود یا ثبت‌نام در سامانه صنعت پیش"
+                aria-label="ورود یا ثبت‌نام"
               >
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-orange-50 group-hover:bg-[#E06518]/15 text-[#E06518] flex items-center justify-center transition-colors shrink-0">
                   <User className="w-3.5 h-3.5" />
                 </div>
-                <div className="flex items-center gap-1 font-bold">
+                <div className="hidden sm:flex items-center gap-1 font-bold">
                   <span>ورود</span>
                   <span className="text-slate-300 font-light text-[11px]">|</span>
                   <span className="text-slate-700 group-hover:text-[#E06518] transition-colors">ثبت‌نام</span>
@@ -674,127 +659,7 @@ export const Header: React.FC = () => {
               </button>
 
               {/* Industrial MegaMenu Dropdown */}
-              {isMegaMenuOpen && (
-                <div className="absolute right-0 top-full w-[940px] xl:w-[980px] bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#CBD2D8] flex overflow-hidden z-50 animate-in fade-in duration-150">
-                  {/* Right Column: 6 Main Product Categories */}
-                  <div className="w-80 bg-slate-50/90 border-l border-[#CBD2D8] p-2.5 space-y-1.5 max-h-[580px] overflow-y-auto">
-                    <Link
-                      to="/products"
-                      onClick={() => setIsMegaMenuOpen(false)}
-                      className="flex items-center justify-between p-3 mb-2 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white font-bold text-xs transition-colors shadow-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        <span>مشاهده همه محصولات و تجهیزات</span>
-                      </div>
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </Link>
-                    <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-[#777A7D] border-b border-slate-200/80 mb-1">
-                      <span>دسته‌بندی‌های اصلی تجهیزات صنعتی</span>
-                      <span className="text-[10px] font-mono text-[#E06518]">{toPersianDigits(CATEGORIES.length)} دسته اصلی</span>
-                    </div>
-                    {PRIMARY_CATALOG_CATEGORIES.map((cat, idx) => (
-                      <button
-                        key={cat.slug}
-                        onMouseEnter={() => setActiveMegaCategory(cat.slug)}
-                        onFocus={() => setActiveMegaCategory(cat.slug)}
-                        onClick={() => {
-                          setIsMegaMenuOpen(false);
-                          navigate(`/category/${cat.slug}`);
-                        }}
-                        className={`w-full text-right p-3 rounded-xl font-bold text-xs flex items-center justify-between transition-all cursor-pointer ${
-                          activeMegaCategory === cat.slug
-                            ? 'bg-white text-[#E06518] shadow-sm border border-slate-200/80 ring-1 ring-orange-500/10'
-                            : 'text-[#55565A] hover:bg-slate-100 hover:text-[#2B313A]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span
-                            className={`w-5 h-5 rounded-lg text-[10px] font-mono font-bold flex items-center justify-center shrink-0 ${
-                              activeMegaCategory === cat.slug
-                                ? 'bg-[#E06518] text-white'
-                                : 'bg-slate-200/80 text-slate-600'
-                            }`}
-                          >
-                            {toPersianDigits(idx + 1)}
-                          </span>
-                          <span className="truncate">{cat.name}</span>
-                        </div>
-                        <ChevronLeft
-                          className={`w-3.5 h-3.5 transition-transform ${
-                            activeMegaCategory === cat.slug ? 'text-[#E06518] translate-x-0.5' : 'text-slate-300'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Left Area: Active Category Showcase */}
-                  <div className="flex-1 p-6 space-y-4 bg-white text-right max-h-[580px] overflow-y-auto">
-                    {/* Category Header */}
-                    <div className="border-b border-slate-100 pb-3.5 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-black text-base text-[#2B313A]">
-                            {selectedCategoryObj.name}
-                          </h4>
-                          <span className="text-[11px] font-mono text-[#777A7D]">
-                            ({selectedCategoryObj.nameEn})
-                          </span>
-                        </div>
-                        <Link
-                          to={`/category/${selectedCategoryObj.slug}`}
-                          onClick={() => setIsMegaMenuOpen(false)}
-                          className="text-xs font-bold text-[#E06518] hover:text-[#C95210] flex items-center gap-1 shrink-0"
-                        >
-                          <span>مشاهده محصولات این گروه</span>
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-
-                      {selectedCategoryObj.featuredBadge && (
-                        <div className="inline-block px-2.5 py-0.5 rounded-md bg-orange-50 text-[#C95210] border border-orange-200 text-[10px] font-bold">
-                          {selectedCategoryObj.featuredBadge}
-                        </div>
-                      )}
-
-                      <p className="text-xs text-[#55565A] leading-relaxed pt-1">
-                        {selectedCategoryObj.description}
-                      </p>
-                    </div>
-
-                    {/* Subcategories Grid */}
-                    <div>
-                      <div className="text-[11px] font-bold text-[#777A7D] mb-2.5 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E06518]" />
-                        <span>زیرمجموعه‌ها و گروه‌های تخصصی:</span>
-                      </div>
-                      <CategoryNavigation key={selectedCategoryObj.slug} nodes={selectedCategoryObj.children} categorySlug={selectedCategoryObj.slug} onNavigate={() => setIsMegaMenuOpen(false)} expanded />
-                    </div>
-
-
-                    {/* Authorized Brands & Quick Consult Link */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                        <span className="text-[11px] font-bold text-[#777A7D] ml-1">برندهای تأییدشده:</span>
-                        {selectedCategoryObj.brands && selectedCategoryObj.brands.map(b => (
-                          <span key={b} className="px-2 py-0.5 rounded bg-slate-100 text-[#55565A] font-medium text-[10px] border border-slate-200">
-                            {b}
-                          </span>
-                        ))}
-                      </div>
-                      <Link
-                        to="/ai-consult"
-                        onClick={() => setIsMegaMenuOpen(false)}
-                        className="text-[11px] font-bold text-[#E06518] hover:underline flex items-center gap-1"
-                      >
-                        <span>مشاوره و استعلام فنی</span>
-                        <ChevronLeft className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {isMegaMenuOpen && <ReferenceMegaMenu onNavigate={()=>setIsMegaMenuOpen(false)}/>}
             </div>
 
 
@@ -826,168 +691,10 @@ export const Header: React.FC = () => {
               </button>
 
               {/* Industries Dropdown */}
-              {activeDropdown === 'industries' && (
-                <div className="absolute right-0 top-full w-72 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1 border-b border-slate-100">
-                    صنایع تخصصی تحت پوشش
-                  </div>
-                  <div className="space-y-1">
-                    <Link
-                      to="/category/ceramic-tiles"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت کاشی و سرامیک</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/category/textile-machinery"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت نساجی و پارچه</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/category/packaging-carton"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت بسته‌بندی و کارتنسازی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/category/food-beverage"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنایع غذایی و نوشیدنی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/category/machinery-equipment"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت ماشین‌سازی و تجهیزات صنعتی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/category/rubber-plastics"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنایع لاستیک و پلاستیک</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-100">
-                    <Link
-                      to="/#industries"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block text-center py-1.5 px-3 bg-slate-50 hover:bg-orange-50 text-[11px] font-bold text-[#E06518] rounded-lg transition-colors"
-                    >
-                      مشاهده راهنمای کامل صنایع
-                    </Link>
-                  </div>
-                </div>
-              )}
+              {activeDropdown === 'industries' && <IndustryNavigation onNavigate={()=>setActiveDropdown(null)}/> }
             </div>
 
-            {/* 3. برندها (Orange Tag icon + Down Chevron) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveDropdown(activeDropdown === 'brands' ? null : 'brands');
-                  setIsMegaMenuOpen(false);
-                }}
-                onMouseEnter={() => {
-                  if (activeDropdown && activeDropdown !== 'brands') {
-                    setActiveDropdown('brands');
-                  }
-                }}
-                className={`flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 transition-colors cursor-pointer group ${
-                  activeDropdown === 'brands' ? 'text-[#E06518] bg-white/5' : 'text-white hover:text-[#E06518]'
-                }`}
-              >
-                <Tag className="w-4 h-4 text-[#E06518] shrink-0" />
-                <span>برندهای همکار</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#E06518] transition-transform duration-200 ${
-                    activeDropdown === 'brands' ? 'rotate-180 text-[#E06518]' : ''
-                  }`}
-                />
-              </button>
-
-              {/* Brands Dropdown */}
-              {activeDropdown === 'brands' && (
-                <div className="absolute right-0 top-full w-80 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3.5 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1.5 border-b border-slate-100">
-                    برندهای اختصاصی و انحصاری اطلس
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      to="/category/swr-forza-exclusive"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg bg-orange-50/60 hover:bg-orange-100/80 border border-orange-200 transition-colors"
-                    >
-                      <div className="font-black text-xs text-[#C95210]">SWR آلمان</div>
-                      <div className="text-[10px] text-slate-600 mt-0.5">نماینده انحصاری تسمه</div>
-                    </Link>
-                    <Link
-                      to="/category/swr-forza-exclusive"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-colors"
-                    >
-                      <div className="font-black text-xs text-blue-700">FORZA ایتالیا</div>
-                      <div className="text-[10px] text-slate-600 mt-0.5">نماینده انحصاری پولی</div>
-                    </Link>
-                    <Link
-                      to="/category/industrial-belts"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">MEGADYNE</div>
-                      <div className="text-[10px] text-slate-500">ایتالیا</div>
-                    </Link>
-                    <Link
-                      to="/category/industrial-belts"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">OPTIBELT</div>
-                      <div className="text-[10px] text-slate-500">آلمان</div>
-                    </Link>
-                    <Link
-                      to="/category/bearings"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">SKF سوئد</div>
-                      <div className="text-[10px] text-slate-500">بلبرینگ صنعتی</div>
-                    </Link>
-                    <Link
-                      to="/category/bearings"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">TIMKEN آمریکا</div>
-                      <div className="text-[10px] text-slate-500">رولبرینگ سنگین</div>
-                    </Link>
-                  </div>
-                  <div className="pt-2.5 mt-2 border-t border-slate-100 flex items-center justify-between">
-                    <Link
-                      to="/#brands"
-                      onClick={() => setActiveDropdown(null)}
-                      className="text-[11px] font-bold text-[#E06518] hover:text-[#C95210] transition-colors"
-                    >
-                      مشاهده تمام برندهای صنعتی ←
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Link to="/brands" onClick={()=>{setActiveDropdown(null);setIsMegaMenuOpen(false);}} className="flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 hover:text-[#E06518] transition-colors text-white"><Tag className="w-4 h-4 text-[#E06518]"/><span>برندهای همکار</span></Link>
 
             {/* 4. خدمات صنعتی (White Wrench icon + Down Chevron) */}
             <div className="relative">
@@ -1107,55 +814,7 @@ export const Header: React.FC = () => {
 
               {/* About Dropdown */}
               {activeDropdown === 'about' && (
-                <div className="absolute right-0 top-full w-64 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1 border-b border-slate-100">
-                    شناخت صنعت پیش و بازرگانی اطلس
-                  </div>
-                  <div className="space-y-1">
-                    <Link
-                      to="/about?tab=intro"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      معرفی و توانمندی‌های صنعت پیش
-                    </Link>
-                    <Link
-                      to="/about?tab=history"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      تاریخچه و خط زمان (از سال ۱۳۶۶)
-                    </Link>
-                    <Link
-                      to="/about?tab=licenses"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      مجوزها و استانداردهای ISO
-                    </Link>
-                    <Link
-                      to="/about?tab=awards"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      افتخارات و تندیس‌های ملی
-                    </Link>
-                    <Link
-                      to="/contact"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      تماس با ما و مشاوره تدارکات
-                    </Link>
-                    <Link
-                      to="/contact?tab=factory"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      آدرس کارخانه و انبار مرکزی میبد
-                    </Link>
-                  </div>
-                </div>
+                <AboutNavigation onNavigate={()=>setActiveDropdown(null)}/>
               )}
             </div>
 
@@ -1209,7 +868,7 @@ export const Header: React.FC = () => {
                       <div className="text-[10px] text-slate-500">عاملیت‌های فروش فعال در یزد، تهران و اصفهان</div>
                     </Link>
                     <Link
-                      to="/account"
+                      to={currentUser?.approvedB2B === true ? "/account" : "/consumer-dashboard"}
                       onClick={() => setActiveDropdown(null)}
                       className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -1223,7 +882,7 @@ export const Header: React.FC = () => {
 
             {/* 7. دانشنامه (White BookOpen icon - NO Chevron, direct link) */}
             <Link
-              to="/catalog"
+              to="/knowledge"
               onMouseEnter={() => setActiveDropdown(null)}
               className="flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 hover:text-[#E06518] transition-colors cursor-pointer text-white"
             >
@@ -1234,7 +893,7 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Left: Hotline Support Badge with Pulse */}
-          <div className="flex items-center gap-2 text-xs text-slate-400 whitespace-nowrap shrink-0" dir="rtl">
+          <div className="header-support-status flex items-center gap-2 text-xs text-slate-400 whitespace-nowrap shrink-0" dir="rtl">
             <span className="text-slate-300 font-sans">پشتیبانی صنعتی:</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="text-white font-mono" dir="ltr">۰۳۵-۳۸۷۳۹۹۰۰</span>

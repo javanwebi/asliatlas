@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Customer, UserRole, PriceTiers, Address, RegisterPayload, AuthResponse, AuthCredentials } from '../types';
-import { MOCK_CUSTOMERS } from '../data/mockData';
 import { AuthService } from '../services/authService';
-import { adminService } from '../services/adminService';
-import { normalizeIranianMobile } from '../utils/usernameGenerator';
+import { clearPortalCache, hydratePortal, portalRequest } from '../services/portalRepository';
 
 interface AuthContextType {
   currentUser: Customer | null;
+  authLoading: boolean;
   activeRole: UserRole;
   priceLayer: keyof PriceTiers;
   roleTitle: string;
@@ -21,7 +20,6 @@ interface AuthContextType {
   setLatestCredentials: (creds: AuthCredentials | null) => void;
   registerUser: (payload: RegisterPayload) => Promise<AuthResponse>;
   loginWithPassword: (identifier: string, password: string) => Promise<AuthResponse>;
-  loginWithOtp: (phone: string, fullName?: string, companyName?: string) => { success: boolean; user?: Customer; message?: string; isNewUser?: boolean };
   saveOnboardingStep1: (brands: string[]) => Promise<boolean>;
   saveOnboardingStep2: (businessType: string) => Promise<boolean>;
   loginAs: (role: UserRole) => void;
@@ -44,43 +42,18 @@ const STORAGE_KEY = 'hyper_sanat_auth_state_v2';
 const USERS_STORAGE_KEY = 'hyper_sanat_registered_users_v2';
 const CREDS_STORAGE_KEY = 'hyper_sanat_latest_credentials_v2';
 
-const INITIAL_DEFAULT_ADDRESSES: Address[] = [
-  {
-    id: 'addr-1',
-    title: 'انبار مرکزی کارخانه کاشی ستاره میبد',
-    recipientName: 'مهندس محمدرضا زارع',
-    recipientPhone: '09131512345',
-    province: 'یزد',
-    city: 'میبد',
-    fullAddress: 'شهرک صنعتی جهان‌آباد، بلوار تلاش، روبروی نیروگاه، درب شماره ۳ خط تولید کوره',
-    postalCode: '8961123456',
-    isDefault: true,
-  },
-  {
-    id: 'addr-2',
-    title: 'دفتر مرکزی بازرگانی یزد',
-    recipientName: 'محمدرضا زارع',
-    recipientPhone: '09131512345',
-    province: 'یزد',
-    city: 'یزد',
-    fullAddress: 'بلوار جمهوری اسلامی، بعد از بیمارستان افشار، جنب بانک سپه',
-    postalCode: '8917987654',
-    isDefault: false,
-  },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<Customer | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<Customer | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    const sync = () => hydratePortal().catch(() => { if (mounted) setCurrentUser(null); }).finally(() => { if (mounted) setAuthLoading(false); });
+    const sessionUpdated = (event: Event) => { if (mounted) setCurrentUser((event as CustomEvent).detail.user || null); };
+    window.addEventListener('atlas-session-updated', sessionUpdated);
+    window.addEventListener('focus', sync);
+    void sync();
+    return () => { mounted = false; window.removeEventListener('atlas-session-updated', sessionUpdated); window.removeEventListener('focus', sync); };
+  }, []);
 
   const [activeRole, setActiveRole] = useState<UserRole>(() => {
     return currentUser ? currentUser.role : 'guest';
@@ -125,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const openAuthModal = (redirectPath?: string, initialView?: 'login' | 'register') => {
-    if (redirectPath) setRedirectOnLogin(redirectPath);
+    if (redirectPath) {setRedirectOnLogin(redirectPath);try{sessionStorage.setItem('sanat_access_destination',redirectPath);}catch{}}
     if (initialView) setAuthModalInitialView(initialView);
     else setAuthModalInitialView('login');
     setIsAuthModalOpen(true);
@@ -148,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.success && result.user) {
       const userWithAddr: Customer = {
         ...result.user,
-        addresses: result.user.addresses && result.user.addresses.length > 0 ? result.user.addresses : INITIAL_DEFAULT_ADDRESSES,
+        addresses: result.user.addresses && result.user.addresses.length > 0 ? result.user.addresses : [],
       };
       setCurrentUser(userWithAddr);
       setActiveRole(userWithAddr.role);
@@ -168,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.success && result.user) {
       const userWithAddr: Customer = {
         ...result.user,
-        addresses: result.user.addresses && result.user.addresses.length > 0 ? result.user.addresses : INITIAL_DEFAULT_ADDRESSES,
+        addresses: result.user.addresses && result.user.addresses.length > 0 ? result.user.addresses : [],
       };
       setCurrentUser(userWithAddr);
       setActiveRole(userWithAddr.role);
@@ -204,101 +177,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const loginWithOtp = (phone: string, fullName?: string, companyName?: string): { success: boolean; user?: Customer; message?: string; isNewUser?: boolean } => {
-    const normalizedPhone = phone.trim();
-    const normalizedCheck = normalizeIranianMobile(normalizedPhone);
-    const searchPhone = normalizedCheck.isValid ? normalizedCheck.normalized : normalizedPhone;
-
-    // Search for existing user across all database records
-    let existingUser: Customer | undefined = MOCK_CUSTOMERS.find(c => c.phone === searchPhone || c.mobile === searchPhone);
-
-    if (!existingUser) {
-      try {
-        const storedUsersStr = localStorage.getItem(USERS_STORAGE_KEY);
-        const storedUsers: Customer[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
-        existingUser = storedUsers.find(u => u.phone === searchPhone || u.mobile === searchPhone);
-      } catch {
-        // ignore
-      }
-    }
-
-    if (!existingUser) {
-      try {
-        const crmCustomers = adminService.getCustomers();
-        const foundInCrm = crmCustomers.find((c: Customer) => c.phone === searchPhone || c.mobile === searchPhone);
-        if (foundInCrm) {
-          existingUser = {
-            ...foundInCrm,
-            approvedB2B: true,
-            role: foundInCrm.role && foundInCrm.role !== 'retail' ? foundInCrm.role : 'wholesale',
-          };
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    if (existingUser) {
-      const loggedUser = {
-        ...existingUser,
-        addresses: existingUser.addresses && existingUser.addresses.length > 0 ? existingUser.addresses : INITIAL_DEFAULT_ADDRESSES,
-      };
-      setCurrentUser(loggedUser);
-      setActiveRole(loggedUser.role);
-      setWelcomeMessage(`خوش آمدید، ${loggedUser.fullName || 'کاربر گرامی'}`);
-      return { success: true, user: loggedUser };
-    } else {
-      // User does NOT exist in system! Deny login completely as per user requirements.
-      return {
-        success: false,
-        message: 'این شماره موبایل در سیستم ثبت نشده است. حتماً باید اطلاعات شما در سیستم ما وجود داشته باشد یا ابتدا ثبت‌نام فرمایید.',
-      };
-    }
-  };
-
-
-
-  const loginAs = (role: UserRole) => {
-    if (role === 'guest') {
-      setCurrentUser(null);
-      setActiveRole('guest');
-      return;
-    }
-
-    if (role === 'admin') {
-      const adminUser: Customer = {
-        id: 'admin-1',
-        fullName: 'مدیریت بازرگانی تسمه اطلس',
-        companyName: 'دفتر مرکزی یزد',
-        phone: '035-37254000',
-        mobile: '09131512345',
-        email: 'admin@atlassanat.ir',
-        role: 'admin',
-        clubTier: 'gold',
-        clubPoints: 5000,
-        approvedB2B: true,
-        city: 'یزد',
-        province: 'یزد',
-        addresses: INITIAL_DEFAULT_ADDRESSES,
-        onboardingCompleted: true,
-        createdAt: '1366/01/01',
-      };
-      setCurrentUser(adminUser);
-      setActiveRole('admin');
-      return;
-    }
-
-    const mock = MOCK_CUSTOMERS.find(c => c.role === role) || MOCK_CUSTOMERS[0];
-    const userWithAddresses: Customer = {
-      ...mock,
-      addresses: mock.addresses && mock.addresses.length > 0 ? mock.addresses : INITIAL_DEFAULT_ADDRESSES,
-      onboardingCompleted: true,
-    };
-    setCurrentUser(userWithAddresses);
-    setActiveRole(role);
-  };
+  // OTP requires a real SMS verification provider. Never authenticate by phone alone.
+  const loginAs = (role: UserRole) => { if (role === 'guest') logout(); };
 
   const logout = () => {
+    void portalRequest({ action: 'logout' });
+    clearPortalCache();
     setCurrentUser(null);
     setActiveRole('guest');
     setLatestCredentials(null);
@@ -309,39 +193,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginAs(role);
   };
 
-  const addClubPoints = (pts: number) => {
-    if (!currentUser) return;
-    setCurrentUser(prev => prev ? { ...prev, clubPoints: Math.max(0, prev.clubPoints + pts) } : null);
-  };
-
+  const addClubPoints = (_pts: number) => { /* Purchase totals and club levels are server controlled. */ };
   const updateProfile = (data: Partial<Customer>) => {
     if (!currentUser) return;
-    const updated = { ...currentUser, ...data };
-    setCurrentUser(updated);
+    void AuthService.updateProfile(data).then(result => {
+      if (result.success && result.user) setCurrentUser(result.user);
+    });
   };
-
-  const activateDealerRole = () => {
-    if (currentUser) {
-      const updatedUser: Customer = {
-        ...currentUser,
-        role: 'dealer',
-        approvedB2B: true,
-        companyName: currentUser.companyName || 'فروشگاه و نمایندگی پخش قطعات صنعتی',
-      };
-      setCurrentUser(updatedUser);
-      setActiveRole('dealer');
-      setWelcomeMessage('پنل نمایندگی و پخش صنعت پیش برای شما با موفقیت فعال شد.');
-    } else {
-      loginAs('dealer');
-      setWelcomeMessage('پنل نمایندگی و پخش صنعت پیش فعال شد.');
-    }
-  };
+  const activateDealerRole = () => { setWelcomeMessage('دسترسی حساب توسط مدیریت و پس از بررسی درخواست شما فعال می‌شود.'); };
 
   const getUserAddresses = (): Address[] => {
     if (currentUser?.addresses && currentUser.addresses.length > 0) {
       return currentUser.addresses;
     }
-    return INITIAL_DEFAULT_ADDRESSES;
+    return [];
   };
 
   const addAddress = (addressData: Omit<Address, 'id'>): Address => {
@@ -406,6 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
+        authLoading,
         activeRole,
         priceLayer,
         roleTitle: roleTitles[activeRole],
@@ -420,7 +286,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLatestCredentials,
         registerUser,
         loginWithPassword,
-        loginWithOtp,
         saveOnboardingStep1,
         saveOnboardingStep2,
         loginAs,

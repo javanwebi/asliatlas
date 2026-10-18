@@ -6,13 +6,13 @@ import { CategoryNavigation } from '../components/catalog/CategoryNavigation';
 import { getProductsByCategory } from '../data/mockGenerator';
 import { ProductCard } from '../components/product/ProductCard';
 import { toPersianDigits } from '../utils/formatters';
-import { 
-  ChevronLeft, 
-  SlidersHorizontal, 
-  ArrowUpDown, 
-  Layers, 
-  Sparkles, 
-  Package, 
+import {
+  ChevronLeft,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Layers,
+  Sparkles,
+  Package,
   CheckCircle2,
   Search,
   RotateCcw,
@@ -68,7 +68,7 @@ export const CategoryPage: React.FC = () => {
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      list = list.filter(p => 
+      list = list.filter(p =>
         matchesProductSearch(p, q) ||
         p.name.toLowerCase().includes(q) ||
         p.code.toLowerCase().includes(q) ||
@@ -252,26 +252,8 @@ export const CategoryPage: React.FC = () => {
             >
               پیشنهاد ویژه
             </button>
-            <button
-              onClick={() => setSortBy('price_asc')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                sortBy === 'price_asc'
-                  ? 'bg-white text-[#E06518] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              ارزان‌ترین
-            </button>
-            <button
-              onClick={() => setSortBy('price_desc')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                sortBy === 'price_desc'
-                  ? 'bg-white text-[#E06518] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              گران‌ترین
-            </button>
+
+
             <button
               onClick={() => setSortBy('code')}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
@@ -333,19 +315,7 @@ export const CategoryPage: React.FC = () => {
 
             {/* Status Toggles */}
             <div className="pt-3 border-t border-slate-100 space-y-2.5">
-              <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 cursor-pointer transition-colors border border-slate-100">
-                <span className="text-xs font-bold text-[#2B313A]">فقط کالاهای موجود در انبار</span>
-                <input
-                  type="checkbox"
-                  checked={inStockOnly}
-                  onChange={e => {
-                    setInStockOnly(e.target.checked);
-                    if (e.target.checked) setInquiryOnlyFilter(false);
-                    setPage(1);
-                  }}
-                  className="w-4 h-4 rounded border-slate-300 text-[#E06518] focus:ring-[#E06518] cursor-pointer"
-                />
-              </label>
+
 
               <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 cursor-pointer transition-colors border border-slate-100">
                 <span className="text-xs font-bold text-[#2B313A]">فقط اقلام نیازمند استعلام قیمت</span>

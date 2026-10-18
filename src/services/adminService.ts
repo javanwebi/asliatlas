@@ -1,3 +1,5 @@
+import { portalRequest, hydratePortal, clearPortalCache } from './portalRepository';
+import { persistPortalCache } from './portalRepository';
 import { Product, Order, PriceInquiry, Customer, DiscountCode, SmsLog, AgencyApplication, Category, Brand, Ticket, Representative, OfficialInvoice } from '../types';
 import {
   generateMockProducts,
@@ -7,7 +9,7 @@ import {
   resetManagedFamily,
   moveGalleryImageToFamily,
 } from '../data/mockGenerator';
-import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_INQUIRIES, MOCK_DISCOUNT_CODES, MOCK_SMS_LOGS, MOCK_REPRESENTATIVES } from '../data/mockData';
+import { MOCK_DISCOUNT_CODES } from '../data/mockData';
 import { CATEGORIES } from '../data/categories';
 import { BRANDS } from '../data/brands';
 import { agencyService } from './agencyService';
@@ -282,65 +284,9 @@ const STORAGE_KEYS = {
 };
 
 // Initial Seed Data
-const INITIAL_ADMINS: AdminUser[] = [
-  {
-    id: 'adm-1',
-    username: 'admin',
-    name: 'مهندس مرتضوی (مدیر کل بازرگانی)',
-    role: 'super_admin',
-    email: 'admin@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۱۰:۱۵',
-  },
-  {
-    id: 'adm-2',
-    username: 'sales',
-    name: 'خانم دهقان (کارشناس ارشد فروش و استعلام)',
-    role: 'sales_manager',
-    email: 'sales@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۰۹:۴۰',
-  },
-  {
-    id: 'adm-3',
-    username: 'warehouse',
-    name: 'آقای فلاح (مسئول انبار مرکزی یزد)',
-    role: 'warehouse_operator',
-    email: 'stock@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۰۸:۲۰',
-  },
-];
+const INITIAL_ADMINS: AdminUser[] = [];
 
-const INITIAL_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 'log-1',
-    userId: 'adm-1',
-    userName: 'مهندس مرتضوی',
-    userRole: 'مدیر کل',
-    action: 'تأیید نمایندگی',
-    entity: 'نمایندگی کاشی ستاره میبد',
-    details: 'درخواست نمایندگی تأیید و سقف اعتبار ۲۵۰ میلیون تومان فعال گردید.',
-    timestamp: '۱۴۰۳/۰۶/۲۱ - ۱۱:۳۰',
-  },
-  {
-    id: 'log-2',
-    userId: 'adm-2',
-    userName: 'خانم دهقان',
-    userRole: 'کارشناس فروش',
-    action: 'پاسخ به استعلام قیمت',
-    entity: 'استعلام INQ-7481',
-    details: 'قیمت تسمه تایمینگ ۵,۲۰۰,۰۰۰ تومان با اعتبار ۷ روزه اعلام شد.',
-    timestamp: '۱۴۰۳/۰۶/۲۱ - ۱۰:۰۵',
-  },
-  {
-    id: 'log-3',
-    userId: 'adm-3',
-    userName: 'آقای فلاح',
-    userRole: 'انباردار',
-    action: 'به‌روزرسانی موجودی انبار',
-    entity: 'کد SWR-230',
-    details: 'موجودی انبار مرکزی از ۸۵ به ۱۲۰ حلقه تغییر یافت.',
-    timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۵',
-  },
-];
+const INITIAL_AUDIT_LOGS: AuditLog[] = [];
 
 const INITIAL_PRICE_HISTORY: PriceHistoryRecord[] = [
   {
@@ -451,35 +397,20 @@ export const adminService = {
     return this.getCurrentAdmin();
   },
 
-  login(username: string, pass: string): AdminUser | null {
-    if ((username === 'admin' && pass === '123admin') || (username === 'sales' && pass === '123sales')) {
-      const found = INITIAL_ADMINS.find(a => a.username === username) || INITIAL_ADMINS[0];
-      const sessionUser = {
-        ...found,
-        lastLogin: new Date().toLocaleDateString('fa-IR') + ' - ' + new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(sessionUser));
-      this.logAction('ورود به پنل', 'سیستم مدیریت', 'ورود موفق به پنل مدیریت');
-      return sessionUser;
-    }
-    return null;
+  async login(username: string, pass: string): Promise<AdminUser | null> {
+    await portalRequest({ action: 'admin_login', username, password: pass });
+    await hydratePortal();
+    const user: AdminUser = { id: 'admin', username, name: 'مدیریت صنعت پیش', role: 'super_admin', email: '', lastLogin: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(user));
+    return user;
   },
-
   logout(): void {
-    this.logAction('خروج از پنل', 'سیستم مدیریت', 'خروج کاربر ادمین');
+    void portalRequest({ action: 'logout' });
+    clearPortalCache();
     localStorage.removeItem(STORAGE_KEYS.ADMIN_AUTH);
   },
-
-  switchAdminRole(role: AdminUser['role']): AdminUser {
-    const current = this.getCurrentAdmin() || INITIAL_ADMINS[0];
-    const updated: AdminUser = {
-      ...current,
-      role,
-      name: role === 'super_admin' ? 'مهندس مرتضوی (مدیر کل)' : role === 'sales_manager' ? 'خانم دهقان (کارشناس فروش)' : 'آقای فلاح (انباردار)',
-    };
-    localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(updated));
-    this.logAction('تغییر نقش اپراتور', 'دسترسی', `نقش به ${role} تغییر یافت.`);
-    return updated;
+  switchAdminRole(_role: AdminUser['role']): AdminUser {
+    return this.getCurrentAdmin()!;
   },
 
   // --- Audit Logs ---
@@ -494,7 +425,8 @@ export const adminService = {
   },
 
   logAction(action: string, entity: string, details: string): void {
-    const admin = this.getCurrentAdmin() || INITIAL_ADMINS[0];
+    const admin = this.getCurrentAdmin();
+    if(!admin)return;
     const logs = this.getAuditLogs();
     const newLog: AuditLog = {
       id: 'log-' + Date.now(),
@@ -508,7 +440,7 @@ export const adminService = {
     };
     logs.unshift(newLog);
     try {
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs.slice(0, 100)));
+      persistPortalCache(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs.slice(0, 100)));
     } catch {
       // ignore
     }
@@ -612,7 +544,7 @@ export const adminService = {
     });
 
     try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(updatedList));
+      persistPortalCache(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(updatedList));
     } catch {
       // ignore
     }
@@ -641,7 +573,7 @@ export const adminService = {
     };
     logs.unshift(newLog);
     try {
-      localStorage.setItem(STORAGE_KEYS.PRICE_LOGS, JSON.stringify(logs.slice(0, 50)));
+      persistPortalCache(STORAGE_KEYS.PRICE_LOGS, JSON.stringify(logs.slice(0, 50)));
     } catch {
       // ignore
     }
@@ -808,7 +740,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     });
 
     try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(products));
+      persistPortalCache(STORAGE_KEYS.ADMIN_PRODUCTS, JSON.stringify(products));
     } catch {
       // ignore
     }
@@ -837,7 +769,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_INQUIRIES;
+    return [];
   },
 
   answerInquiry(inquiryId: string, price: number, validityDays: number | string = 7): void {
@@ -856,7 +788,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       };
 
       try {
-        localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(inquiries));
+        persistPortalCache(STORAGE_KEYS.INQUIRIES, JSON.stringify(inquiries));
       } catch {
         // ignore
       }
@@ -879,7 +811,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_ORDERS;
+    return [];
   },
 
   updateOrderStatus(orderId: string, newStatus: any, trackingInfo?: string | { carrier?: string; trackingNumber?: string }): void {
@@ -912,7 +844,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       };
 
       try {
-        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        persistPortalCache(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
       } catch {
         // ignore
       }
@@ -920,7 +852,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       // Mock SMS
       const label = statusLabels[newStatus] || newStatus;
       this.sendMockSms(
-        order.recipientPhone || '09121112233',
+        order.recipientPhone || '',
         `سفارش شما با شناسه ${order.orderNumber || order.id} به وضعیت «${label}» تغییر کرد. شرکت صنعت پیش یزد`
       );
 
@@ -936,7 +868,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_CUSTOMERS;
+    return [];
   },
 
   saveCustomerNote(customerId: string, note: string): void {
@@ -948,7 +880,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         notes: note,
       } as any;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
       } catch {
         // ignore
       }
@@ -981,7 +913,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(banner);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BANNERS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BANNERS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -992,7 +924,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getBanners();
     const filtered = list.filter(b => b.id !== bannerId);
     try {
-      localStorage.setItem(STORAGE_KEYS.BANNERS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BANNERS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1011,7 +943,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
   saveClubConfig(config: ClubConfig): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.CLUB_CONFIG, JSON.stringify(config));
+      persistPortalCache(STORAGE_KEYS.CLUB_CONFIG, JSON.stringify(config));
     } catch {
       // ignore
     }
@@ -1038,7 +970,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(template);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.SMS_TEMPLATES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.SMS_TEMPLATES, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1082,7 +1014,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(discount);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.DISCOUNTS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.DISCOUNTS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1093,7 +1025,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getDiscounts();
     const filtered = list.filter(d => d.code !== code);
     try {
-      localStorage.setItem(STORAGE_KEYS.DISCOUNTS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.DISCOUNTS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1124,7 +1056,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(category);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.CATEGORIES, JSON.stringify(list));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1139,7 +1071,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getCategories();
     const filtered = list.filter(c => c.slug !== slug);
     try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.CATEGORIES, JSON.stringify(filtered));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-categories-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1195,7 +1127,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(normalized);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BRANDS, JSON.stringify(list));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1210,7 +1142,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getBrands();
     const filtered = list.filter(b => b.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BRANDS, JSON.stringify(filtered));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-brands-updated'));
         window.dispatchEvent(new CustomEvent('atlas-catalog-updated'));
@@ -1229,13 +1161,9 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    const initial = MOCK_REPRESENTATIVES.map((r, i) => ({
-      ...r,
-      creditLimit: i === 0 ? 250000000 : i === 1 ? 180000000 : 150000000,
-      seasonalTargetAchieved: i === 0 ? 92 : i === 1 ? 84 : 78,
-    }));
+    const initial: (Representative & {creditLimit:number;seasonalTargetAchieved:number})[] = [];
     try {
-      localStorage.setItem(STORAGE_KEYS.DEALERS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.DEALERS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1251,7 +1179,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(dealer);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.DEALERS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.DEALERS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1266,84 +1194,9 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    const initial: any[] = [
-      {
-        id: 'TCK-881',
-        ticketNumber: 'TCK-881',
-        customerName: 'مهندس حیدری (کاشی یزد)',
-        phone: '09131518920',
-        subject: 'درخواست کاتالوگ فنی تسمه با تحمل حرارتی بالای ۱۵۰ درجه سانتی‌گراد',
-        department: 'technical',
-        priority: 'high',
-        status: 'open',
-        createdAt: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-        messages: [
-          {
-            id: 'm1',
-            sender: 'user',
-            senderName: 'مهندس حیدری (کاشی یزد)',
-            text: 'سلام و احترام، خط خروجی کوره کاشی ما نیازمند تسمه سیلیکونی یا تفلونی مقاوم تا ۱۸۰ درجه سانتی‌گراد است. کاتالوگ و مشخصات دقیق مدل SWR را بفرمایید.',
-            message: 'سلام و احترام، خط خروجی کوره کاشی ما نیازمند تسمه سیلیکونی یا تفلونی مقاوم تا ۱۸۰ درجه سانتی‌گراد است. کاتالوگ و مشخصات دقیق مدل SWR را بفرمایید.',
-            timestamp: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-          },
-        ],
-      },
-      {
-        id: 'TCK-882',
-        ticketNumber: 'TCK-882',
-        customerName: 'آقای شمس (پخش اصفهان)',
-        phone: '09132223344',
-        subject: 'استعلام زمان تحویل بار ارسالی با باربری وطن',
-        department: 'sales',
-        priority: 'medium',
-        status: 'answered',
-        createdAt: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۲۰ - ۱۷:۰۵',
-        messages: [
-          {
-            id: 'm1',
-            sender: 'user',
-            senderName: 'آقای شمس (پخش اصفهان)',
-            text: 'سلام، شماره بارنامه سفارش ثبت شده دیروز را محبت می‌فرمایید؟',
-            message: 'سلام، شماره بارنامه سفارش ثبت شده دیروز را محبت می‌فرمایید؟',
-            timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۰',
-          },
-          {
-            id: 'm2',
-            sender: 'admin',
-            senderName: 'پشتیبانی بازرگانی اطلس',
-            text: 'با سلام، شماره بارنامه ۱۲۹۸۳۷۴ باربری وطن یزد صادر شد و پیامک پیگیری نیز برای جنابعالی ارسال گردید.',
-            message: 'با سلام، شماره بارنامه ۱۲۹۸۳۷۴ باربری وطن یزد صادر شد و پیامک پیگیری نیز برای جنابعالی ارسال گردید.',
-            timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۷:۰۵',
-          },
-        ],
-      },
-      {
-        id: 't-103',
-        ticketNumber: 'TCK-8794',
-        customerName: 'نمایندگی اصفهان (ابزار صنعت اسپادانا)',
-        phone: '03133880000',
-        subject: 'استعلام افزایش سقف اعتبار عاملیت استانی',
-        department: 'agency',
-        priority: 'medium',
-        status: 'open',
-        createdAt: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-        messages: [
-          {
-            id: 'm-4',
-            sender: 'user',
-            senderName: 'نمایندگی اصفهان (ابزار صنعت اسپادانا)',
-            text: 'احتراماً با توجه به حجم سفارشات پایان فصل کارخانجات نساجی، تقاضای افزایش سقف اعتبار از ۱۵۰ به ۲۵۰ م ت را داریم.',
-            message: 'احتراماً با توجه به حجم سفارشات پایان فصل کارخانجات نساجی، تقاضای افزایش سقف اعتبار از ۱۵۰ به ۲۵۰ م ت را داریم.',
-            timestamp: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-          },
-        ],
-      },
-    ];
+    const initial: any[] = [];
     try {
-      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1371,7 +1224,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         messages: msgs,
       };
       try {
-        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(list));
+        persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(list));
       } catch {
         // ignore
       }
@@ -1414,7 +1267,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1430,7 +1283,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(article);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1449,7 +1302,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getArticles();
     const filtered = list.filter(a => a.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1474,7 +1327,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         id: 'pg-contact',
         slug: 'contact-us',
         title: 'تماس با ما و دفاتر بازرگانی',
-        content: 'دفتر مرکزی: یزد، بلوار جمهوری، مجتمع تجاری صنعتی اطلس. تلفن: ۰۳۵-۳۵۲۲۲۰۰۰ | کارگاه آپارات و انبار مرکزی: شهرک صنعتی یزد فاز ۱.',
+        content: 'برای هماهنگی مراجعه و ارتباط با صنعت پیش، صفحه تماس با ما را ببینید.',
         lastUpdated: '۱۴۰۳/۰۶/۱۵',
       },
       {
@@ -1486,7 +1339,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.PAGES, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.PAGES, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1502,7 +1355,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.push(page);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.PAGES, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.PAGES, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1544,7 +1397,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     ];
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1560,7 +1413,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       list.unshift(campaign);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(list));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1571,7 +1424,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getCampaigns();
     const filtered = list.filter(c => c.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(filtered));
+      persistPortalCache(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(filtered));
     } catch {
       // ignore
     }
@@ -1588,14 +1441,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const initial: SystemSettings = {
       paymentGateway: {
         provider: 'mellat',
-        merchantId: 'MOCK-MLT-982341',
-        terminalId: 'TRM-88210',
+        merchantId: '',
+        terminalId: '',
         sandbox: true,
       },
       smsProvider: {
         provider: 'kavenegar',
-        apiKey: 'kav_live_sample_token_889241',
-        senderNumber: '1000882200',
+        apiKey: '',
+        senderNumber: '',
       },
       shippingMethods: {
         barbari: true,
@@ -1612,7 +1465,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       },
     };
     try {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initial));
+      persistPortalCache(STORAGE_KEYS.SETTINGS, JSON.stringify(initial));
     } catch {
       // ignore
     }
@@ -1621,7 +1474,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
   saveSettings(settings: SystemSettings): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+      persistPortalCache(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     } catch {
       // ignore
     }
@@ -1639,53 +1492,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'INV-1403-881',
-        invoiceNumber: 'INV-1403-881',
-        nationalTaxId: 'TX-140306-9923',
-        issueDate: '۱۴۰۳/۰۶/۲۱',
-        validUntil: '۱۴۰۳/۰۶/۲۸',
-        seller: {
-          name: 'شرکت بازرگانی و تولیدی صنعت پیش اطلس یزد (سهامی خاص)',
-          nationalId: '10861234567',
-          economicCode: '411589321456',
-          registrationNumber: '14285',
-          address: 'یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس',
-          postalCode: '8917945639',
-          phone: '۰۳۵-۳۵۲۵۴۷۰۳',
-        },
-        buyer: {
-          name: 'مجتمع کارخانجات کاشی و سرامیک عقیق یزد',
-          companyName: 'شرکت صنایع سرامیک عقیق (سهامی عام)',
-          nationalId: '10860012458',
-          economicCode: '411298456123',
-          phone: '۰۳۵-۳۲۲۴۵۰۰۰',
-          address: 'یزد، شهرک صنعتی یزد، فاز ۲، میدان صنعت، خیابان کاشی',
-          postalCode: '8916574125',
-        },
-        items: [
-          {
-            row: 1,
-            productCode: 'SWR-230',
-            productName: 'تسمه تایمینگ دنده‌ای صنعتی HTD-8M-1760 ضد سایش',
-            quantity: 25,
-            unit: 'حلقه',
-            unitPrice: 5200000,
-            totalPrice: 130000000,
-            discount: 6500000,
-            tax: 12350000,
-            finalPrice: 135850000,
-          },
-        ],
-        subtotal: 130000000,
-        totalDiscount: 6500000,
-        totalTax: 12350000,
-        grandTotal: 135850000,
-        paymentTerms: 'تسویه ۳۰ روزه با چک صیادی تأییدشده',
-        status: 'issued',
-      },
-    ];
+    return [];
   },
 
   createOfficialInvoice(invoiceData: any): OfficialInvoice {
@@ -1698,21 +1505,21 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       validUntil: invoiceData.validUntil || '۷ روز کاری',
       seller: invoiceData.seller || {
         name: 'شرکت بازرگانی و تولیدی صنعت پیش اطلس یزد (سهامی خاص)',
-        nationalId: '10861234567',
-        economicCode: '411589321456',
-        registrationNumber: '14285',
-        address: 'یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس',
-        postalCode: '8917945639',
-        phone: '۰۳۵-۳۵۲۵۴۷۰۳',
+        nationalId: '',
+        economicCode: '',
+        registrationNumber: '',
+        address: '',
+        postalCode: '',
+        phone: '',
       },
       buyer: {
         name: invoiceData.buyer?.name || 'خریدار',
         companyName: invoiceData.buyer?.companyName || invoiceData.buyer?.company || 'سازمان خریدار',
-        nationalId: invoiceData.buyer?.nationalId || '10100000000',
-        economicCode: invoiceData.buyer?.economicCode || '411000000000',
-        phone: invoiceData.buyer?.phone || '09120000000',
-        address: invoiceData.buyer?.address || 'یزد، شهرک صنعتی',
-        postalCode: invoiceData.buyer?.postalCode || '8910000000',
+        nationalId: invoiceData.buyer?.nationalId || '',
+        economicCode: invoiceData.buyer?.economicCode || '',
+        phone: invoiceData.buyer?.phone || '',
+        address: invoiceData.buyer?.address || '',
+        postalCode: invoiceData.buyer?.postalCode || '',
       },
       items: (invoiceData.items || []).map((item: any, idx: number) => ({
         row: idx + 1,
@@ -1736,7 +1543,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const list = this.getOfficialInvoices();
     list.unshift(invoice);
     try {
-      localStorage.setItem('atlas_admin_official_invoices_v1', JSON.stringify(list));
+      persistPortalCache('atlas_admin_official_invoices_v1', JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -1763,7 +1570,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     try {
       const logs = this.getSmsLogs();
       logs.unshift(log);
-      localStorage.setItem('atlas_admin_sms_logs_v1', JSON.stringify(logs));
+      persistPortalCache('atlas_admin_sms_logs_v1', JSON.stringify(logs));
     } catch {
       // ignore
     }
@@ -1776,24 +1583,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'sms-101',
-        recipientPhone: '09131512345',
-        template: 'order_registered',
-        message: 'مشتری گرامی، سفارش شما در سامانه صنعت پیش ثبت و در صف تأیید قرار گرفت.',
-        status: 'delivered',
-        sentAt: '۱۴۰۳/۰۶/۲۱ - ۱۰:۱۵',
-      },
-      {
-        id: 'sms-102',
-        recipientPhone: '09121114567',
-        template: 'inquiry_received',
-        message: 'پیش‌فاکتور رسمی استعلام INQ-7481 صادر شد. جهت مشاهده به پنل کاربری مراجعه فرمایید.',
-        status: 'delivered',
-        sentAt: '۱۴۰۳/۰۶/۲۱ - ۱۱:۳۰',
-      },
-    ];
+    return [];
   },
 
   verifyReceipt(orderId: string, approved: boolean, reason?: string): void {
@@ -1806,7 +1596,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         receiptVerified: approved,
       } as any;
       try {
-        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        persistPortalCache(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
       } catch {
         // ignore
       }
@@ -1826,7 +1616,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         timestamp: new Date().toLocaleDateString('fa-IR'),
       });
       try {
-        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+        persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
       } catch {
         // ignore
       }
@@ -1882,7 +1672,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       } as any;
       customers[idx] = updatedCust;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
         const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
         const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
         const rIdx = registered.findIndex(r => r.id === customerId || r.phone === updatedCust.phone);
@@ -1891,7 +1681,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         } else {
           registered.unshift(updatedCust);
         }
-        localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+        persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
 
         const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
         const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
@@ -1901,7 +1691,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         } else if (updatedCust.approvedB2B) {
           legacyList.unshift(updatedCust);
         }
-        localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+        persistPortalCache('atlas_legacy_customers_v1', JSON.stringify(legacyList));
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
         }
@@ -1953,14 +1743,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       mobile: cleanPhone,
       password: payload.password || cleanPhone,
       economicCode: payload.economicCode || '',
-      creditLimit: payload.creditLimit ?? 250000000,
-      totalPurchases: payload.totalPurchases ?? 180000000,
-      totalOrdersAmount: payload.totalPurchases ?? 180000000,
+      creditLimit: payload.creditLimit ?? 0,
+      totalPurchases: payload.totalPurchases ?? 0,
+      totalOrdersAmount: payload.totalPurchases ?? 0,
       assignedPriceListCode: priceListCode,
       role: payload.role || 'wholesale',
       tier: payload.role === 'factory' ? 'factory' : payload.role === 'dealer' ? 'dealer' : 'colleague',
-      clubTier,
-      clubPoints: 1200,
+      clubTier: clubTier === 'platinum' ? 'gold' : clubTier,
+      clubPoints: 0,
       approvedB2B: payload.approvedB2B ?? true,
       isLegacyCustomer: true,
       onboardingCompleted: true,
@@ -1971,17 +1761,17 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
 
     customers.unshift(newCust);
     try {
-      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+      persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
 
       const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
       const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
       registered.unshift(newCust);
-      localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+      persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
 
       const legRaw = localStorage.getItem('atlas_legacy_customers_v1');
       const legacyList: Customer[] = legRaw ? JSON.parse(legRaw) : [];
       legacyList.unshift(newCust);
-      localStorage.setItem('atlas_legacy_customers_v1', JSON.stringify(legacyList));
+      persistPortalCache('atlas_legacy_customers_v1', JSON.stringify(legacyList));
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('atlas-pricing-updated'));
@@ -2005,14 +1795,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       const current = Boolean(customers[idx].approvedB2B);
       customers[idx].approvedB2B = !current;
       try {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+        persistPortalCache(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
 
         const storedStr = localStorage.getItem('hyper_sanat_registered_users_v2');
         const registered: Customer[] = storedStr ? JSON.parse(storedStr) : [];
         const rIdx = registered.findIndex((r: Customer) => r.id === customerId || r.phone === customers[idx].phone);
         if (rIdx >= 0) {
           registered[rIdx].approvedB2B = !current;
-          localStorage.setItem('hyper_sanat_registered_users_v2', JSON.stringify(registered));
+          persistPortalCache('hyper_sanat_registered_users_v2', JSON.stringify(registered));
         }
       } catch {}
 
@@ -2029,32 +1819,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'ag-101',
-        code: 'AG-1403-101',
-        name: 'نمایندگی کاشی ستاره میبد (فروشگاه فنی دهقانی)',
-        phone: '035-32356000',
-        province: 'یزد',
-        city: 'میبد',
-        creditLimit: 350000000,
-        currentBalance: 120000000,
-        nextCheckDate: '۱۴۰۳/۰۷/۱۵',
-        contractStatus: 'valid',
-      },
-      {
-        id: 'ag-102',
-        code: 'AG-1403-102',
-        name: 'عاملیت مرکزی تسمه و قطعات اصفهان (صنعتی پایا)',
-        phone: '031-33880000',
-        province: 'اصفهان',
-        city: 'اصفهان',
-        creditLimit: 500000000,
-        currentBalance: 280000000,
-        nextCheckDate: '۱۴۰۳/۰۷/۲۰',
-        contractStatus: 'valid',
-      },
-    ];
+    return [];
   },
 
   saveActiveAgency(agency: ActiveAgency): void {
@@ -2063,7 +1828,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     if (idx >= 0) list[idx] = agency;
     else list.push(agency);
     try {
-      localStorage.setItem('atlas_admin_active_agencies_v1', JSON.stringify(list));
+      persistPortalCache('atlas_admin_active_agencies_v1', JSON.stringify(list));
     } catch {
       // ignore
     }
@@ -2107,28 +1872,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'SUP-701',
-        agencyName: 'نمایندگی میبد',
-        productName: 'تسمه کوره انتقال سرامیک HTD-14M',
-        productCode: 'SWR-14M-2100',
-        quantity: 40,
-        urgency: 'immediate',
-        status: 'pending',
-        createdAt: '۱۴۰۳/۰۶/۲۱',
-      },
-      {
-        id: 'SUP-702',
-        agencyName: 'عاملیت اصفهان',
-        productName: 'رولیک و غلتک سرامیکی نسوز کوره',
-        productCode: 'AT-751',
-        quantity: 100,
-        urgency: 'normal',
-        status: 'approved',
-        createdAt: '۱۴۰۳/۰۶/۱۹',
-      },
-    ];
+    return [];
   },
 
   updateSupplyRequestStatus(id: string, status: SupplyRequestItem['status']): void {
@@ -2137,7 +1881,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     if (idx >= 0) {
       list[idx].status = status;
       try {
-        localStorage.setItem('atlas_admin_supply_reqs_v1', JSON.stringify(list));
+        persistPortalCache('atlas_admin_supply_reqs_v1', JSON.stringify(list));
       } catch {
         // ignore
       }
@@ -2146,17 +1890,11 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   },
 
   getClubMembers(): ClubMember[] {
-    return [
-      { id: 'cm-1', name: 'کاشی و سرامیک عقیق', phone: '09131510000', points: 2850, level: 'الماس VIP', joinedAt: '۱۴۰۱/۰۲/۱۰' },
-      { id: 'cm-2', name: 'نساجی تابان یزد', phone: '09132512222', points: 1420, level: 'طلایی', joinedAt: '۱۴۰۲/۰۵/۱۵' },
-      { id: 'cm-3', name: 'کاشی ستاره میبد', phone: '09133513333', points: 950, level: 'نقره‌ای', joinedAt: '۱۴۰۲/۰۹/۰۱' },
-    ];
+    return this.getCustomers().map(customer=>({id:customer.id,name:customer.companyName||customer.fullName,phone:customer.phone,points:customer.clubPoints||0,level:customer.clubTier||'',joinedAt:customer.createdAt||''}));
   },
 
   getRewardRequests(): RewardRequestItem[] {
-    return [
-      { id: 'rw-1', memberName: 'کاشی عقیق', phone: '09131510000', rewardTitle: 'تخفیف ۵ میلیون تومانی خرید عمده بعدی', pointsCost: 1000, status: 'pending', createdAt: '۱۴۰۳/۰۶/۲۱' },
-    ];
+    return [];
   },
 
   updateRewardStatus(id: string, status: RewardRequestItem['status']): void {
@@ -2166,7 +1904,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   deleteBlogPost(id: string): void {
     const posts = this.getBlogPosts().filter(p => p.id !== id);
     try {
-      localStorage.setItem(STORAGE_KEYS.BLOG, JSON.stringify(posts));
+      persistPortalCache(STORAGE_KEYS.BLOG, JSON.stringify(posts));
     } catch {
       // ignore
     }

@@ -166,6 +166,8 @@ export interface Customer {
 }
 
 export interface RegisterPayload {
+  username: string;
+  password: string;
   firstName: string;
   lastName: string;
   mobile: string;

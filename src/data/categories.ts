@@ -1,3 +1,4 @@
+import { BELT_MENU, matchesBeltSelection } from "./beltNavigation";
 import type { Category, Product } from '../types';
 import { USER_PRODUCTS, categorySlugFor } from './userProducts';
 import source from './catalogueSource.json';
@@ -41,13 +42,17 @@ const legacyNames: Record<string, string> = {
 export const CATEGORY_ALIASES = Object.fromEntries(Object.entries(legacyNames).map(([slug, name]) => [slug, categorySlugFor(name)]));
 export const resolveCategorySlug = (slug: string) => CATEGORY_ALIASES[slug] || slug;
 export function matchesCatalogCategory(product: Product, slug: string, selection = 'all'): boolean {
-  return product.categorySlug === resolveCategorySlug(slug) &&
-    (selection === 'all' || product.submenu === selection || product.subcategory === selection);
+  if (product.categorySlug !== resolveCategorySlug(slug)) return false;
+  if (selection === 'all') return true;
+  const beltMatch = product.categoryName === 'تسمه و انتقال نیرو' ? matchesBeltSelection(product, selection) : undefined;
+  return beltMatch ?? (product.submenu === selection || product.subcategory === selection);
 }
+
 export const CATEGORIES: EnhancedCategory[] = definitions.map(category => ({
   ...category, count: USER_PRODUCTS.filter(p => p.categorySlug === category.slug).length,
   description: category.children.map(n => n.name).join('، '),
-  subcategories: category.children.map(n => n.name),
+  children: category.name === "تسمه و انتقال نیرو" ? BELT_MENU : category.children,
+  subcategories: category.name === "تسمه و انتقال نیرو" ? BELT_MENU.map(n=>n.name) : category.children.map(n => n.name),
   image: USER_PRODUCTS.find(p => p.categorySlug === category.slug && p.images.length)?.images[0],
 }));
 export const PRIMARY_CATALOG_CATEGORIES = CATEGORIES;

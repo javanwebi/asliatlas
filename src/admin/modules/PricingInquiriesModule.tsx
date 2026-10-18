@@ -63,7 +63,7 @@ export const PricingInquiriesModule: React.FC = () => {
     setSelectedInquiry(inq);
     const initialPrices: Record<string, number> = {};
     inq.items.forEach(item => {
-      initialPrices[item.productCode] = item.suggestedPrice || 1500000;
+      initialPrices[item.productCode] = item.suggestedPrice || 0;
     });
     setItemPrices(initialPrices);
     setValidityHours(inq.validityHours || 48);
@@ -99,10 +99,10 @@ export const PricingInquiriesModule: React.FC = () => {
         buyer: {
           name: selectedInquiry.customerName,
           company: selectedInquiry.company || 'شخصی',
-          nationalId: '10103489201',
-          economicCode: '411589321456',
+          nationalId: '',
+          economicCode: '',
           phone: selectedInquiry.phone,
-          address: 'یزد، شهرک صنعتی یزد، بلوار کاج، کارخانه شماره ۴',
+          address: '',
         },
         items: itemsList,
         subtotal,
@@ -716,10 +716,10 @@ export const PricingInquiriesModule: React.FC = () => {
                   <div className="font-bold text-[#55565A] border-b border-slate-200 pb-1">
                     مشخصات فروشنده: شرکت بازرگانی تسمه اطلس یزد
                   </div>
-                  <div>شناسه ملی: <span className="font-mono font-bold">14008920194</span></div>
-                  <div>کد اقتصادی: <span className="font-mono font-bold">411634892011</span></div>
-                  <div>نشانی: یزد، میدان مهدیه، ابتدای بلوار شهید بهشتی، ساختمان اطلس</div>
-                  <div>تلفن: <span className="font-mono">۰۳۵-۳۸۲۴۵۰۰۰</span></div>
+                  <div>شناسه ملی: <span className="font-mono font-bold">{viewInvoice.seller.nationalId || 'ثبت نشده'}</span></div>
+                  <div>کد اقتصادی: <span className="font-mono font-bold">{viewInvoice.seller.economicCode || 'ثبت نشده'}</span></div>
+                  <div>نشانی: {viewInvoice.seller.address || 'ثبت نشده'}</div>
+                  <div>تلفن: <span className="font-mono">{viewInvoice.seller.phone || 'ثبت نشده'}</span></div>
                 </div>
 
                 {/* Buyer */}
@@ -786,9 +786,7 @@ export const PricingInquiriesModule: React.FC = () => {
               <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-6 text-xs">
                 <div className="space-y-1">
                   <div className="font-bold text-[#55565A]">اطلاعات حساب بانکی شرکت:</div>
-                  <div>بانک ملت شعبه مهدیه یزد - شماره حساب: <span className="font-mono font-bold">5421890041</span></div>
-                  <div>شماره شبا: <span className="font-mono font-bold">IR540120000000005421890041</span></div>
-                  <div>به نام شرکت بازرگانی تسمه اطلس یزد</div>
+                  <div>اطلاعات پرداخت پس از تأیید امور مالی و از مسیر رسمی شرکت اعلام می‌شود.</div>
                 </div>
 
                 <div className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 rounded-2xl text-center">

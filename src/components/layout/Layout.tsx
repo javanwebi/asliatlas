@@ -19,11 +19,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     location.pathname === '/cognivo';
 
   if (isDedicatedAiWorkspace) {
-    return <>{children}</>;
+    return <>{children}<AuthModal /></>;
   }
 
   // Isolated dedicated portals (dashboards): Admin, Dealer/Agency panel, B2B & Consumer Account Portals
   const isDedicatedPortal =
+    ['/onboarding', '/login', '/register'].includes(location.pathname) ||
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/dealer') ||
     location.pathname.startsWith('/agency') ||
@@ -40,6 +41,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     );
   }
 
+  const isEditorial=["/industries","/brands","/knowledge","/about"].some(p=>location.pathname.startsWith(p));
   const isHomePage = location.pathname === '/';
 
   const handleOpenMobileMenu = () => {
@@ -51,9 +53,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFFFFF] text-[#55565A] overflow-x-hidden">
+    <div className="storefront min-h-screen flex flex-col">
       <Header />
-      <main className={`flex-1 w-full pb-16 lg:pb-0 ${isHomePage ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6'}`}>
+      <main className={`flex-1 w-full pb-16 lg:pb-0 ${isHomePage || isEditorial ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6'}`}>
         {children}
       </main>
       <Footer />
@@ -63,7 +65,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         onOpenSearch={handleOpenSearch}
       />
       {/* Global AI Floating Quick Action Button */}
-      <AiFloatingButton />
+      {!location.pathname.startsWith("/cart") && !location.pathname.startsWith("/checkout") && !location.pathname.startsWith("/product/") && <AiFloatingButton />}
       {/* Global OTP Auth Modal */}
       <AuthModal />
     </div>
