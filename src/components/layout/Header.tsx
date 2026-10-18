@@ -1,3 +1,4 @@
+import { IndustryNavigation } from "../storefront/IndustryTools";
 import {AboutNavigation} from '../../pages/DiscoveryPages';
 import { ProductImage } from '../product/ProductImage';
 import React, { useState, useRef, useEffect } from 'react';
@@ -115,12 +116,15 @@ export const Header: React.FC = () => {
     const handleOpenConsult = () => navigate('/ai-consult');
     const handleOpenForza = () => navigate('/ai-consult?voice=1');
 
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setIsMegaMenuOpen(false); setActiveDropdown(null); setIsSearchDropdownOpen(false); setIsUserMenuOpen(false); } };
+    document.addEventListener('keydown', handleEscape);
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('open-mobile-search', handleOpenSearch);
     window.addEventListener('open-ai-consult', handleOpenConsult);
     window.addEventListener('open-forza-face-to-face', handleOpenForza);
 
     return () => {
+      document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('open-mobile-search', handleOpenSearch);
       window.removeEventListener('open-ai-consult', handleOpenConsult);
@@ -655,7 +659,7 @@ export const Header: React.FC = () => {
 
               {/* Industrial MegaMenu Dropdown */}
               {isMegaMenuOpen && (
-                <div className="absolute right-0 top-full w-[940px] xl:w-[980px] bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#CBD2D8] flex overflow-hidden z-50 animate-in fade-in duration-150">
+                <div className="catalog-mega absolute right-0 top-full w-[940px] xl:w-[980px] bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#CBD2D8] flex overflow-hidden z-50 animate-in fade-in duration-150">
                   {/* Right Column: 6 Main Product Categories */}
                   <div className="w-80 bg-slate-50/90 border-l border-[#CBD2D8] p-2.5 space-y-1.5 max-h-[580px] overflow-y-auto">
                     <Link
@@ -806,72 +810,7 @@ export const Header: React.FC = () => {
               </button>
 
               {/* Industries Dropdown */}
-              {activeDropdown === 'industries' && (
-                <div className="absolute right-0 top-full w-72 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1 border-b border-slate-100">
-                    صنایع تخصصی تحت پوشش
-                  </div>
-                  <div className="space-y-1">
-                    <Link
-                      to="/industries/ceramic"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت کاشی و سرامیک</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/industries/textile"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت نساجی و پارچه</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/industries/packaging"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت بسته‌بندی و کارتنسازی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/industries/food"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنایع غذایی و نوشیدنی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/industries/machinery"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنعت ماشین‌سازی و تجهیزات صنعتی</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                    <Link
-                      to="/industries/rubber"
-                      onClick={() => setActiveDropdown(null)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
-                    >
-                      <span className="font-bold">صنایع لاستیک و پلاستیک</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-                    </Link>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-100">
-                    <Link
-                      to="/#industries"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block text-center py-1.5 px-3 bg-slate-50 hover:bg-orange-50 text-[11px] font-bold text-[#E06518] rounded-lg transition-colors"
-                    >
-                      مشاهده راهنمای کامل صنایع
-                    </Link>
-                  </div>
-                </div>
-              )}
+              {activeDropdown === 'industries' && <IndustryNavigation onNavigate={()=>setActiveDropdown(null)}/> }
             </div>
 
             <Link to="/brands" onClick={()=>{setActiveDropdown(null);setIsMegaMenuOpen(false);}} className="flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 hover:text-[#E06518] transition-colors text-white"><Tag className="w-4 h-4 text-[#E06518]"/><span>برندهای همکار</span></Link>

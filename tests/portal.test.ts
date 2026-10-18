@@ -74,6 +74,8 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
     const registration = await request({
       action: "register",
       payload: {
+        username: "test_factory",
+        password: "test-selected-password",
         firstName: "کاربر",
         lastName: "آزمایش",
         companyName: "Test factory",
@@ -94,6 +96,68 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
         assert.equal(registration.data.user.approvedB2B, false);
         assert.equal(registration.data.smsSent, false);
         assert.equal(registration.data.user.totalPurchases, 0);
+      },
+    );
+    await t.test(
+      "onboarding cannot be skipped and must persist valid answers",
+      async () => {
+        assert.equal(
+          (
+            await request(
+              { action: "inquiry", code: "80301", quantity: 1 },
+              consumer,
+            )
+          ).status,
+          403,
+        );
+        assert.equal(
+          (
+            await request(
+              { action: "profile", payload: { onboardingCompleted: true } },
+              consumer,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              { action: "profile", payload: { onboardingCompleted: "yes" } },
+              consumer,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              { action: "profile", payload: { favoriteBrands: ["invalid"] } },
+              consumer,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              { action: "profile", payload: { favoriteBrands: ["forza"] } },
+              consumer,
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await request(
+              {
+                action: "profile",
+                payload: { businessType: "factory", onboardingCompleted: true },
+              },
+              consumer,
+            )
+          ).status,
+          200,
+        );
       },
     );
     await t.test(
@@ -135,6 +199,8 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
         const stranger = await request({
           action: "register",
           payload: {
+            username: "other_factory",
+            password: "other-selected-password",
             firstName: "کاربر",
             lastName: "دیگر",
             companyName: "Other",
@@ -181,7 +247,7 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
           await request({
             action: "login",
             identifier: "۰۹۱۲۱۱۱۱۱۱۱",
-            password: "09121111111",
+            password: "test-selected-password",
           })
         ).status,
         200,
@@ -323,6 +389,23 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
       async () => {
         assert.equal(b2bLogin.status, 200);
         assert.equal(b2bLogin.data.user.approvedB2B, true);
+        assert.equal(b2bLogin.data.user.onboardingCompleted, false);
+        assert.equal(
+          (
+            await request(
+              {
+                action: "profile",
+                payload: {
+                  favoriteBrands: ["forza"],
+                  businessType: "factory",
+                  onboardingCompleted: true,
+                },
+              },
+              b2bLogin.cookie,
+            )
+          ).status,
+          200,
+        );
         assert.equal(b2bLogin.data.user.creditLimit, 0);
         const high = (await request(undefined, b2bLogin.cookie)).data;
         assert.deepEqual(

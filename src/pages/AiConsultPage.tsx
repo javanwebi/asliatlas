@@ -136,7 +136,10 @@ const INDUSTRY_DOMAINS = [
   { id: 'ceramic', label: 'کاشی، سرامیک و کوره‌های رولری' },
   { id: 'textile', label: 'نساجی، ریسندگی و بافندگی' },
   { id: 'cement', label: 'سیمان، فولاد و معادن سنگین' },
-  { id: 'food', label: 'صنایع غذایی و بسته‌بندی' },
+  { id: 'food', label: 'صنایع غذایی و نوشیدنی' },
+  { id: 'packaging', label: 'بسته‌بندی و کارتن‌سازی' },
+  { id: 'machinery', label: 'ماشین‌سازی و تجهیزات صنعتی' },
+  { id: 'rubber', label: 'لاستیک و پلاستیک' },
 ];
 
 const PROMPT_SUGGESTIONS = [
@@ -548,7 +551,8 @@ export const AiConsultPage: React.FC = () => {
             }] `
           : '';
 
-      const queryWithContext = `${industryPrefix}${
+      const stageContext = entryParams.get("stage")?.slice(0, 150);
+      const queryWithContext = `${industryPrefix}${stageContext ? `[بخش خط تولید: ${stageContext}] ` : ""}${
         isDeeperResearchActive ? '[تحلیل عمیق و استاندارد فنی] ' : ''
       }${textToSend}`;
 

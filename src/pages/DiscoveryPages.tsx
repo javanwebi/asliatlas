@@ -1,3 +1,4 @@
+import { IndustryTools } from "../components/storefront/IndustryTools";
 import yazdRegionMap from "../assets/images/yazd-region-osm.png";
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -150,6 +151,7 @@ export function IndustryPage() {
           </div>
         </div>
       </section>
+      <IndustryTools key={industry.slug} industry={industry} />
       <div className="industry-process editorial-wrap">
         <strong>در امتداد خط تولید</strong>
         {industry.steps.map((s, i) => (
@@ -181,7 +183,7 @@ export function IndustryPage() {
           ))}
         </div>
       </section>
-      <section className="industry-check-band">
+      <section className="industry-check-band" id="industry-checks">
         <div className="editorial-wrap editorial-split">
           <div>
             <SectionHeading
@@ -207,7 +209,7 @@ export function IndustryPage() {
           </div>
         </div>
       </section>
-      <section className="editorial-wrap">
+      <section className="editorial-wrap" id="industry-catalog">
         <SectionHeading
           eyebrow="از کاتالوگ واقعی سایت"
           title="خانواده‌های مرتبط برای بررسی اولیه"
@@ -271,11 +273,15 @@ export function IndustriesPage() {
 }
 export function BrandsPage() {
   const [query, setQuery] = useState("");
+  const [specialty, setSpecialty] = useState("");
   useEffect(() => title("برندهای همکار"), []);
   const brands = BRANDS.filter(
     (b) =>
       b.active !== false &&
-      `${b.name} ${b.nameEn}`.toLowerCase().includes(query.toLowerCase()),
+      `${b.name} ${b.nameEn} ${b.specialties?.join(" ")}`
+        .toLowerCase()
+        .includes(query.toLowerCase()) &&
+      (!specialty || b.specialties?.some((s) => s.includes(specialty))),
   );
   return (
     <div className="editorial">
@@ -296,10 +302,18 @@ export function BrandsPage() {
               کاوش برندها <ArrowLeft size={17} />
             </a>
           </div>
-          <div className="brand-logo-wall">
-            <img src={A.logoForza} alt="FORZA" />
-            <img src={A.swrLogo} alt="SWR" />
-            <span>قطعه را با کد و مشخصات انتخاب کنید.</span>
+          <div className="brand-engineering-wall">
+            <img
+              className="brand-engineering-photo"
+              src={A.heroPulley}
+              alt="قطعات انتقال قدرت"
+            />
+            <div className="brand-logo-wall">
+              <img src={A.logoForza} alt="FORZA" />
+              <img src={A.swrLogo} alt="SWR" />
+              <span>کد دقیق · مشخصات روشن · انتخاب آگاهانه</span>
+            </div>
+            <span className="brand-wall-caption">در امتداد حرکت صنعت</span>
           </div>
         </div>
       </section>
@@ -319,9 +333,26 @@ export function BrandsPage() {
             />
           </label>
         </div>
+        <div
+          className="brand-filters"
+          role="group"
+          aria-label="حوزه محصولات برند"
+        >
+          {["", "تسمه", "پلی", "انتقال", "لاستیک"].map((t) => (
+            <button
+              key={t}
+              aria-pressed={specialty === t}
+              onClick={() => setSpecialty(t)}
+            >
+              {t || "همه حوزه‌ها"}
+            </button>
+          ))}
+          <span>{brands.length.toLocaleString("fa-IR")} برند</span>
+        </div>
         <div className="brand-directory">
           {brands.map((b) => (
             <article id={b.id} key={b.id}>
+              <span className="brand-card-index">{b.nameEn}</span>
               <div className="brand-card-logo">
                 <img
                   src={

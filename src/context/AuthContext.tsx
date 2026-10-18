@@ -20,7 +20,6 @@ interface AuthContextType {
   setLatestCredentials: (creds: AuthCredentials | null) => void;
   registerUser: (payload: RegisterPayload) => Promise<AuthResponse>;
   loginWithPassword: (identifier: string, password: string) => Promise<AuthResponse>;
-  loginWithOtp: (phone: string, fullName?: string, companyName?: string) => { success: boolean; user?: Customer; message?: string; isNewUser?: boolean };
   saveOnboardingStep1: (brands: string[]) => Promise<boolean>;
   saveOnboardingStep2: (businessType: string) => Promise<boolean>;
   loginAs: (role: UserRole) => void;
@@ -179,7 +178,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // OTP requires a real SMS verification provider. Never authenticate by phone alone.
-  const loginWithOtp = (_phone: string) => ({ success: false, message: 'ورود پیامکی هنوز فعال نیست؛ با نام کاربری و رمز عبور وارد شوید.' });
   const loginAs = (role: UserRole) => { if (role === 'guest') logout(); };
 
   const logout = () => {
@@ -288,7 +286,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLatestCredentials,
         registerUser,
         loginWithPassword,
-        loginWithOtp,
         saveOnboardingStep1,
         saveOnboardingStep2,
         loginAs,

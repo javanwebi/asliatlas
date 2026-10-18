@@ -37,7 +37,9 @@ export class AuthService {
     payload: Partial<Customer>,
   ): Promise<{ success: boolean; user?: Customer; message?: string }> {
     try {
-      return await portalRequest({ action: "profile", payload });
+      const data = await portalRequest({ action: "profile", payload });
+      await hydratePortal();
+      return data;
     } catch (e: any) {
       return { success: false, message: e.message };
     }

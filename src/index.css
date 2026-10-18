@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./storefront.css";
+@import "./engineering.css";
 
 @font-face {font-family: "Vazirmatn";src: url("./assets/fonts/Vazirmatn-variable.woff2") format("woff2");font-weight: 100 900;font-style: normal;font-display: swap;}
 

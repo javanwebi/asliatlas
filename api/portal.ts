@@ -3,9 +3,26 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import { smsConfigured, sendVerificationCode } from "./sms";
+import { BRANDS } from "../src/data/brands";
+import { BUSINESS_TYPES } from "../src/data/iranLocations";
+
 type Row = Record<string, any>;
 interface Database {
   revision: number;
+  otp?: Record<
+    string,
+    {
+      hash: string;
+      expires: number;
+      sentAt: number;
+      attempts: number;
+      count: number;
+      window: number;
+      userId: string;
+      version: number;
+    }
+  >;
   users: Row[];
   values: Record<string, any>;
 }
@@ -216,6 +233,7 @@ function portal(user: Row) {
   return user.approvedB2B === true ? "high_volume" : "consumer";
 }
 function canPurchase(db: Database, user: Row) {
+  if (user.onboardingCompleted !== true) return false;
   const p = portal(user);
   const base = db.values.atlas_portal_layout_configs_v1?.[p];
   const override = db.values.atlas_portal_customer_overrides_v1?.find(
@@ -392,6 +410,7 @@ export default async function handler(
     if (req.method === "GET")
       return send(200, {
         success: true,
+        smsAvailable: smsConfigured(),
         revision: db.revision,
         user: auth.user ? safeUser(auth.user) : null,
         admin: auth.admin,
@@ -455,15 +474,23 @@ export default async function handler(
         fail(400, "ایمیل معتبر وارد کنید.");
       if (db.users.some((u) => u.phone === phone))
         fail(409, "این شماره قبلاً ثبت شده است.");
-      const base =
-        String(p.companyName)
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "")
-          .slice(0, 30) || `sanat_${phone.slice(-6)}`;
-      let username = base;
-      let count = 2;
-      while (db.users.some((u) => u.username === username))
-        username = `${base}${count++}`;
+      const username = String(p.username || "")
+        .trim()
+        .toLowerCase();
+      if (!/^[a-z][a-z0-9_]{3,31}$/.test(username))
+        fail(
+          400,
+          "نام کاربری باید ۴ تا ۳۲ حرف انگلیسی، عدد یا زیرخط و با حرف شروع شود.",
+        );
+      if (db.users.some((u) => u.username?.toLowerCase() === username))
+        fail(409, "این نام کاربری قبلاً انتخاب شده است.");
+      if (
+        typeof p.password !== "string" ||
+        p.password.length < 10 ||
+        p.password.length > 128 ||
+        p.password === phone
+      )
+        fail(400, "رمز باید ۱۰ تا ۱۲۸ نویسه و متفاوت با شماره موبایل باشد.");
       const user: Row = {
         id: crypto.randomUUID(),
         username,
@@ -490,18 +517,95 @@ export default async function handler(
         onboardingCompleted: false,
         createdAt: new Date().toISOString(),
       };
-      setPassword(user, phone);
+      setPassword(user, p.password);
       db.users.push(user);
       await writeDb(db, revision);
       await issueSession(res, user.id, user.sessionVersion);
       return send(201, {
         success: true,
         user: safeUser(user),
-        credentials: { username, initialPassword: phone },
+        credentials: { username },
         smsSent: false,
         isNewUser: true,
         onboardingStep: 1,
       });
+    }
+    if (body.action === "otp_request") {
+      await rateLimit(req);
+      if (!smsConfigured())
+        fail(503, "ورود پیامکی هنوز فعال نشده است؛ با رمز عبور وارد شوید.");
+      const phone = mobile(body.phone);
+      const key = crypto
+        .createHmac("sha256", await secret())
+        .update(phone)
+        .digest("hex");
+      db.otp ||= {};
+      for (const [id, value] of Object.entries(db.otp))
+        if (value.window + 3600000 < Date.now()) delete db.otp[id];
+      const old = db.otp[key],
+        now = Date.now();
+      if (old && now - old.sentAt < 60000)
+        fail(429, "برای ارسال مجدد یک دقیقه صبر کنید.");
+      const count = old && now - old.window < 3600000 ? old.count : 0;
+      if (count >= 5)
+        fail(429, "تعداد درخواست‌های پیامک زیاد است؛ یک ساعت دیگر تلاش کنید.");
+      const user = db.users.find((u) => u.phone === phone);
+      const code = String(crypto.randomInt(100000, 1000000));
+      db.otp[key] = {
+        hash: crypto
+          .createHmac("sha256", await secret())
+          .update(phone + ":" + code)
+          .digest("hex"),
+        expires: now + 180000,
+        sentAt: now,
+        attempts: 0,
+        count: count + 1,
+        window: count ? old!.window : now,
+        userId: user?.id || "",
+        version: user?.sessionVersion || 0,
+      };
+      await writeDb(db, revision);
+      if (user) await sendVerificationCode(phone, code);
+      return send(200, {
+        success: true,
+        retryAfter: 60,
+        message:
+          "اگر این شماره حساب فعال داشته باشد، کد ورود برای آن ارسال می‌شود.",
+      });
+    }
+    if (body.action === "otp_verify") {
+      await rateLimit(req);
+      const phone = mobile(body.phone);
+      const code = String(body.code || "")
+        .replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c)))
+        .replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
+      const key = crypto
+        .createHmac("sha256", await secret())
+        .update(phone)
+        .digest("hex");
+      const entry = db.otp?.[key]!;
+      if (!entry || entry.expires <= Date.now() || entry.attempts >= 5)
+        fail(401, "کد منقضی شده یا معتبر نیست؛ کد جدید درخواست کنید.");
+      entry.attempts++;
+      const hash = crypto
+        .createHmac("sha256", await secret())
+        .update(phone + ":" + code)
+        .digest("hex");
+      const user = db.users.find(
+        (u) =>
+          u.phone === phone &&
+          u.id === entry.userId &&
+          u.sessionVersion === entry.version,
+      );
+      const valid = /^\d{6}$/.test(code) && equal(hash, entry.hash) && user;
+      if (valid) {
+        entry.expires = 0;
+        entry.hash = "";
+      }
+      await writeDb(db, revision);
+      if (!valid) fail(401, "کد واردشده صحیح نیست.");
+      await issueSession(res, user!.id, user!.sessionVersion);
+      return send(200, { success: true, user: safeUser(user!) });
     }
     if (body.action === "login") {
       await rateLimit(req);
@@ -585,6 +689,36 @@ export default async function handler(
     if (body.action === "profile") {
       if (!auth.user) fail(401, "ابتدا وارد حساب شوید.");
       const patch = body.payload || {};
+      if (
+        patch.onboardingCompleted !== undefined &&
+        typeof patch.onboardingCompleted !== "boolean"
+      )
+        fail(400, "وضعیت تکمیل حساب معتبر نیست.");
+      if (
+        patch.favoriteBrands !== undefined &&
+        (!Array.isArray(patch.favoriteBrands) ||
+          !patch.favoriteBrands.length ||
+          patch.favoriteBrands.some(
+            (id: unknown) =>
+              typeof id !== "string" ||
+              !BRANDS.some((b) => b.id === id && b.active !== false),
+          ))
+      )
+        fail(400, "حداقل یک برند معتبر انتخاب کنید.");
+      if (
+        patch.businessType !== undefined &&
+        !BUSINESS_TYPES.some((b) => b.id === patch.businessType)
+      )
+        fail(400, "نوع کسب‌وکار را انتخاب کنید.");
+      if (
+        patch.onboardingCompleted === true &&
+        (!(patch.favoriteBrands || auth.user!.favoriteBrands)?.length ||
+          !BUSINESS_TYPES.some(
+            (b) => b.id === (patch.businessType || auth.user!.businessType),
+          ))
+      )
+        fail(400, "ابتدا برندها و نوع کسب‌وکار را تکمیل کنید.");
+
       for (const field of [
         "favoriteBrands",
         "businessType",
@@ -654,6 +788,7 @@ export default async function handler(
                     : "wholesale"
                   : "retail",
               approvedB2B: row.approvedB2B === true,
+              onboardingCompleted: previous?.onboardingCompleted === true,
             };
             if (!previous || row.password)
               setPassword(user, String(row.password || phone));

@@ -7,7 +7,7 @@ import {
 } from "./pages/DiscoveryPages";
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { ClubPointsProvider } from "./context/ClubPointsContext";
 import { WishlistProvider } from "./context/WishlistContext";
@@ -79,6 +79,8 @@ const AdminLayout = lazy(() =>
   })),
 );
 
+function CustomerPanelEntry() { const { currentUser } = useAuth(); return <Navigate to={currentUser?.approvedB2B ? "/account" : "/consumer-dashboard"} replace/>; }
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -117,7 +119,8 @@ export default function App() {
                     {/* Dedicated Registration, Login, and Onboarding */}
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/onboarding" element={<OnboardingPage />} />
+                    <Route path="/inquiry" element={<ProtectedRoute><CustomerPanelEntry /></ProtectedRoute>} />
+                    <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
 
                     {/* 1. Home Page */}
                     <Route path="/" element={<HomePage />} />

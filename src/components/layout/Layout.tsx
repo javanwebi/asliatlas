@@ -24,6 +24,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   // Isolated dedicated portals (dashboards): Admin, Dealer/Agency panel, B2B & Consumer Account Portals
   const isDedicatedPortal =
+    ['/onboarding', '/login', '/register'].includes(location.pathname) ||
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/dealer') ||
     location.pathname.startsWith('/agency') ||
