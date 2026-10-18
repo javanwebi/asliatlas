@@ -72,10 +72,10 @@ export const OurClientsSection: React.FC = () => {
       {/* Top Centered Heading & Subtitle (Matching Reference Image) */}
       <div className="max-w-4xl mx-auto px-4 text-center space-y-2">
         <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
-          کسب‌وکارهایی که به صنعت‌پیش اعتماد کرده‌اند
+          مشتری‌های ما
         </h2>
         <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
-          بیش از ۴۵۰ کارخانه و مجتمع صنعتی بزرگ کشور تجربه تأمین قطعات خط تولید خود را با صنعت‌پیش بهبود بخشیده‌اند
+          همراه مجموعه‌های صنعتی در تأمین قطعات خطوط تولید
         </p>
       </div>
 

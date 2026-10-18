@@ -1,3 +1,4 @@
+import { ReferenceMegaMenu } from "../catalog/ReferenceMegaMenu";
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -141,25 +142,7 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = () => {
               <ArrowUpLeft size={17} />
             </Link>
             <div className="store-mobile-category-tree">
-              {PRIMARY_CATALOG_CATEGORIES.map((c) => (
-                <details key={c.slug}>
-                  <summary>
-                    {c.name}
-                    <ChevronLeft size={16} />
-                  </summary>
-                  <Link
-                    className="store-sheet-category-link"
-                    to={`/products?category=${c.slug}`}
-                  >
-                    همه محصولات این دسته
-                    <ArrowUpLeft size={15} />
-                  </Link>
-                  <CategoryNavigation
-                    nodes={c.children || []}
-                    categorySlug={c.slug}
-                  />
-                </details>
-              ))}
+              <ReferenceMegaMenu compact />
             </div>
           </>
         ) : (

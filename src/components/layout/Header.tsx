@@ -1,3 +1,4 @@
+import { ReferenceMegaMenu } from "../catalog/ReferenceMegaMenu";
 import { IndustryNavigation } from "../storefront/IndustryTools";
 import {AboutNavigation} from '../../pages/DiscoveryPages';
 import { ProductImage } from '../product/ProductImage';
@@ -658,127 +659,7 @@ export const Header: React.FC = () => {
               </button>
 
               {/* Industrial MegaMenu Dropdown */}
-              {isMegaMenuOpen && (
-                <div className="catalog-mega absolute right-0 top-full w-[940px] xl:w-[980px] bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#CBD2D8] flex overflow-hidden z-50 animate-in fade-in duration-150">
-                  {/* Right Column: 6 Main Product Categories */}
-                  <div className="w-80 bg-slate-50/90 border-l border-[#CBD2D8] p-2.5 space-y-1.5 max-h-[580px] overflow-y-auto">
-                    <Link
-                      to="/products"
-                      onClick={() => setIsMegaMenuOpen(false)}
-                      className="flex items-center justify-between p-3 mb-2 rounded-xl bg-[#E06518] hover:bg-[#C95210] text-white font-bold text-xs transition-colors shadow-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        <span>مشاهده همه محصولات و تجهیزات</span>
-                      </div>
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </Link>
-                    <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-[#777A7D] border-b border-slate-200/80 mb-1">
-                      <span>دسته‌بندی‌های اصلی تجهیزات صنعتی</span>
-                      <span className="text-[10px] font-mono text-[#E06518]">{toPersianDigits(CATEGORIES.length)} دسته اصلی</span>
-                    </div>
-                    {PRIMARY_CATALOG_CATEGORIES.map((cat, idx) => (
-                      <button
-                        key={cat.slug}
-                        onMouseEnter={() => setActiveMegaCategory(cat.slug)}
-                        onFocus={() => setActiveMegaCategory(cat.slug)}
-                        onClick={() => {
-                          setIsMegaMenuOpen(false);
-                          navigate(`/category/${cat.slug}`);
-                        }}
-                        className={`w-full text-right p-3 rounded-xl font-bold text-xs flex items-center justify-between transition-all cursor-pointer ${
-                          activeMegaCategory === cat.slug
-                            ? 'bg-white text-[#E06518] shadow-sm border border-slate-200/80 ring-1 ring-orange-500/10'
-                            : 'text-[#55565A] hover:bg-slate-100 hover:text-[#2B313A]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span
-                            className={`w-5 h-5 rounded-lg text-[10px] font-mono font-bold flex items-center justify-center shrink-0 ${
-                              activeMegaCategory === cat.slug
-                                ? 'bg-[#E06518] text-white'
-                                : 'bg-slate-200/80 text-slate-600'
-                            }`}
-                          >
-                            {toPersianDigits(idx + 1)}
-                          </span>
-                          <span className="truncate">{cat.name}</span>
-                        </div>
-                        <ChevronLeft
-                          className={`w-3.5 h-3.5 transition-transform ${
-                            activeMegaCategory === cat.slug ? 'text-[#E06518] translate-x-0.5' : 'text-slate-300'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Left Area: Active Category Showcase */}
-                  <div className="flex-1 p-6 space-y-4 bg-white text-right max-h-[580px] overflow-y-auto">
-                    {/* Category Header */}
-                    <div className="border-b border-slate-100 pb-3.5 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-black text-base text-[#2B313A]">
-                            {selectedCategoryObj.name}
-                          </h4>
-                          <span className="text-[11px] font-mono text-[#777A7D]">
-                            ({selectedCategoryObj.nameEn})
-                          </span>
-                        </div>
-                        <Link
-                          to={`/category/${selectedCategoryObj.slug}`}
-                          onClick={() => setIsMegaMenuOpen(false)}
-                          className="text-xs font-bold text-[#E06518] hover:text-[#C95210] flex items-center gap-1 shrink-0"
-                        >
-                          <span>مشاهده محصولات این گروه</span>
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-
-                      {selectedCategoryObj.featuredBadge && (
-                        <div className="inline-block px-2.5 py-0.5 rounded-md bg-orange-50 text-[#C95210] border border-orange-200 text-[10px] font-bold">
-                          {selectedCategoryObj.featuredBadge}
-                        </div>
-                      )}
-
-                      <p className="text-xs text-[#55565A] leading-relaxed pt-1">
-                        {selectedCategoryObj.description}
-                      </p>
-                    </div>
-
-                    {/* Subcategories Grid */}
-                    <div>
-                      <div className="text-[11px] font-bold text-[#777A7D] mb-2.5 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E06518]" />
-                        <span>زیرمجموعه‌ها و گروه‌های تخصصی:</span>
-                      </div>
-                      <CategoryNavigation key={selectedCategoryObj.slug} nodes={selectedCategoryObj.children} categorySlug={selectedCategoryObj.slug} onNavigate={() => setIsMegaMenuOpen(false)} expanded />
-                    </div>
-
-
-                    {/* Authorized Brands & Quick Consult Link */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                        <span className="text-[11px] font-bold text-[#777A7D] ml-1">برندهای تأییدشده:</span>
-                        {selectedCategoryObj.brands && selectedCategoryObj.brands.map(b => (
-                          <span key={b} className="px-2 py-0.5 rounded bg-slate-100 text-[#55565A] font-medium text-[10px] border border-slate-200">
-                            {b}
-                          </span>
-                        ))}
-                      </div>
-                      <Link
-                        to="/ai-consult"
-                        onClick={() => setIsMegaMenuOpen(false)}
-                        className="text-[11px] font-bold text-[#E06518] hover:underline flex items-center gap-1"
-                      >
-                        <span>مشاوره و استعلام فنی</span>
-                        <ChevronLeft className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {isMegaMenuOpen && <ReferenceMegaMenu onNavigate={()=>setIsMegaMenuOpen(false)}/>}
             </div>
 
 
@@ -1012,7 +893,7 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Left: Hotline Support Badge with Pulse */}
-          <div className="flex items-center gap-2 text-xs text-slate-400 whitespace-nowrap shrink-0" dir="rtl">
+          <div className="header-support-status flex items-center gap-2 text-xs text-slate-400 whitespace-nowrap shrink-0" dir="rtl">
             <span className="text-slate-300 font-sans">پشتیبانی صنعتی:</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="text-white font-mono" dir="ltr">۰۳۵-۳۸۷۳۹۹۰۰</span>

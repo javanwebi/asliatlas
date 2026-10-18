@@ -811,7 +811,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
       <HomeCategoryStrip />
-      <HomeTrustStrip />
+      <OurClientsSection />
       <div className="home-sequence-products"><HighUtilityProductsSection /></div>
       <HomeIndustryShowcase />
       <section className="home-brands-kept" aria-label="برندهای همکار صنعت پیش"><div className="editorial-wrap home-brands-heading"><div><span className="store-eyebrow">شناخت برند، انتخاب آگاهانه</span><h2>برندها در امتداد حرکت صنعت</h2></div><Link to="/brands" className="editorial-text-link">آشنایی با همه برندها <ArrowLeft size={17}/></Link></div><MainBrandsBanner /></section>
