@@ -25,3 +25,7 @@ Challenges use random six-digit tokens, keyed hashes, three-minute expiration, f
 ## Validation
 
 Type checking, production build, role/CRM persistence tests, chosen-credentials and OTP tests (mock provider; no real SMS sent), full browser registration/onboarding/failure retry/password login, and public route checks at 320/390/768/1440 pixels. External model generation, payments and handset delivery are not reported as successful production integrations.
+
+## Homepage reference refinement
+
+Restores the previous desktop/mobile cinematic hero. The immediate next section is a six-group image category strip, then factual trust links, useful products, the dark industrial supply carousel, existing FORZA/SWR brand banners, a unified FORZA introduction, compact company benefits, knowledge and membership. Header/footer and account logic remain unchanged. Industry imagery is limited to the actual six supported industries, and no unverified volume or customer statistics are added.

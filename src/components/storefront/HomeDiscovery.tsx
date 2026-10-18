@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -81,34 +81,71 @@ export function HomeAiIntroduction() {
   );
 }
 export function HomeIndustryShowcase() {
+  const deck = useRef<HTMLDivElement>(null);
   return (
-    <section className="home-industry-showcase">
-      <div className="home-industry-showcase-inner">
-        <div className="home-industry-story">
-          <span className="store-eyebrow">برای نیازهای متفاوت خطوط تولید</span>
+    <section className="home-industrial-supply" id="industries">
+      <img
+        className="home-supply-background"
+        src={A.industries.bgPlant}
+        alt=""
+        loading="lazy"
+      />
+      <div className="home-supply-inner">
+        <div className="home-supply-story">
+          <span className="store-eyebrow">صنعت پیش · همراه خطوط تولید</span>
+          <span className="home-supply-label">تأمین قطعات و تجهیزات صنعتی</span>
           <h2>
-            صنعت شما،
+            تأمین قطعات خطوط
             <br />
-            <em>مسیر تخصصی شما.</em>
+            <em>صنایع مختلف</em>
           </h2>
           <p>
-            کاربرد قطعات، اطلاعات لازم برای انتخاب و خانواده‌های مرتبط را در
-            صفحهٔ مخصوص صنعت خود بررسی کنید.
+            از کاشی و سرامیک و نساجی تا بسته‌بندی، صنایع غذایی، ماشین‌سازی و
+            لاستیک؛ از کاربرد خط شروع کنید و به خانواده قطعه و مشخصات مورد نیاز
+            برسید.
           </p>
-          <Link to="/industries" className="store-btn-primary">
-            آشنایی با همه صنایع <ArrowLeft size={17} />
+          <Link className="store-btn-primary" to="/industries">
+            مشاهده قطعات خطوط <ArrowLeft size={19} />
           </Link>
         </div>
-        <div className="home-industry-deck">
-          {INDUSTRIES.map((i) => (
-            <Link key={i.slug} to={`/industries/${i.slug}`}>
-              <img src={i.image} alt={i.title} loading="lazy" />
-              <span>
-                {i.title}
-                <ArrowUpLeft size={18} />
-              </span>
-            </Link>
-          ))}
+        <div className="home-supply-carousel">
+          <div className="home-supply-deck" ref={deck}>
+            {INDUSTRIES.map((i, n) => (
+              <Link
+                to={`/industries/${i.slug}`}
+                key={i.slug}
+                className={n === 0 ? "is-featured" : ""}
+              >
+                <img src={i.image} alt={i.title} loading="lazy" />
+                <span>
+                  <Layers size={16} />
+                  <strong>{i.title}</strong>
+                  <i>
+                    <ArrowLeft size={17} />
+                  </i>
+                </span>
+              </Link>
+            ))}
+          </div>
+          <div className="home-supply-controls">
+            <button
+              aria-label="صنعت‌های قبلی"
+              onClick={() =>
+                deck.current?.scrollBy({ left: 300, behavior: "smooth" })
+              }
+            >
+              <ArrowLeft size={18} style={{ transform: "rotate(180deg)" }} />
+            </button>
+            <span>صنعت خود را انتخاب کنید</span>
+            <button
+              aria-label="صنعت‌های بعدی"
+              onClick={() =>
+                deck.current?.scrollBy({ left: -300, behavior: "smooth" })
+              }
+            >
+              <ArrowLeft size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </section>
