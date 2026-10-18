@@ -1,7 +1,18 @@
+import { portalContentService } from "../services/portalContentService";
+import {
+  MemberAccess,
+  memberPath,
+} from "../components/storefront/MemberAccess";
 import { ProductVariants } from "../components/product/ProductVariants";
 import { ProductImage } from "../components/product/ProductImage";
 import React, { useState, useEffect, useMemo } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  Link,
+  useSearchParams,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import {
   getProductByCode,
   getSimilarProducts,
@@ -42,12 +53,32 @@ import { pricingCreditService } from "../services/pricingCreditService";
 import { adminService } from "../services/adminService";
 
 export const ProductDetailPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { code } = useParams<{ code: string }>();
   const [searchParams] = useSearchParams();
   const isPreviewMode =
     searchParams.get("preview") === "1" || !!adminService.getCurrentAdmin();
 
   const { currentUser, openAuthModal } = useAuth();
+  const buyingAllowed = currentUser
+    ? portalContentService.getResolvedConfigForCustomer(
+        currentUser.approvedB2B ? "high_volume" : "consumer",
+        currentUser.id,
+      ).permissions.allowQuickSkuOrder !== false
+    : false;
+  const canViewCommercial =
+    buyingAllowed &&
+    !!currentUser &&
+    (location.pathname.startsWith("/account/") ||
+      location.pathname.startsWith("/consumer-dashboard/"));
+  const continueInPanel = () =>
+    currentUser
+      ? navigate(memberPath(currentUser, selectedVariantCode || code))
+      : openAuthModal(
+          memberPath(currentUser, selectedVariantCode || code),
+          "register",
+        );
   const { addToCart, submitInquiry } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
@@ -95,6 +126,8 @@ export const ProductDetailPage: React.FC = () => {
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [inquiryNotes, setInquiryNotes] = useState("");
   const [inquirySubmitted, setInquirySubmitted] = useState(false);
+  const [inquiryBusy, setInquiryBusy] = useState(false);
+  const [inquiryError, setInquiryError] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isInquiring, setIsInquiring] = useState(false);
@@ -209,9 +242,23 @@ export const ProductDetailPage: React.FC = () => {
     visibleVariants[0];
 
   // SKU-owned pricing & stock resolution
-  const activeUnitPrice = selectedVariant
+  const baseUnitPrice = selectedVariant
     ? (selectedVariant.price ?? selectedVariant.prices?.retail ?? 0)
     : (product.prices?.retail ?? 0);
+
+  const customerPriceList = currentUser
+    ? pricingCreditService.getPriceListForCustomer(currentUser)
+    : undefined;
+  const skuPrice = (sku: string, base: number) =>
+    customerPriceList
+      ? pricingCreditService.getSkuPriceForList(sku, base, customerPriceList)
+      : currentUser?.approvedB2B
+        ? 0
+        : base;
+  const activeUnitPrice = skuPrice(
+    selectedVariant?.code || product.code,
+    baseUnitPrice,
+  );
 
   const isSelectedInquiryOnly = selectedVariant
     ? selectedVariant.inquiryOnly !== undefined
@@ -256,12 +303,11 @@ export const ProductDetailPage: React.FC = () => {
         name: selectedVariant.name || product.name,
         brand: activeBrand,
         unit: activeUnit,
-        prices: selectedVariant.prices || {
-          base: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.8) : 0,
+        prices: {
+          base: activeUnitPrice,
           retail: activeUnitPrice,
-          wholesale:
-            activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.9) : 0,
-          dealer: activeUnitPrice > 0 ? Math.round(activeUnitPrice * 0.84) : 0,
+          wholesale: activeUnitPrice,
+          dealer: activeUnitPrice,
         },
         stock: activeStockCount,
         inquiryOnly: isSelectedInquiryOnly,
@@ -271,7 +317,15 @@ export const ProductDetailPage: React.FC = () => {
             : product.images,
         technicalSpecs: combinedSpecs,
       }
-    : product;
+    : {
+        ...product,
+        prices: {
+          base: activeUnitPrice,
+          retail: activeUnitPrice,
+          wholesale: activeUnitPrice,
+          dealer: activeUnitPrice,
+        },
+      };
 
   const isFavorited = isInWishlist(product.code);
   const similarProducts = getSimilarProducts(product, 4);
@@ -286,6 +340,10 @@ export const ProductDetailPage: React.FC = () => {
     : 0;
 
   const handleAddToCart = () => {
+    if (!canViewCommercial) {
+      continueInPanel();
+      return;
+    }
     if (isSelectedInquiryOnly || activeUnitPrice <= 0) {
       setIsInquiryModalOpen(true);
       return;
@@ -296,12 +354,31 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   const handleInquirePriceClick = () => {
+    if (!canViewCommercial) {
+      continueInPanel();
+      return;
+    }
     setIsInquiryModalOpen(true);
   };
 
-  const handleInquirySubmit = (e: React.FormEvent) => {
+  const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    submitInquiry(requestedProduct, quantity, inquiryNotes);
+    if (!canViewCommercial) {
+      continueInPanel();
+      return;
+    }
+    setInquiryBusy(true);
+    setInquiryError("");
+    try {
+      await submitInquiry(requestedProduct, quantity, inquiryNotes);
+    } catch (error) {
+      setInquiryError(
+        error instanceof Error ? error.message : "ثبت استعلام انجام نشد.",
+      );
+      return;
+    } finally {
+      setInquiryBusy(false);
+    }
     setInquirySubmitted(true);
     setTimeout(() => {
       setInquirySubmitted(false);
@@ -344,6 +421,14 @@ export const ProductDetailPage: React.FC = () => {
       className="product-detail-page space-y-6 lg:space-y-8 pb-24 lg:pb-12 text-right"
       dir="rtl"
     >
+      {canViewCommercial && (
+        <Link
+          className="portal-product-back store-btn-secondary"
+          to={currentUser?.approvedB2B ? "/account" : "/consumer-dashboard"}
+        >
+          بازگشت به پنل من
+        </Link>
+      )}
       {/* Preview / Inactive Banner for Site Manager */}
       {(product.active === false ||
         selectedVariant?.active === false ||
@@ -652,11 +737,13 @@ export const ProductDetailPage: React.FC = () => {
                     style={{ backgroundColor: stockInfo.badgeBg }}
                   />
                   <span className="text-slate-700">
-                    {!isSelectedStockKnown
-                      ? "موجودی نیازمند استعلام"
-                      : activeStockCount > 0
-                        ? `موجود در انبار (${toPersianDigits(activeStockCount)} ${activeUnit})`
-                        : "ناموجود / تأمین سفارشی"}
+                    {!canViewCommercial
+                      ? "موجودی در پنل کاربری"
+                      : !isSelectedStockKnown
+                        ? "موجودی نیازمند استعلام"
+                        : activeStockCount > 0
+                          ? `موجود در انبار (${toPersianDigits(activeStockCount)} ${activeUnit})`
+                          : "ناموجود / تأمین سفارشی"}
                   </span>
                 </div>
               </div>
@@ -689,7 +776,9 @@ export const ProductDetailPage: React.FC = () => {
                   <div className="flex flex-wrap gap-2">
                     {visibleVariants.map((v) => {
                       const isSel = v.code === selectedVariant?.code;
-                      const vPrice = v.price ?? v.prices?.retail ?? 0;
+                      const vPrice = canViewCommercial
+                        ? skuPrice(v.code, v.price ?? v.prices?.retail ?? 0)
+                        : 0;
                       const vInq =
                         v.inquiryOnly !== undefined
                           ? v.inquiryOnly
@@ -744,8 +833,15 @@ export const ProductDetailPage: React.FC = () => {
                     <ChevronLeft size={15} />
                   </summary>
                   <ProductVariants
+                    showPrices={canViewCommercial}
                     key={product.code}
-                    variants={visibleVariants}
+                    variants={visibleVariants.map((v) => ({
+                      ...v,
+                      price: canViewCommercial
+                        ? skuPrice(v.code, v.price ?? v.prices?.retail ?? 0)
+                        : 0,
+                      prices: undefined,
+                    }))}
                     selected={selectedVariant?.code || ""}
                     onSelect={handleSelectVariant}
                     galleryImages={galleryImages}
@@ -809,8 +905,15 @@ export const ProductDetailPage: React.FC = () => {
                     <ChevronLeft size={15} />
                   </summary>
                   <ProductVariants
+                    showPrices={canViewCommercial}
                     key={product.code}
-                    variants={visibleVariants}
+                    variants={visibleVariants.map((v) => ({
+                      ...v,
+                      price: canViewCommercial
+                        ? skuPrice(v.code, v.price ?? v.prices?.retail ?? 0)
+                        : 0,
+                      prices: undefined,
+                    }))}
                     selected={selectedVariant?.code || ""}
                     onSelect={handleSelectVariant}
                     galleryImages={galleryImages}
@@ -825,7 +928,12 @@ export const ProductDetailPage: React.FC = () => {
 
             {/* Primary SKU-Owned Pricing & Order Action Area */}
             <div className="pt-5 border-t border-slate-200/80 space-y-4">
-              {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+              {!canViewCommercial ? (
+                <MemberAccess
+                  code={selectedVariantCode || product.code}
+                  compact
+                />
+              ) : !isSelectedInquiryOnly && activeUnitPrice > 0 ? (
                 /* SKU HAS AN ACTIVE PRICE */
                 <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90">
                   <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1307,7 +1415,9 @@ export const ProductDetailPage: React.FC = () => {
             کد: {requestedProduct.code}
           </span>
           <div className="text-xs font-black text-[#55565A] truncate">
-            {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+            {canViewCommercial &&
+            !isSelectedInquiryOnly &&
+            activeUnitPrice > 0 ? (
               <span className="text-emerald-700 font-mono">
                 {toPersianDigits(
                   new Intl.NumberFormat("fa-IR").format(
@@ -1323,7 +1433,9 @@ export const ProductDetailPage: React.FC = () => {
         </div>
 
         <div>
-          {!isSelectedInquiryOnly && activeUnitPrice > 0 ? (
+          {canViewCommercial &&
+          !isSelectedInquiryOnly &&
+          activeUnitPrice > 0 ? (
             <button
               type="button"
               onClick={handleAddToCart}
@@ -1400,6 +1512,11 @@ export const ProductDetailPage: React.FC = () => {
             />
           </div>
 
+          {inquiryError && (
+            <p role="alert" className="account-error">
+              {inquiryError}
+            </p>
+          )}
           {inquirySubmitted ? (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold text-center">
               درخواست استعلام با موفقیت ثبت شد. واحد فروش به زودی پاسخ خواهد
@@ -1408,6 +1525,7 @@ export const ProductDetailPage: React.FC = () => {
           ) : (
             <button
               type="submit"
+              disabled={inquiryBusy}
               className="w-full h-11 bg-[#E06518] hover:bg-[#C95210] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
             >
               ارسال استعلام رسمی برای کد {requestedProduct.code}

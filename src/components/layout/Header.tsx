@@ -1,3 +1,4 @@
+import {AboutNavigation} from '../../pages/DiscoveryPages';
 import { ProductImage } from '../product/ProductImage';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -112,7 +113,7 @@ export const Header: React.FC = () => {
       setTimeout(() => mobileSearchInputRef.current?.focus(), 100);
     };
     const handleOpenConsult = () => navigate('/ai-consult');
-    const handleOpenForza = () => navigate('/ai-forza');
+    const handleOpenForza = () => navigate('/ai-consult?voice=1');
 
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('open-mobile-search', handleOpenSearch);
@@ -358,11 +359,7 @@ export const Header: React.FC = () => {
                             </div>
                           </div>
                           <div className="font-bold text-[#2B313A] shrink-0 text-left">
-                            {p.inquiryOnly ? (
-                              <span className="text-amber-600 text-[11px]">استعلام قیمت</span>
-                            ) : (
-                              formatPrice(p.prices.retail)
-                            )}
+                            <span className="text-[11px] text-[#777A7D]">مشاهده مشخصات</span>
                           </div>
                         </Link>
                       ))}
@@ -816,7 +813,7 @@ export const Header: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <Link
-                      to="/category/ceramic-tiles"
+                      to="/industries/ceramic"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -824,7 +821,7 @@ export const Header: React.FC = () => {
                       <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
                     </Link>
                     <Link
-                      to="/category/textile-machinery"
+                      to="/industries/textile"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -832,7 +829,7 @@ export const Header: React.FC = () => {
                       <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
                     </Link>
                     <Link
-                      to="/category/packaging-carton"
+                      to="/industries/packaging"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -840,7 +837,7 @@ export const Header: React.FC = () => {
                       <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
                     </Link>
                     <Link
-                      to="/category/food-beverage"
+                      to="/industries/food"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -848,7 +845,7 @@ export const Header: React.FC = () => {
                       <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
                     </Link>
                     <Link
-                      to="/category/machinery-equipment"
+                      to="/industries/machinery"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -856,7 +853,7 @@ export const Header: React.FC = () => {
                       <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
                     </Link>
                     <Link
-                      to="/category/rubber-plastics"
+                      to="/industries/rubber"
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs transition-colors"
                     >
@@ -877,100 +874,7 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* 3. برندها (Orange Tag icon + Down Chevron) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveDropdown(activeDropdown === 'brands' ? null : 'brands');
-                  setIsMegaMenuOpen(false);
-                }}
-                onMouseEnter={() => {
-                  if (activeDropdown && activeDropdown !== 'brands') {
-                    setActiveDropdown('brands');
-                  }
-                }}
-                className={`flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 transition-colors cursor-pointer group ${
-                  activeDropdown === 'brands' ? 'text-[#E06518] bg-white/5' : 'text-white hover:text-[#E06518]'
-                }`}
-              >
-                <Tag className="w-4 h-4 text-[#E06518] shrink-0" />
-                <span>برندهای همکار</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#E06518] transition-transform duration-200 ${
-                    activeDropdown === 'brands' ? 'rotate-180 text-[#E06518]' : ''
-                  }`}
-                />
-              </button>
-
-              {/* Brands Dropdown */}
-              {activeDropdown === 'brands' && (
-                <div className="absolute right-0 top-full w-80 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3.5 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1.5 border-b border-slate-100">
-                    برندهای اختصاصی و انحصاری اطلس
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      to="/category/swr-forza-exclusive"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg bg-orange-50/60 hover:bg-orange-100/80 border border-orange-200 transition-colors"
-                    >
-                      <div className="font-black text-xs text-[#C95210]">SWR آلمان</div>
-                      <div className="text-[10px] text-slate-600 mt-0.5">نماینده انحصاری تسمه</div>
-                    </Link>
-                    <Link
-                      to="/category/swr-forza-exclusive"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-colors"
-                    >
-                      <div className="font-black text-xs text-blue-700">FORZA ایتالیا</div>
-                      <div className="text-[10px] text-slate-600 mt-0.5">نماینده انحصاری پولی</div>
-                    </Link>
-                    <Link
-                      to="/category/industrial-belts"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">MEGADYNE</div>
-                      <div className="text-[10px] text-slate-500">ایتالیا</div>
-                    </Link>
-                    <Link
-                      to="/category/industrial-belts"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">OPTIBELT</div>
-                      <div className="text-[10px] text-slate-500">آلمان</div>
-                    </Link>
-                    <Link
-                      to="/category/bearings"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">SKF سوئد</div>
-                      <div className="text-[10px] text-slate-500">بلبرینگ صنعتی</div>
-                    </Link>
-                    <Link
-                      to="/category/bearings"
-                      onClick={() => setActiveDropdown(null)}
-                      className="p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                    >
-                      <div className="font-bold text-xs text-[#55565A]">TIMKEN آمریکا</div>
-                      <div className="text-[10px] text-slate-500">رولبرینگ سنگین</div>
-                    </Link>
-                  </div>
-                  <div className="pt-2.5 mt-2 border-t border-slate-100 flex items-center justify-between">
-                    <Link
-                      to="/#brands"
-                      onClick={() => setActiveDropdown(null)}
-                      className="text-[11px] font-bold text-[#E06518] hover:text-[#C95210] transition-colors"
-                    >
-                      مشاهده تمام برندهای صنعتی ←
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Link to="/brands" onClick={()=>{setActiveDropdown(null);setIsMegaMenuOpen(false);}} className="flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 hover:text-[#E06518] transition-colors text-white"><Tag className="w-4 h-4 text-[#E06518]"/><span>برندهای همکار</span></Link>
 
             {/* 4. خدمات صنعتی (White Wrench icon + Down Chevron) */}
             <div className="relative">
@@ -1090,55 +994,7 @@ export const Header: React.FC = () => {
 
               {/* About Dropdown */}
               {activeDropdown === 'about' && (
-                <div className="absolute right-0 top-full w-64 bg-white text-[#55565A] rounded-b-2xl shadow-2xl border border-[#E3E5E6] p-3 z-50 animate-in fade-in duration-150 text-right">
-                  <div className="text-[11px] font-bold text-[#777A7D] px-2 py-1 mb-1 border-b border-slate-100">
-                    شناخت صنعت پیش و بازرگانی اطلس
-                  </div>
-                  <div className="space-y-1">
-                    <Link
-                      to="/about?tab=intro"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      معرفی و توانمندی‌های صنعت پیش
-                    </Link>
-                    <Link
-                      to="/about?tab=history"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      تاریخچه و خط زمان (از سال ۱۳۶۶)
-                    </Link>
-                    <Link
-                      to="/about?tab=licenses"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      مجوزها و استانداردهای ISO
-                    </Link>
-                    <Link
-                      to="/about?tab=awards"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      افتخارات و تندیس‌های ملی
-                    </Link>
-                    <Link
-                      to="/contact"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      تماس با ما و مشاوره تدارکات
-                    </Link>
-                    <Link
-                      to="/contact?tab=factory"
-                      onClick={() => setActiveDropdown(null)}
-                      className="block p-2 rounded-lg hover:bg-orange-50 hover:text-[#E06518] text-xs font-bold transition-colors"
-                    >
-                      آدرس کارخانه و انبار مرکزی میبد
-                    </Link>
-                  </div>
-                </div>
+                <AboutNavigation onNavigate={()=>setActiveDropdown(null)}/>
               )}
             </div>
 
@@ -1206,7 +1062,7 @@ export const Header: React.FC = () => {
 
             {/* 7. دانشنامه (White BookOpen icon - NO Chevron, direct link) */}
             <Link
-              to="/catalog"
+              to="/knowledge"
               onMouseEnter={() => setActiveDropdown(null)}
               className="flex items-center gap-1.5 py-3 px-2 xl:px-2.5 whitespace-nowrap rounded-lg hover:bg-white/5 hover:text-[#E06518] transition-colors cursor-pointer text-white"
             >

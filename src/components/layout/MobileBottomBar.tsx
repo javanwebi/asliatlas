@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   UserRound,
   Headphones,
+  Layers,
   X,
   ChevronLeft,
   ArrowUpLeft,
@@ -167,11 +168,8 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = () => {
               مشاوره هوشمند انتخاب قطعه
               <ChevronLeft size={17} />
             </Link>
-            <Link to="/ai-forza">
-              گفت‌وگوی صوتی FORZA
-              <ChevronLeft size={17} />
-            </Link>
-            <Link to="/contact">
+
+            <Link to="/industries"><Layers size={18}/>صنایع تحت پوشش</Link><Link to="/brands"><Layers size={18}/>برندهای همکار</Link><Link to="/knowledge"><Layers size={18}/>دانشنامه</Link><Link to="/about"><Layers size={18}/>درباره صنعت پیش</Link><Link to="/contact">
               ارتباط با کارشناسان فروش
               <ChevronLeft size={17} />
             </Link>

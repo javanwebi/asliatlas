@@ -4,7 +4,7 @@ import { Heart, ArrowUpLeft, Layers } from "lucide-react";
 import type { Product } from "../../types";
 import { ProductImage } from "./ProductImage";
 import { useWishlist } from "../../context/WishlistContext";
-import { toPersianDigits, formatPrice } from "../../utils/formatters";
+import { toPersianDigits } from "../../utils/formatters";
 export interface ProductCardProps {
   product: Product;
 }
@@ -56,11 +56,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </p>
         <div className="store-product-bottom">
           <span>
-            {!product.variants?.length &&
-            !product.inquiryOnly &&
-            product.prices?.retail > 0
-              ? formatPrice(product.prices.retail)
-              : "انتخاب کد و استعلام"}
+            قیمت و موجودی در پنل
           </span>
           <Link to={href} aria-label={`مشاهده ${product.name}`}>
             <span>مشاهده محصول</span>

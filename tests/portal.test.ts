@@ -96,6 +96,61 @@ test("portal authentication, isolation, persistence and admin edits", async (t) 
         assert.equal(registration.data.user.totalPurchases, 0);
       },
     );
+    await t.test(
+      "inquiries require a signed customer and persist with server-owned identity",
+      async () => {
+        assert.equal(
+          (await request({ action: "inquiry", code: "80301", quantity: 1 }))
+            .status,
+          401,
+        );
+        assert.equal(
+          (
+            await request(
+              { action: "inquiry", code: "80301", quantity: 0 },
+              consumer,
+            )
+          ).status,
+          400,
+        );
+        const result = await request(
+          {
+            action: "inquiry",
+            code: "80301",
+            quantity: 2,
+            customerId: "forged",
+            productName: "چرخ دنده",
+            notes: "نیاز به بررسی",
+          },
+          consumer,
+        );
+        assert.equal(result.status, 201);
+        assert.equal(result.data.inquiry.customerId, registration.data.user.id);
+        const snapshot = await request(undefined, consumer);
+        assert.equal(snapshot.data.values.atlas_admin_inquiries_v1.length, 1);
+        assert.equal(
+          (await request()).data.values.atlas_admin_inquiries_v1,
+          undefined,
+        );
+        const stranger = await request({
+          action: "register",
+          payload: {
+            firstName: "کاربر",
+            lastName: "دیگر",
+            companyName: "Other",
+            mobile: "09121112222",
+            provinceId: "yazd",
+            cityId: "yazd-yazd",
+            activityField: "صنعت",
+          },
+        });
+        assert.deepEqual(
+          (await request(undefined, stranger.cookie)).data.values
+            .atlas_admin_inquiries_v1,
+          [],
+        );
+      },
+    );
     await t.test("missing password and guessed OTP are rejected", async () => {
       assert.equal(
         (await request({ action: "login", identifier: "09121111111" })).status,

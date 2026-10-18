@@ -1,3 +1,5 @@
+import {HomeAiIntroduction,HomeIndustryShowcase,HomeMembership} from '../components/storefront/HomeDiscovery';
+import {HomeKnowledge} from './DiscoveryPages';
 import {
   HomeAssist,
   IndustrialServices,
@@ -457,7 +459,7 @@ export const HomePage: React.FC = () => {
                           heroSlides[heroSlideIndex].primaryBtn.action ===
                           "consult"
                         ) {
-                          setIsConsultOpen(true);
+                          navigate("/ai-consult");
                         }
                       }}
                       className="h-12 sm:h-13 px-6 sm:px-8 bg-gradient-to-r from-[#C95210] to-[#E06518] hover:from-[#C2410C] hover:to-[#C95210] text-white font-black text-xs sm:text-sm rounded-xl shadow-[0_6px_18px_rgba(249,115,22,0.35)] hover:shadow-[0_8px_22px_rgba(249,115,22,0.5)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-95"
@@ -472,7 +474,7 @@ export const HomePage: React.FC = () => {
                   "consult" ? (
                     <button
                       type="button"
-                      onClick={() => setIsConsultOpen(true)}
+                      onClick={() => navigate("/ai-consult")}
                       className="h-12 sm:h-13 px-5 sm:px-7 bg-[#55565A]/70 hover:bg-[#55565A]/85 text-white font-bold text-xs sm:text-sm rounded-xl border border-white/20 hover:border-orange-500/70 backdrop-blur-md transition-all flex items-center justify-center gap-2.5 cursor-pointer group shadow-md active:scale-95"
                     >
                       <span className="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-[#E06518] group-hover:scale-110 transition-transform">
@@ -677,7 +679,7 @@ export const HomePage: React.FC = () => {
                         heroSlides[heroSlideIndex].primaryBtn.action ===
                         "consult"
                       ) {
-                        setIsConsultOpen(true);
+                        navigate("/ai-consult");
                       }
                     }}
                     className="h-11 px-6 bg-gradient-to-r from-[#C95210] to-[#E06518] hover:from-[#C2410C] hover:to-[#C95210] text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
@@ -704,7 +706,7 @@ export const HomePage: React.FC = () => {
                         heroSlides[heroSlideIndex].secondaryBtn.action ===
                         "consult"
                       ) {
-                        setIsConsultOpen(true);
+                        navigate("/ai-consult");
                       } else if (
                         heroSlides[heroSlideIndex].secondaryBtn.action ===
                         "visualSearch"
@@ -823,10 +825,7 @@ export const HomePage: React.FC = () => {
         {/* 2. DUAL AI FEATURE BANNER (مشاوره هوشمند قطعات & پیدا کردن قطعه با AI)       */}
         {/* ========================================================================= */}
         <IndustrialServices />
-        <HomeAssist
-          onVisual={() => setIsVisualSearchOpen(true)}
-          onConsult={() => setIsConsultOpen(true)}
-        />
+        <HomeAiIntroduction />
 
         {/* ========================================================================= */}
         {/* 3. PRODUCT CATEGORIES (7 items matching screenshot)                       */}
@@ -930,29 +929,7 @@ export const HomePage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 4. COVERED INDUSTRIES - 100% FULL WIDTH MATCHING REFERENCE UI/UX           */}
       {/* ========================================================================= */}
-      <section className="home-industries" aria-labelledby="industries-title">
-        <div className="store-section-heading">
-          <div>
-            <span className="store-eyebrow">کنار خطوط تولید</span>
-            <h2 id="industries-title">قطعات مناسب صنعت شما</h2>
-          </div>
-          <Link to="/products">
-            مشاهده محصولات
-            <ArrowLeft size={16} />
-          </Link>
-        </div>
-        <div className="home-industry-grid">
-          {coveredIndustries.map((ind) => (
-            <Link key={ind.id} to={ind.link}>
-              <img src={ind.image} alt="" loading="lazy" />
-              <span>
-                {ind.title}
-                <ArrowLeft size={15} />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <HomeIndustryShowcase />
 
       {/* ========================================================================= */}
       {/* SECTION 5, 6, 7 CONTAINER                                                 */}
@@ -977,6 +954,8 @@ export const HomePage: React.FC = () => {
       {/* 6. SANAT PISH INTERACTIVE SHOWCASE (معرفی توانمندی‌ها و خدمات صنعت پیش)     */}
       {/* ========================================================================= */}
       <WhySanatPish />
+      <HomeKnowledge />
+      <HomeMembership />
 
       {/* ========================================================================= */}
       {/* 7. CTA CONSULTATION & INQUIRY BANNER (مشاوره تخصصی و استعلام قیمت)        */}
@@ -990,7 +969,7 @@ export const HomePage: React.FC = () => {
           <button
             type="button"
             className="store-btn-primary"
-            onClick={() => setIsConsultOpen(true)}
+            onClick={() => navigate("/ai-consult")}
           >
             شروع مشاوره
             <ArrowLeft size={16} />

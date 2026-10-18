@@ -1,3 +1,5 @@
+import { getProductByCode } from "../data/mockGenerator";
+import { portalRequest, hydratePortal } from "../services/portalRepository";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   Product,
@@ -96,7 +98,11 @@ interface CartContextType {
   removeDiscountCode: () => void;
   setClubPointsUsage: (points: number) => void;
   setSelectedShippingId: (id: string) => void;
-  submitInquiry: (product: Product, quantity: number, notes?: string) => void;
+  submitInquiry: (
+    product: Product,
+    quantity: number,
+    notes?: string,
+  ) => Promise<boolean>;
   placeOrder: (params: {
     address: Address;
     shippingMethod: ShippingMethod;
@@ -130,7 +136,8 @@ const INQUIRY_STORAGE_KEY = "hyper_sanat_inquiries_v2";
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { currentUser, priceLayer, activeRole, addClubPoints } = useAuth();
+  const { currentUser, priceLayer, activeRole, addClubPoints, openAuthModal } =
+    useAuth();
   const [, setContentVersion] = useState(0);
   useEffect(() => {
     const update = () => setContentVersion((v) => v + 1);
@@ -173,6 +180,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const inquiries = allInquiries.filter(
     (i) => i.customerId === (currentUser?.id || "guest"),
   );
+
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const rows = JSON.parse(
+          localStorage.getItem("atlas_admin_inquiries_v1") || "[]",
+        );
+        if (currentUser)
+          setInquiries(
+            rows
+              .filter((r: any) => r.customerId === currentUser.id)
+              .map((r: any) => ({
+                id: r.id,
+                customerId: r.customerId,
+                product: {
+                  ...(getProductByCode(r.productCode) || {}),
+                  code: r.productCode,
+                  name: r.productName,
+                },
+                quantity: r.requestedQty,
+                notes: r.notes,
+                date: new Date(r.createdAt).toLocaleDateString("fa-IR"),
+                status: r.status === "pending" ? "pending" : "answered",
+                answeredPrice: r.answeredPrice,
+              })),
+          );
+        else setInquiries([]);
+      } catch {}
+    };
+    window.addEventListener("atlas-portal-content-updated", sync);
+    sync();
+    return () =>
+      window.removeEventListener("atlas-portal-content-updated", sync);
+  }, [currentUser?.id]);
 
   // Orders
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -274,8 +315,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const addToCart = (product: Product, quantity = 1) => {
+    if (!currentUser) {
+      openAuthModal("/consumer-dashboard", "register");
+      return;
+    }
     if (product.inquiryOnly) {
-      submitInquiry(product, quantity);
+      void submitInquiry(product, quantity).catch(() =>
+        openAuthModal(undefined, "login"),
+      );
       return;
     }
 
@@ -408,21 +455,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     setUsedClubPoints(Math.max(0, points));
   };
 
-  const submitInquiry = (
+  const submitInquiry = async (
     product: Product,
     quantity: number,
     notes?: string,
-  ) => {
-    const newInquiry: InquiryItem = {
-      id: "INQ-" + crypto.randomUUID(),
-      customerId: currentUser?.id || "guest",
-      product,
+  ): Promise<boolean> => {
+    if (!currentUser) {
+      openAuthModal("/consumer-dashboard", "register");
+      return false;
+    }
+    const response = await portalRequest({
+      action: "inquiry",
+      code: product.code,
+      productName: product.name,
       quantity,
       notes,
-      date: new Date().toLocaleDateString("fa-IR"),
-      status: "pending",
-    };
-    setInquiries((prev) => [newInquiry, ...prev]);
+    });
+    setInquiries((prev) => [
+      {
+        id: response.inquiry.id,
+        customerId: currentUser.id,
+        product,
+        quantity,
+        notes,
+        date: new Date().toLocaleDateString("fa-IR"),
+        status: "pending",
+      },
+      ...prev,
+    ]);
+    await hydratePortal();
+    return true;
   };
 
   // Computations
@@ -582,7 +644,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     const newSms: SmsLog = {
       id: "sms-" + Date.now(),
       recipientPhone:
-        params.address.recipientPhone || currentUser?.phone || "09131512345",
+        params.address.recipientPhone || currentUser?.phone || "",
       template: "order_registered",
       message: `بازرگانی تسمه اطلس یزد: سفارش شما به شماره ${orderNum} با موفقیت ثبت شد و در صف آماده‌سازی انبار قرار گرفت.`,
       status: "delivered",

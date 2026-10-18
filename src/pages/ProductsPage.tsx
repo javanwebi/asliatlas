@@ -418,23 +418,12 @@ export const ProductsPage: React.FC = () => {
                   <option value="code_asc">مرتب‌سازی: کد فنی (صعودی)</option>
                   <option value="name_asc">مرتب‌سازی: نام قطعه (الفبا)</option>
                   <option value="rating_desc">مرتب‌سازی: بیشترین امتیاز</option>
-                  <option value="stock_desc">مرتب‌سازی: موجودی انبار</option>
+
                 </select>
               </div>
 
               {/* In Stock Toggle */}
-              <label className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer text-xs font-bold text-slate-700 select-none hover:bg-slate-100">
-                <input
-                  type="checkbox"
-                  checked={inStockOnly}
-                  onChange={(e) => {
-                    setInStockOnly(e.target.checked);
-                    setCurrentPage(1);
-                  }}
-                  className="rounded text-orange-600 focus:ring-orange-500"
-                />
-                <span>فقط کالاهای موجود</span>
-              </label>
+
 
               {/* Official Catalogue Image Toggle */}
               <label

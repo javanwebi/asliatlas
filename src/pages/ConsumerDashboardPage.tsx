@@ -1,9 +1,10 @@
+import { PortalInquiries } from "../components/portal/PortalInquiries";
 import { PortalRecentOrders } from "../components/portal/PortalRecentOrders";
 import { PortalTools } from "../components/portal/PortalTools";
 import { PortalShell } from "../components/portal/PortalShell";
 import { PortalClub } from "../components/portal/PortalClub";
 import React, { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingBag,
   Package,
@@ -118,7 +119,13 @@ export const ConsumerDashboardPage: React.FC = () => {
     [resolvedConfig.menus, resolvedConfig.permissions.allowQuickSkuOrder],
   );
 
+  const [entryParams] = useSearchParams();
   const [activeTab, setActiveTabState] = useState<string>("overview");
+  useEffect(() => {
+    const requested = entryParams.get("tab");
+    if (requested && enabledMenus.some((m) => m.id === requested))
+      setActiveTabState(requested);
+  }, [entryParams, enabledMenus]);
 
   const setActiveTab = (id: string) => {
     if (enabledMenus.some((m) => m.id === id)) setActiveTabState(id);
@@ -432,11 +439,14 @@ export const ConsumerDashboardPage: React.FC = () => {
           {activeTab === "overview" && (
             <div className="space-y-6">
               {enabledMenus.some((m) => m.id === "orders") && (
-                <PortalRecentOrders
-                  title={resolvedConfig.uiTexts.ordersSectionTitle}
-                  labels={resolvedConfig.labels}
-                  onOrders={() => setActiveTab("orders")}
-                />
+                <>
+                  <PortalInquiries labels={resolvedConfig.labels} />
+                  <PortalRecentOrders
+                    title={resolvedConfig.uiTexts.ordersSectionTitle}
+                    labels={resolvedConfig.labels}
+                    onOrders={() => setActiveTab("orders")}
+                  />
+                </>
               )}
               {resolvedConfig.permissions.showClubBarChart &&
                 enabledMenus.some((m) => m.id === "club_rewards") && (

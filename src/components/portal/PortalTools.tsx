@@ -1,7 +1,7 @@
 import { useAuth } from "../../context/AuthContext";
 import { pricingCreditService } from "../../services/pricingCreditService";
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Heart,
   ClipboardList,
@@ -30,7 +30,8 @@ export function PortalTools({
   const { wishlist } = useWishlist();
   const { currentUser } = useAuth();
   const { cart, addToCart } = useCart();
-  const [text, setText] = useState("");
+  const [entryParams]=useSearchParams();
+  const [text, setText] = useState(()=>entryParams.get("sku")?`${entryParams.get("sku")}, 1`:"");
   const [preview, setPreview] = useState(false);
   const [message, setMessage] = useState("");
   const [catalogTick, setCatalogTick] = useState(0);

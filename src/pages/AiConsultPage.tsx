@@ -1,5 +1,8 @@
+import {WorkspaceCatalog} from '../components/search/WorkspaceCatalog';
+import {MemberAccess,memberPath} from '../components/storefront/MemberAccess';
+import {useAuth} from '../context/AuthContext';
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   User,
@@ -145,7 +148,7 @@ const PROMPT_SUGGESTIONS = [
   },
   {
     title: 'استعلام قطعات FORZA و SWR',
-    desc: 'مشخصات فنی و شرایط صدور فاکتور رسمی',
+    desc: 'کد، ابعاد و اطلاعات ثبت‌شده محصولات',
     query: 'بررسی مشخصات فنی، موجودی انبار مرکزی و استعلام قیمت برندهای انحصاری SWR آلمان و FORZA ایتالیا',
     icon: Globe,
   },
@@ -165,10 +168,12 @@ const PROMPT_SUGGESTIONS = [
 
 export const AiConsultPage: React.FC = () => {
   const navigate = useNavigate();
+  const {currentUser,openAuthModal}=useAuth();
+  const [entryParams]=useSearchParams();
   const { addToCart } = useCart();
 
   // Mode: Engineering Chat OR Visual Part Identification Studio
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'chat' | 'visual_studio'>('chat');
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'chat' | 'visual_studio'>(()=>entryParams.get('view')==='visual'?'visual_studio':'chat');
 
   // Chat sessions state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -190,7 +195,7 @@ export const AiConsultPage: React.FC = () => {
   const [isVisualSearchModalOpen, setIsVisualSearchModalOpen] = useState(false);
 
   // Settings State
-  const [selectedIndustry, setSelectedIndustry] = useState('general');
+  const [selectedIndustry, setSelectedIndustry] = useState(()=>entryParams.get('industry')||'general');
   const [calculationStandard, setCalculationStandard] = useState<'din' | 'fast'>('din');
 
   // Visual Part Studio State
@@ -293,7 +298,7 @@ export const AiConsultPage: React.FC = () => {
     } catch {}
     setMessages([]);
     setInputQuery('');
-    setActiveWorkspaceTab('chat');
+    setActiveWorkspaceTab(!autoFocus&&entryParams.get('view')==='visual'?'visual_studio':'chat');
     setIsMobileDrawerOpen(false);
     if (autoFocus) {
       setTimeout(() => textareaRef.current?.focus(), 100);
@@ -1042,7 +1047,7 @@ export const AiConsultPage: React.FC = () => {
                     </span>
                     <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      آنلاین
+                      میزکار یکپارچه
                     </span>
                   </div>
                   <span className="text-[10px] text-[#777A7D] block -mt-0.5">
@@ -1600,11 +1605,7 @@ export const AiConsultPage: React.FC = () => {
                             <div className="text-xs">
                               {item.catalogProduct ? (
                                 <span className="font-black text-[#2B313A]">
-                                  {formatPrice(
-                                    item.catalogProduct.prices?.retail ||
-                                      item.catalogProduct.prices?.base ||
-                                      0
-                                  )}
+                                  قیمت و موجودی در پنل
                                 </span>
                               ) : (
                                 <span className="text-[#777A7D] text-[11px]">استعلام قیمت</span>
@@ -1616,13 +1617,14 @@ export const AiConsultPage: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    addToCart(item.catalogProduct!);
+                                    if(currentUser)navigate(memberPath(currentUser,item.code));else openAuthModal(memberPath(null,item.code),"register");
+                                    return;
                                     setAddedCartCode(item.code);
                                     setTimeout(() => setAddedCartCode(null), 2000);
                                   }}
                                   className="px-2.5 py-1.5 rounded-lg bg-[#E06518] hover:bg-[#C95210] text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                                 >
-                                  {addedCartCode === item.code ? (
+                                  {false ? (
                                     <>
                                       <Check className="w-3 h-3" />
                                       <span>افزوده شد</span>
@@ -1669,14 +1671,15 @@ export const AiConsultPage: React.FC = () => {
                     </div>
 
                     <h1 className="text-xl sm:text-2xl font-black text-[#2B313A] mb-1.5">
-                      میزکار هوشمند مهندسی FORZA
+                      میزکار هوشمند FORZA
                     </h1>
                     <p className="text-xs sm:text-sm text-[#55565A] mb-6 max-w-md leading-relaxed">
-                      مشاوره انتخاب قطعات، محاسبات طول تسمه و پولی، و استعلام قیمت خطوط تولید صنعتی
+                      مشاوره انتخاب قطعات، جستجوی مشخصات کاتالوگ و محاسبات مهندسی در یک میزکار
                     </p>
 
                     {/* Quick Suggestions Grid */}
-                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-right">
+                    <WorkspaceCatalog />
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-right">
                       {PROMPT_SUGGESTIONS.map((item, idx) => {
                         const Icon = item.icon;
                         return (

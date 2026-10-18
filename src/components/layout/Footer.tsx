@@ -275,7 +275,7 @@ export const Footer: React.FC = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/#brands" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
+                  <Link to="/brands" className="hover:text-[#E06518] transition-colors flex items-center justify-between group">
                     <span>برندها</span>
                     <ChevronLeft className="w-3 h-3 text-[#777A7D] group-hover:text-[#E06518] transition-colors" />
                   </Link>
@@ -583,7 +583,7 @@ export const Footer: React.FC = () => {
                 شرایط استفاده
               </Link>
               <span className="text-slate-600">|</span>
-              <Link to="/catalog" className="hover:text-white transition-colors">
+              <Link to="/knowledge" className="hover:text-white transition-colors">
                 سوالات متداول
               </Link>
               <span className="text-slate-600">|</span>

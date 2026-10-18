@@ -9,7 +9,7 @@ import {
   resetManagedFamily,
   moveGalleryImageToFamily,
 } from '../data/mockGenerator';
-import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_INQUIRIES, MOCK_DISCOUNT_CODES, MOCK_SMS_LOGS, MOCK_REPRESENTATIVES } from '../data/mockData';
+import { MOCK_DISCOUNT_CODES } from '../data/mockData';
 import { CATEGORIES } from '../data/categories';
 import { BRANDS } from '../data/brands';
 import { agencyService } from './agencyService';
@@ -284,65 +284,9 @@ const STORAGE_KEYS = {
 };
 
 // Initial Seed Data
-const INITIAL_ADMINS: AdminUser[] = [
-  {
-    id: 'adm-1',
-    username: 'admin',
-    name: 'مهندس مرتضوی (مدیر کل بازرگانی)',
-    role: 'super_admin',
-    email: 'admin@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۱۰:۱۵',
-  },
-  {
-    id: 'adm-2',
-    username: 'sales',
-    name: 'خانم دهقان (کارشناس ارشد فروش و استعلام)',
-    role: 'sales_manager',
-    email: 'sales@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۰۹:۴۰',
-  },
-  {
-    id: 'adm-3',
-    username: 'warehouse',
-    name: 'آقای فلاح (مسئول انبار مرکزی یزد)',
-    role: 'warehouse_operator',
-    email: 'stock@hyper-sanat.ir',
-    lastLogin: '۱۴۰۳/۰۶/۲۱ - ۰۸:۲۰',
-  },
-];
+const INITIAL_ADMINS: AdminUser[] = [];
 
-const INITIAL_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 'log-1',
-    userId: 'adm-1',
-    userName: 'مهندس مرتضوی',
-    userRole: 'مدیر کل',
-    action: 'تأیید نمایندگی',
-    entity: 'نمایندگی کاشی ستاره میبد',
-    details: 'درخواست نمایندگی تأیید و سقف اعتبار ۲۵۰ میلیون تومان فعال گردید.',
-    timestamp: '۱۴۰۳/۰۶/۲۱ - ۱۱:۳۰',
-  },
-  {
-    id: 'log-2',
-    userId: 'adm-2',
-    userName: 'خانم دهقان',
-    userRole: 'کارشناس فروش',
-    action: 'پاسخ به استعلام قیمت',
-    entity: 'استعلام INQ-7481',
-    details: 'قیمت تسمه تایمینگ ۵,۲۰۰,۰۰۰ تومان با اعتبار ۷ روزه اعلام شد.',
-    timestamp: '۱۴۰۳/۰۶/۲۱ - ۱۰:۰۵',
-  },
-  {
-    id: 'log-3',
-    userId: 'adm-3',
-    userName: 'آقای فلاح',
-    userRole: 'انباردار',
-    action: 'به‌روزرسانی موجودی انبار',
-    entity: 'کد SWR-230',
-    details: 'موجودی انبار مرکزی از ۸۵ به ۱۲۰ حلقه تغییر یافت.',
-    timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۵',
-  },
-];
+const INITIAL_AUDIT_LOGS: AuditLog[] = [];
 
 const INITIAL_PRICE_HISTORY: PriceHistoryRecord[] = [
   {
@@ -481,7 +425,8 @@ export const adminService = {
   },
 
   logAction(action: string, entity: string, details: string): void {
-    const admin = this.getCurrentAdmin() || INITIAL_ADMINS[0];
+    const admin = this.getCurrentAdmin();
+    if(!admin)return;
     const logs = this.getAuditLogs();
     const newLog: AuditLog = {
       id: 'log-' + Date.now(),
@@ -824,7 +769,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_INQUIRIES;
+    return [];
   },
 
   answerInquiry(inquiryId: string, price: number, validityDays: number | string = 7): void {
@@ -866,7 +811,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return MOCK_ORDERS;
+    return [];
   },
 
   updateOrderStatus(orderId: string, newStatus: any, trackingInfo?: string | { carrier?: string; trackingNumber?: string }): void {
@@ -907,7 +852,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       // Mock SMS
       const label = statusLabels[newStatus] || newStatus;
       this.sendMockSms(
-        order.recipientPhone || '09121112233',
+        order.recipientPhone || '',
         `سفارش شما با شناسه ${order.orderNumber || order.id} به وضعیت «${label}» تغییر کرد. شرکت صنعت پیش یزد`
       );
 
@@ -1216,11 +1161,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    const initial = MOCK_REPRESENTATIVES.map((r, i) => ({
-      ...r,
-      creditLimit: i === 0 ? 250000000 : i === 1 ? 180000000 : 150000000,
-      seasonalTargetAchieved: i === 0 ? 92 : i === 1 ? 84 : 78,
-    }));
+    const initial: (Representative & {creditLimit:number;seasonalTargetAchieved:number})[] = [];
     try {
       persistPortalCache(STORAGE_KEYS.DEALERS, JSON.stringify(initial));
     } catch {
@@ -1253,82 +1194,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    const initial: any[] = [
-      {
-        id: 'TCK-881',
-        ticketNumber: 'TCK-881',
-        customerName: 'مهندس حیدری (کاشی یزد)',
-        phone: '09131518920',
-        subject: 'درخواست کاتالوگ فنی تسمه با تحمل حرارتی بالای ۱۵۰ درجه سانتی‌گراد',
-        department: 'technical',
-        priority: 'high',
-        status: 'open',
-        createdAt: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-        messages: [
-          {
-            id: 'm1',
-            sender: 'user',
-            senderName: 'مهندس حیدری (کاشی یزد)',
-            text: 'سلام و احترام، خط خروجی کوره کاشی ما نیازمند تسمه سیلیکونی یا تفلونی مقاوم تا ۱۸۰ درجه سانتی‌گراد است. کاتالوگ و مشخصات دقیق مدل SWR را بفرمایید.',
-            message: 'سلام و احترام، خط خروجی کوره کاشی ما نیازمند تسمه سیلیکونی یا تفلونی مقاوم تا ۱۸۰ درجه سانتی‌گراد است. کاتالوگ و مشخصات دقیق مدل SWR را بفرمایید.',
-            timestamp: '۱۴۰۳/۰۶/۲۱ - ۰۹:۳۰',
-          },
-        ],
-      },
-      {
-        id: 'TCK-882',
-        ticketNumber: 'TCK-882',
-        customerName: 'آقای شمس (پخش اصفهان)',
-        phone: '09132223344',
-        subject: 'استعلام زمان تحویل بار ارسالی با باربری وطن',
-        department: 'sales',
-        priority: 'medium',
-        status: 'answered',
-        createdAt: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۲۰ - ۱۷:۰۵',
-        messages: [
-          {
-            id: 'm1',
-            sender: 'user',
-            senderName: 'آقای شمس (پخش اصفهان)',
-            text: 'سلام، شماره بارنامه سفارش ثبت شده دیروز را محبت می‌فرمایید؟',
-            message: 'سلام، شماره بارنامه سفارش ثبت شده دیروز را محبت می‌فرمایید؟',
-            timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۶:۴۰',
-          },
-          {
-            id: 'm2',
-            sender: 'admin',
-            senderName: 'پشتیبانی بازرگانی اطلس',
-            text: 'با سلام، شماره بارنامه ۱۲۹۸۳۷۴ باربری وطن یزد صادر شد و پیامک پیگیری نیز برای جنابعالی ارسال گردید.',
-            message: 'با سلام، شماره بارنامه ۱۲۹۸۳۷۴ باربری وطن یزد صادر شد و پیامک پیگیری نیز برای جنابعالی ارسال گردید.',
-            timestamp: '۱۴۰۳/۰۶/۲۰ - ۱۷:۰۵',
-          },
-        ],
-      },
-      {
-        id: 't-103',
-        ticketNumber: 'TCK-8794',
-        customerName: 'نمایندگی اصفهان (ابزار صنعت اسپادانا)',
-        phone: '03133880000',
-        subject: 'استعلام افزایش سقف اعتبار عاملیت استانی',
-        department: 'agency',
-        priority: 'medium',
-        status: 'open',
-        createdAt: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-        lastReplyAt: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-        messages: [
-          {
-            id: 'm-4',
-            sender: 'user',
-            senderName: 'نمایندگی اصفهان (ابزار صنعت اسپادانا)',
-            text: 'احتراماً با توجه به حجم سفارشات پایان فصل کارخانجات نساجی، تقاضای افزایش سقف اعتبار از ۱۵۰ به ۲۵۰ م ت را داریم.',
-            message: 'احتراماً با توجه به حجم سفارشات پایان فصل کارخانجات نساجی، تقاضای افزایش سقف اعتبار از ۱۵۰ به ۲۵۰ م ت را داریم.',
-            timestamp: '۱۴۰۳/۰۶/۱۹ - ۱۲:۰۰',
-          },
-        ],
-      },
-    ];
+    const initial: any[] = [];
     try {
       persistPortalCache(STORAGE_KEYS.TICKETS, JSON.stringify(initial));
     } catch {
@@ -1461,7 +1327,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
         id: 'pg-contact',
         slug: 'contact-us',
         title: 'تماس با ما و دفاتر بازرگانی',
-        content: 'دفتر مرکزی: یزد، بلوار جمهوری، مجتمع تجاری صنعتی اطلس. تلفن: ۰۳۵-۳۵۲۲۲۰۰۰ | کارگاه آپارات و انبار مرکزی: شهرک صنعتی یزد فاز ۱.',
+        content: 'برای هماهنگی مراجعه و ارتباط با صنعت پیش، صفحه تماس با ما را ببینید.',
         lastUpdated: '۱۴۰۳/۰۶/۱۵',
       },
       {
@@ -1575,14 +1441,14 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     const initial: SystemSettings = {
       paymentGateway: {
         provider: 'mellat',
-        merchantId: 'MOCK-MLT-982341',
-        terminalId: 'TRM-88210',
+        merchantId: '',
+        terminalId: '',
         sandbox: true,
       },
       smsProvider: {
         provider: 'kavenegar',
-        apiKey: 'kav_live_sample_token_889241',
-        senderNumber: '1000882200',
+        apiKey: '',
+        senderNumber: '',
       },
       shippingMethods: {
         barbari: true,
@@ -1626,53 +1492,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'INV-1403-881',
-        invoiceNumber: 'INV-1403-881',
-        nationalTaxId: 'TX-140306-9923',
-        issueDate: '۱۴۰۳/۰۶/۲۱',
-        validUntil: '۱۴۰۳/۰۶/۲۸',
-        seller: {
-          name: 'شرکت بازرگانی و تولیدی صنعت پیش اطلس یزد (سهامی خاص)',
-          nationalId: '10861234567',
-          economicCode: '411589321456',
-          registrationNumber: '14285',
-          address: 'یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس',
-          postalCode: '8917945639',
-          phone: '۰۳۵-۳۵۲۵۴۷۰۳',
-        },
-        buyer: {
-          name: 'مجتمع کارخانجات کاشی و سرامیک عقیق یزد',
-          companyName: 'شرکت صنایع سرامیک عقیق (سهامی عام)',
-          nationalId: '10860012458',
-          economicCode: '411298456123',
-          phone: '۰۳۵-۳۲۲۴۵۰۰۰',
-          address: 'یزد، شهرک صنعتی یزد، فاز ۲، میدان صنعت، خیابان کاشی',
-          postalCode: '8916574125',
-        },
-        items: [
-          {
-            row: 1,
-            productCode: 'SWR-230',
-            productName: 'تسمه تایمینگ دنده‌ای صنعتی HTD-8M-1760 ضد سایش',
-            quantity: 25,
-            unit: 'حلقه',
-            unitPrice: 5200000,
-            totalPrice: 130000000,
-            discount: 6500000,
-            tax: 12350000,
-            finalPrice: 135850000,
-          },
-        ],
-        subtotal: 130000000,
-        totalDiscount: 6500000,
-        totalTax: 12350000,
-        grandTotal: 135850000,
-        paymentTerms: 'تسویه ۳۰ روزه با چک صیادی تأییدشده',
-        status: 'issued',
-      },
-    ];
+    return [];
   },
 
   createOfficialInvoice(invoiceData: any): OfficialInvoice {
@@ -1685,21 +1505,21 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
       validUntil: invoiceData.validUntil || '۷ روز کاری',
       seller: invoiceData.seller || {
         name: 'شرکت بازرگانی و تولیدی صنعت پیش اطلس یزد (سهامی خاص)',
-        nationalId: '10861234567',
-        economicCode: '411589321456',
-        registrationNumber: '14285',
-        address: 'یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس',
-        postalCode: '8917945639',
-        phone: '۰۳۵-۳۵۲۵۴۷۰۳',
+        nationalId: '',
+        economicCode: '',
+        registrationNumber: '',
+        address: '',
+        postalCode: '',
+        phone: '',
       },
       buyer: {
         name: invoiceData.buyer?.name || 'خریدار',
         companyName: invoiceData.buyer?.companyName || invoiceData.buyer?.company || 'سازمان خریدار',
-        nationalId: invoiceData.buyer?.nationalId || '10100000000',
-        economicCode: invoiceData.buyer?.economicCode || '411000000000',
-        phone: invoiceData.buyer?.phone || '09120000000',
-        address: invoiceData.buyer?.address || 'یزد، شهرک صنعتی',
-        postalCode: invoiceData.buyer?.postalCode || '8910000000',
+        nationalId: invoiceData.buyer?.nationalId || '',
+        economicCode: invoiceData.buyer?.economicCode || '',
+        phone: invoiceData.buyer?.phone || '',
+        address: invoiceData.buyer?.address || '',
+        postalCode: invoiceData.buyer?.postalCode || '',
       },
       items: (invoiceData.items || []).map((item: any, idx: number) => ({
         row: idx + 1,
@@ -1763,24 +1583,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'sms-101',
-        recipientPhone: '09131512345',
-        template: 'order_registered',
-        message: 'مشتری گرامی، سفارش شما در سامانه صنعت پیش ثبت و در صف تأیید قرار گرفت.',
-        status: 'delivered',
-        sentAt: '۱۴۰۳/۰۶/۲۱ - ۱۰:۱۵',
-      },
-      {
-        id: 'sms-102',
-        recipientPhone: '09121114567',
-        template: 'inquiry_received',
-        message: 'پیش‌فاکتور رسمی استعلام INQ-7481 صادر شد. جهت مشاهده به پنل کاربری مراجعه فرمایید.',
-        status: 'delivered',
-        sentAt: '۱۴۰۳/۰۶/۲۱ - ۱۱:۳۰',
-      },
-    ];
+    return [];
   },
 
   verifyReceipt(orderId: string, approved: boolean, reason?: string): void {
@@ -2016,32 +1819,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'ag-101',
-        code: 'AG-1403-101',
-        name: 'نمایندگی کاشی ستاره میبد (فروشگاه فنی دهقانی)',
-        phone: '035-32356000',
-        province: 'یزد',
-        city: 'میبد',
-        creditLimit: 350000000,
-        currentBalance: 120000000,
-        nextCheckDate: '۱۴۰۳/۰۷/۱۵',
-        contractStatus: 'valid',
-      },
-      {
-        id: 'ag-102',
-        code: 'AG-1403-102',
-        name: 'عاملیت مرکزی تسمه و قطعات اصفهان (صنعتی پایا)',
-        phone: '031-33880000',
-        province: 'اصفهان',
-        city: 'اصفهان',
-        creditLimit: 500000000,
-        currentBalance: 280000000,
-        nextCheckDate: '۱۴۰۳/۰۷/۲۰',
-        contractStatus: 'valid',
-      },
-    ];
+    return [];
   },
 
   saveActiveAgency(agency: ActiveAgency): void {
@@ -2094,28 +1872,7 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'SUP-701',
-        agencyName: 'نمایندگی میبد',
-        productName: 'تسمه کوره انتقال سرامیک HTD-14M',
-        productCode: 'SWR-14M-2100',
-        quantity: 40,
-        urgency: 'immediate',
-        status: 'pending',
-        createdAt: '۱۴۰۳/۰۶/۲۱',
-      },
-      {
-        id: 'SUP-702',
-        agencyName: 'عاملیت اصفهان',
-        productName: 'رولیک و غلتک سرامیکی نسوز کوره',
-        productCode: 'AT-751',
-        quantity: 100,
-        urgency: 'normal',
-        status: 'approved',
-        createdAt: '۱۴۰۳/۰۶/۱۹',
-      },
-    ];
+    return [];
   },
 
   updateSupplyRequestStatus(id: string, status: SupplyRequestItem['status']): void {
@@ -2133,17 +1890,11 @@ ERR-001,تسمه بدون قیمت تستی,نامشخص,ناشناخته,0,-5`;
   },
 
   getClubMembers(): ClubMember[] {
-    return [
-      { id: 'cm-1', name: 'کاشی و سرامیک عقیق', phone: '09131510000', points: 2850, level: 'الماس VIP', joinedAt: '۱۴۰۱/۰۲/۱۰' },
-      { id: 'cm-2', name: 'نساجی تابان یزد', phone: '09132512222', points: 1420, level: 'طلایی', joinedAt: '۱۴۰۲/۰۵/۱۵' },
-      { id: 'cm-3', name: 'کاشی ستاره میبد', phone: '09133513333', points: 950, level: 'نقره‌ای', joinedAt: '۱۴۰۲/۰۹/۰۱' },
-    ];
+    return this.getCustomers().map(customer=>({id:customer.id,name:customer.companyName||customer.fullName,phone:customer.phone,points:customer.clubPoints||0,level:customer.clubTier||'',joinedAt:customer.createdAt||''}));
   },
 
   getRewardRequests(): RewardRequestItem[] {
-    return [
-      { id: 'rw-1', memberName: 'کاشی عقیق', phone: '09131510000', rewardTitle: 'تخفیف ۵ میلیون تومانی خرید عمده بعدی', pointsCost: 1000, status: 'pending', createdAt: '۱۴۰۳/۰۶/۲۱' },
-    ];
+    return [];
   },
 
   updateRewardStatus(id: string, status: RewardRequestItem['status']): void {

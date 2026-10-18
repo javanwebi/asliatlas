@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { MemberAccess } from "../components/storefront/MemberAccess";
+import { MapCard } from "./DiscoveryPages";
+import React, { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Phone,
   PhoneCall,
@@ -19,30 +21,35 @@ import {
   Copy,
   Check,
   FileText,
-} from 'lucide-react';
-import { STORE_ASSETS } from '../assets/images';
+} from "lucide-react";
+import { STORE_ASSETS } from "../assets/images";
 
 interface ContactUsPageProps {
-  defaultTab?: 'all' | 'factory' | 'offices';
+  defaultTab?: "all" | "factory" | "offices";
 }
 
-export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all' }) => {
+export const ContactUsPage: React.FC<ContactUsPageProps> = ({
+  defaultTab = "all",
+}) => {
   const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get('tab') as 'all' | 'factory' | 'offices' | null;
-  const [activeTab, setActiveTab] = useState<'all' | 'factory' | 'offices'>(tabFromUrl || defaultTab);
+  const tabFromUrl = searchParams.get("tab") as
+    "all" | "factory" | "offices" | null;
+  const [activeTab, setActiveTab] = useState<"all" | "factory" | "offices">(
+    tabFromUrl || defaultTab,
+  );
 
   useEffect(() => {
-    if (tabFromUrl && ['all', 'factory', 'offices'].includes(tabFromUrl)) {
+    if (tabFromUrl && ["all", "factory", "offices"].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
 
   // Form state
-  const [formName, setFormName] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formPlant, setFormPlant] = useState('');
-  const [formSubject, setFormSubject] = useState('استعلام قطعات خط تولید');
-  const [formMessage, setFormMessage] = useState('');
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formPlant, setFormPlant] = useState("");
+  const [formSubject, setFormSubject] = useState("استعلام قطعات خط تولید");
+  const [formMessage, setFormMessage] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -58,69 +65,89 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
     setIsSubmitted(true);
     setTimeout(() => {
       setIsSubmitted(false);
-      setFormName('');
-      setFormPhone('');
-      setFormPlant('');
-      setFormMessage('');
+      setFormName("");
+      setFormPhone("");
+      setFormPlant("");
+      setFormMessage("");
     }, 4000);
   };
 
   // Locations data
   const locations = [
     {
-      id: 'yazd_office',
-      type: 'offices',
-      title: 'دفتر مرکزی بازرگانی و فروش یزد (صنعت پیش)',
-      badge: 'بازرگانی تسمه اطلس از سال ۱۳۶۶',
-      address: 'یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس (صنعت پیش)',
-      postalCode: '۸۹۱۷۹۴۵۶۳۹',
-      phone: '۰۳۵-۳۵۲۵۴۷۰۳۴',
-      phoneRaw: '035352547034',
-      mobile: '۰۹۹۰۳۴۲۷۰۲۷',
-      mobileRaw: '09903427027',
-      hours: 'شنبه تا چهارشنبه ۸:۰۰ الی ۱۸:۰۰ | پنجشنبه‌ها ۸:۰۰ الی ۱۳:۳۰',
-      features: ['تولید و ساخت سفارشی قطعات خطوط تولید', 'دپوی بیش از ۳۰,۰۰۰ قلم کالا و ارسال رایگان سراسری', 'مشاوره هوشمند قطعات با شعار «پیش به صنعت»'],
+      id: "yazd_office",
+      type: "offices",
+      title: "دفتر مرکزی بازرگانی و فروش یزد (صنعت پیش)",
+      badge: "بازرگانی تسمه اطلس از سال ۱۳۶۶",
+      address:
+        "یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه، بازرگانی اطلس (صنعت پیش)",
+      postalCode: "۸۹۱۷۹۴۵۶۳۹",
+      phone: "۰۳۵-۳۵۲۵۴۷۰۳۴",
+      phoneRaw: "035352547034",
+      mobile: "۰۹۹۰۳۴۲۷۰۲۷",
+      mobileRaw: "09903427027",
+      hours: "شنبه تا چهارشنبه ۸:۰۰ الی ۱۸:۰۰ | پنجشنبه‌ها ۸:۰۰ الی ۱۳:۳۰",
+      features: [
+        "تولید و ساخت سفارشی قطعات خطوط تولید",
+        "دپوی بیش از ۳۰,۰۰۰ قلم کالا و ارسال رایگان سراسری",
+        "مشاوره هوشمند قطعات با شعار «پیش به صنعت»",
+      ],
       image: STORE_ASSETS.whySanatCadEngineering,
     },
     {
-      id: 'meybod_warehouse',
-      type: 'factory',
-      title: 'انبار مرکزی، دپوی رولرها و کارگاه ساخت میبد',
-      badge: 'قطب کاشی و سرامیک کشور',
-      address: 'استان یزد، میبد، کیلومتر ۳ جاده سنتو، روبروی شهرک صنعتی جهان‌آباد، مجتمع لجستیک صنعت پیش',
-      postalCode: '۸۹۶۵۱-۳۴۸۲۱',
-      phone: '۰۳۵-۳۵۲۵۴۷۰۳',
-      phoneRaw: '03535254703',
-      mobile: '۰۹۹۰۳۴۲۷۰۲۷',
-      mobileRaw: '09903427027',
-      hours: 'شبانه‌روزی ۲۴ ساعته (ویژه سفارشات اورژانسی کوره)',
-      features: ['دپوی بیش از ۲,۴۰۰ شاخه رولر آلومینایی', 'کارگاه اختصاصی آپارات و روکش لیناتکس', 'ناوگان حمل اکسپرس کمتر از ۲ ساعت به کارخانجات میبد'],
+      id: "meybod_warehouse",
+      type: "factory",
+      title: "انبار مرکزی، دپوی رولرها و کارگاه ساخت میبد",
+      badge: "قطب کاشی و سرامیک کشور",
+      address:
+        "استان یزد، میبد، کیلومتر ۳ جاده سنتو، روبروی شهرک صنعتی جهان‌آباد، مجتمع لجستیک صنعت پیش",
+      postalCode: "۸۹۶۵۱-۳۴۸۲۱",
+      phone: "۰۳۵-۳۵۲۵۴۷۰۳",
+      phoneRaw: "03535254703",
+      mobile: "۰۹۹۰۳۴۲۷۰۲۷",
+      mobileRaw: "09903427027",
+      hours: "شبانه‌روزی ۲۴ ساعته (ویژه سفارشات اورژانسی کوره)",
+      features: [
+        "دپوی بیش از ۲,۴۰۰ شاخه رولر آلومینایی",
+        "کارگاه اختصاصی آپارات و روکش لیناتکس",
+        "ناوگان حمل اکسپرس کمتر از ۲ ساعت به کارخانجات میبد",
+      ],
       image: STORE_ASSETS.whySanatDirectFactory,
     },
     {
-      id: 'tehran_hq',
-      type: 'offices',
-      title: 'دفتر مرکزی بازرگانی و ترخیص تهران',
-      badge: 'امور بازرگانی خارجی و اسناد رسمی',
-      address: 'تهران، خیابان سعدی جنوبی، روبروی بانک تجارت، پاساژ صدوقی، طبقه ۲، واحد ۲۴',
-      postalCode: '۱۱۴۳۷-۶۸۲۹۱',
-      phone: '۰۲۱-۳۳۹۲۸۴۵۰',
-      phoneRaw: '02133928450',
-      mobile: '۰۹۹۰۳۴۲۷۰۲۷',
-      mobileRaw: '09903427027',
-      hours: 'شنبه تا چهارشنبه ۸:۳۰ الی ۱۷:۳۰ | پنجشنبه‌ها ۸:۳۰ الی ۱۳:۳۰',
-      features: ['واحد صدور فاکتور رسمی و امور مالیاتی', 'ترخیص مستقیم سفارشات گمرکی', 'انبار قطعات دوار سبک و بلبرینگ‌های خاص'],
-      image: STORE_ASSETS.partsWarehouseVault || STORE_ASSETS.whySanatExpressDelivery,
+      id: "tehran_hq",
+      type: "offices",
+      title: "دفتر مرکزی بازرگانی و ترخیص تهران",
+      badge: "امور بازرگانی خارجی و اسناد رسمی",
+      address:
+        "تهران، خیابان سعدی جنوبی، روبروی بانک تجارت، پاساژ صدوقی، طبقه ۲، واحد ۲۴",
+      postalCode: "۱۱۴۳۷-۶۸۲۹۱",
+      phone: "۰۲۱-۳۳۹۲۸۴۵۰",
+      phoneRaw: "02133928450",
+      mobile: "۰۹۹۰۳۴۲۷۰۲۷",
+      mobileRaw: "09903427027",
+      hours: "شنبه تا چهارشنبه ۸:۳۰ الی ۱۷:۳۰ | پنجشنبه‌ها ۸:۳۰ الی ۱۳:۳۰",
+      features: [
+        "واحد صدور فاکتور رسمی و امور مالیاتی",
+        "ترخیص مستقیم سفارشات گمرکی",
+        "انبار قطعات دوار سبک و بلبرینگ‌های خاص",
+      ],
+      image:
+        STORE_ASSETS.partsWarehouseVault ||
+        STORE_ASSETS.whySanatExpressDelivery,
     },
   ];
 
-  const filteredLocations = activeTab === 'all'
-    ? locations
-    : locations.filter((loc) => loc.type === activeTab);
+  const filteredLocations =
+    activeTab === "all"
+      ? locations
+      : locations.filter((loc) => loc.type === activeTab);
 
   return (
-    <div className="w-full text-right font-sans min-h-screen bg-[#F8F9FA] text-[#55565A]" dir="rtl">
-      
+    <div
+      className="w-full text-right font-sans min-h-screen bg-[#F8F9FA] text-[#55565A]"
+      dir="rtl"
+    >
       {/* 1. TOP BREADCRUMB */}
       <div className="border-b border-slate-200 bg-white sticky top-0 z-30 shadow-2xs">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -176,7 +203,8 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
               </span>
             </h1>
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-normal">
-              جهت استعلام قیمت، اعزام کارشناس به خط تولید یا مراجعه حضوری به انبار میبد و دفاتر فروش، از طریق کانال‌های زیر در خدمت شما هستیم.
+              جهت استعلام قیمت، اعزام کارشناس به خط تولید یا مراجعه حضوری به
+              انبار میبد و دفاتر فروش، از طریق کانال‌های زیر در خدمت شما هستیم.
             </p>
           </div>
         </div>
@@ -184,13 +212,10 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
 
       {/* 3. MAIN SECTION */}
       <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12">
-        
         {/* Contact Form & Quick Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           {/* Quick Direct Contacts */}
           <div className="lg:col-span-5 space-y-4">
-            
             <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-4 text-right">
               <h2 className="text-base font-black text-[#2B313A] flex items-center gap-2">
                 <Phone className="w-5 h-5 text-[#E06518]" />
@@ -200,8 +225,13 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
               <div className="space-y-3">
                 <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-slate-200 flex items-center justify-between">
                   <div className="text-right space-y-0.5">
-                    <span className="text-[11px] font-bold text-slate-500">تلفن مستقیم دفتر مرکزی یزد (صنعت پیش):</span>
-                    <div className="text-base font-black font-mono text-[#2B313A]" dir="ltr">
+                    <span className="text-[11px] font-bold text-slate-500">
+                      تلفن مستقیم دفتر مرکزی یزد (صنعت پیش):
+                    </span>
+                    <div
+                      className="text-base font-black font-mono text-[#2B313A]"
+                      dir="ltr"
+                    >
                       ۰۳۵-۳۵۲۵۴۷۰۳
                     </div>
                   </div>
@@ -216,8 +246,13 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
 
                 <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-slate-200 flex items-center justify-between">
                   <div className="text-right space-y-0.5">
-                    <span className="text-[11px] font-bold text-slate-500">پشتیبانی واتس‌اپ و ارسال پیش‌فاکتور:</span>
-                    <div className="text-base font-black font-mono text-emerald-700" dir="ltr">
+                    <span className="text-[11px] font-bold text-slate-500">
+                      پشتیبانی واتس‌اپ و ارسال پیش‌فاکتور:
+                    </span>
+                    <div
+                      className="text-base font-black font-mono text-emerald-700"
+                      dir="ltr"
+                    >
                       ۰۹۹۰۳۴۲۷۰۲۷
                     </div>
                   </div>
@@ -234,7 +269,9 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
 
                 <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-slate-200 flex items-center justify-between">
                   <div className="text-right space-y-0.5">
-                    <span className="text-[11px] font-bold text-slate-500">نشانی دفتر مرکزی و انبار قطعات:</span>
+                    <span className="text-[11px] font-bold text-slate-500">
+                      نشانی دفتر مرکزی و انبار قطعات:
+                    </span>
                     <div className="text-xs font-medium text-[#2B313A]">
                       یزد، بلوار جمهوری، بعد از بیمارستان افشار، جنب بانک سپه
                     </div>
@@ -250,18 +287,27 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
 
                 <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-slate-200 flex items-center justify-between">
                   <div className="text-right space-y-0.5">
-                    <span className="text-[11px] font-bold text-slate-500">ایمیل دریافت فایل نقشه‌ها و RFQ:</span>
-                    <div className="text-xs font-bold font-mono text-slate-800" dir="ltr">
+                    <span className="text-[11px] font-bold text-slate-500">
+                      ایمیل دریافت فایل نقشه‌ها و RFQ:
+                    </span>
+                    <div
+                      className="text-xs font-bold font-mono text-slate-800"
+                      dir="ltr"
+                    >
                       rfq@sanatpish.com
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleCopy('rfq@sanatpish.com', 'email')}
+                    onClick={() => handleCopy("rfq@sanatpish.com", "email")}
                     className="h-9 px-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                   >
-                    {copiedId === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedId === 'email' ? 'کپی شد' : 'کپی'}</span>
+                    {copiedId === "email" ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedId === "email" ? "کپی شد" : "کپی"}</span>
                   </button>
                 </div>
               </div>
@@ -274,119 +320,41 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
                 <span>تضمین تحویل در محل کارخانه</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                ناوگان اختصاصی تحویل اکسپرس برای کلیه شهرک‌های صنعتی استان‌های یزد، اصفهان، قزوین، البرز و تهران فعال است.
+                ناوگان اختصاصی تحویل اکسپرس برای کلیه شهرک‌های صنعتی استان‌های
+                یزد، اصفهان، قزوین، البرز و تهران فعال است.
               </p>
             </div>
-
           </div>
 
           {/* Contact & RFQ Form */}
           <div className="lg:col-span-7">
             <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-5 text-right">
               <div className="space-y-1">
-                <span className="text-xs font-black text-[#E06518] uppercase">فرم ارتباط مستقیم</span>
+                <span className="text-xs font-black text-[#E06518] uppercase">
+                  مسیر استعلام و پیگیری
+                </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#2B313A]">
-                  ثبت پیام، استعلام قیمت یا درخواست بازدید حضوری
+                  استعلام خود را از پنل ثبت کنید
                 </h2>
                 <p className="text-xs text-slate-500">
-                  اطلاعات خود را وارد کنید تا کارشناس فنی همان واحد کمتر از ۱۵ دقیقه با شما تماس بگیرد.
+                  قیمت و موجودی هر کد را در حساب کاربری بررسی کنید. برای هماهنگی
+                  مراجعه، از شماره‌های تماس استفاده کنید.
                 </p>
               </div>
 
-              {isSubmitted ? (
-                <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-center space-y-2 animate-in fade-in">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                  <h4 className="font-black text-sm">درخواست شما با موفقیت در سیستم ثبت گردید</h4>
-                  <p className="text-xs">
-                    کارشناسان فنی صنعت پیش (پیش به صنعت) در کوتاه‌ترین زمان با شماره تماس واردشده ارتباط برقرار خواهند کرد.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleFormSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">نام و نام خانوادگی:</label>
-                      <input
-                        type="text"
-                        required
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        placeholder="مثال: مهندس حسینی"
-                        className="w-full bg-[#F8F9FA] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#E06518] focus:bg-white focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">شماره موبایل یا تلفن کارخانه:</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formPhone}
-                        onChange={(e) => setFormPhone(e.target.value)}
-                        placeholder="۰۹۱۲..."
-                        dir="ltr"
-                        className="w-full bg-[#F8F9FA] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#E06518] focus:bg-white focus:outline-none text-right"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">نام کارخانه یا شرکت صنعتی:</label>
-                      <input
-                        type="text"
-                        value={formPlant}
-                        onChange={(e) => setFormPlant(e.target.value)}
-                        placeholder="مثال: مجتمع کاشی پارس / فولاد البرز"
-                        className="w-full bg-[#F8F9FA] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#E06518] focus:bg-white focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">موضوع استعلام:</label>
-                      <select
-                        value={formSubject}
-                        onChange={(e) => setFormSubject(e.target.value)}
-                        className="w-full bg-[#F8F9FA] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#E06518] focus:bg-white focus:outline-none"
-                      >
-                        <option value="استعلام قطعات خط تولید">استعلام قیمت و پیش‌فاکتور قطعات</option>
-                        <option value="رولر کوره و قطعات کاشی">سفارش رولر آلومینایی کوره و تسمه لعاب</option>
-                        <option value="درخواست اعزام کارشناس فنی">درخواست اعزام مهندس برای اندازه‌گیری در محل</option>
-                        <option value="اخذ نمایندگی و همکاری">همکاری در تأمین و قرارداد سالانه</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">توضیحات و مشخصات قطعه مورد نیاز:</label>
-                    <textarea
-                      rows={4}
-                      value={formMessage}
-                      onChange={(e) => setFormMessage(e.target.value)}
-                      placeholder="کد فنی قطعه، ابعاد، گرید یا شرایط محیطی و دمایی خط تولید را بنویسید..."
-                      className="w-full bg-[#F8F9FA] border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:border-[#E06518] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full sm:w-auto h-12 px-8 bg-gradient-to-r from-[#C95210] to-[#E06518] hover:from-[#C2410C] hover:to-[#C95210] text-white text-xs sm:text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>ارسال پیام و ثبت استعلام در سیستم</span>
-                  </button>
-                </form>
-              )}
+              <MemberAccess />
             </div>
           </div>
-
         </div>
 
         {/* 4. FACTORY & OFFICES ADDRESSES CARDS (آدرس کارخانه، انبار مرکزی و دفاتر) */}
+        <MapCard />
         <section id="factory" className="space-y-6 pt-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-4">
             <div className="space-y-1 text-right">
-              <span className="text-xs font-black text-[#E06518] uppercase">آدرس کارخانه، دپوی انبارها و شعب</span>
+              <span className="text-xs font-black text-[#E06518] uppercase">
+                آدرس کارخانه، دپوی انبارها و شعب
+              </span>
               <h2 className="text-2xl sm:text-3xl font-black text-[#2B313A]">
                 موقعیت کارخانجات، انبار مرکزی و دفاتر منطقه‌ای
               </h2>
@@ -398,27 +366,33 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
             <div className="flex items-center gap-2 p-1 bg-white border border-slate-200 rounded-xl shrink-0">
               <button
                 type="button"
-                onClick={() => setActiveTab('all')}
+                onClick={() => setActiveTab("all")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'all' ? 'bg-[#55565A] text-white' : 'text-slate-600 hover:text-slate-900'
+                  activeTab === "all"
+                    ? "bg-[#55565A] text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 همه شعب
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('factory')}
+                onClick={() => setActiveTab("factory")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'factory' ? 'bg-[#E06518] text-white' : 'text-slate-600 hover:text-slate-900'
+                  activeTab === "factory"
+                    ? "bg-[#E06518] text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 انبار مرکزی و کارگاه میبد
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('offices')}
+                onClick={() => setActiveTab("offices")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'offices' ? 'bg-[#55565A] text-white' : 'text-slate-600 hover:text-slate-900'
+                  activeTab === "offices"
+                    ? "bg-[#55565A] text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 دفاتر مهندسی و بازرگانی
@@ -457,20 +431,31 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-400 font-bold">کد پستی:</span>
-                        <span className="font-mono text-slate-800 font-bold">{loc.postalCode}</span>
+                        <span className="text-slate-400 font-bold">
+                          کد پستی:
+                        </span>
+                        <span className="font-mono text-slate-800 font-bold">
+                          {loc.postalCode}
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="text-[11px] text-slate-600">{loc.hours}</span>
+                        <span className="text-[11px] text-slate-600">
+                          {loc.hours}
+                        </span>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 space-y-1">
-                      <div className="text-[11px] font-bold text-slate-500">امکانات و خدمات این مرکز:</div>
+                      <div className="text-[11px] font-bold text-slate-500">
+                        امکانات و خدمات این مرکز:
+                      </div>
                       {loc.features.map((feat, i) => (
-                        <div key={i} className="text-[11px] text-slate-700 flex items-center gap-1.5">
+                        <div
+                          key={i}
+                          className="text-[11px] text-slate-700 flex items-center gap-1.5"
+                        >
                           <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
                           <span>{feat}</span>
                         </div>
@@ -495,8 +480,14 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
                       className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       title="کپی آدرس کامل"
                     >
-                      {copiedId === loc.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span className="hidden sm:inline">{copiedId === loc.id ? 'کپی شد' : 'کپی آدرس'}</span>
+                      {copiedId === loc.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {copiedId === loc.id ? "کپی شد" : "کپی آدرس"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -504,9 +495,7 @@ export const ContactUsPage: React.FC<ContactUsPageProps> = ({ defaultTab = 'all'
             ))}
           </div>
         </section>
-
       </main>
-
     </div>
   );
 };

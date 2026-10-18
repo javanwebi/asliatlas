@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const openAuthModal = (redirectPath?: string, initialView?: 'login' | 'register') => {
-    if (redirectPath) setRedirectOnLogin(redirectPath);
+    if (redirectPath) {setRedirectOnLogin(redirectPath);try{sessionStorage.setItem('sanat_access_destination',redirectPath);}catch{}}
     if (initialView) setAuthModalInitialView(initialView);
     else setAuthModalInitialView('login');
     setIsAuthModalOpen(true);

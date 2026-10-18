@@ -1,3 +1,5 @@
+import { pricingCreditService } from "../../services/pricingCreditService";
+import { useAuth } from "../../context/AuthContext";
 import React from "react";
 import { Link } from "react-router-dom";
 import { Heart, ArrowUpLeft, Layers } from "lucide-react";
@@ -8,10 +10,25 @@ import { toPersianDigits, formatPrice } from "../../utils/formatters";
 export interface PortalProductCardProps {
   product: Product;
 }
-export const PortalProductCard: React.FC<PortalProductCardProps> = ({ product }) => {
+export const PortalProductCard: React.FC<PortalProductCardProps> = ({
+  product,
+}) => {
+  const { currentUser } = useAuth();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const selected = isInWishlist(product.code);
-  const href = `/product/${encodeURIComponent(product.code)}`;
+  const list = currentUser
+    ? pricingCreditService.getPriceListForCustomer(currentUser)
+    : undefined;
+  const price = list
+    ? pricingCreditService.getSkuPriceForList(
+        product.code,
+        product.prices?.retail || 0,
+        list,
+      )
+    : currentUser?.approvedB2B
+      ? 0
+      : product.prices?.retail || 0;
+  const href = `${currentUser?.approvedB2B ? "/account" : "/consumer-dashboard"}/product/${encodeURIComponent(product.code)}`;
   return (
     <article className="store-product-card">
       <div className="store-product-media">
@@ -56,10 +73,8 @@ export const PortalProductCard: React.FC<PortalProductCardProps> = ({ product })
         </p>
         <div className="store-product-bottom">
           <span>
-            {!product.variants?.length &&
-            !product.inquiryOnly &&
-            product.prices?.retail > 0
-              ? formatPrice(product.prices.retail)
+            {!product.variants?.length && !product.inquiryOnly && price > 0
+              ? formatPrice(price)
               : "انتخاب کد و استعلام"}
           </span>
           <Link to={href} aria-label={`مشاهده ${product.name}`}>

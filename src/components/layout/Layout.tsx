@@ -19,7 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     location.pathname === '/cognivo';
 
   if (isDedicatedAiWorkspace) {
-    return <>{children}</>;
+    return <>{children}<AuthModal /></>;
   }
 
   // Isolated dedicated portals (dashboards): Admin, Dealer/Agency panel, B2B & Consumer Account Portals
@@ -40,6 +40,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     );
   }
 
+  const isEditorial=["/industries","/brands","/knowledge","/about"].some(p=>location.pathname.startsWith(p));
   const isHomePage = location.pathname === '/';
 
   const handleOpenMobileMenu = () => {
@@ -53,7 +54,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return (
     <div className="storefront min-h-screen flex flex-col">
       <Header />
-      <main className={`flex-1 w-full pb-16 lg:pb-0 ${isHomePage ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6'}`}>
+      <main className={`flex-1 w-full pb-16 lg:pb-0 ${isHomePage || isEditorial ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6'}`}>
         {children}
       </main>
       <Footer />

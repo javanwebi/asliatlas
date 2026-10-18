@@ -112,11 +112,9 @@ export const OnboardingPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await saveOnboardingStep2(selectedBusinessType);
-      if (currentUser?.approvedB2B) {
-        navigate('/account');
-      } else {
-        navigate('/consumer-dashboard');
-      }
+      const root=currentUser?.approvedB2B?'/account':'/consumer-dashboard';
+      const destination=sessionStorage.getItem('sanat_access_destination')||'';sessionStorage.removeItem('sanat_access_destination');
+      navigate(destination.startsWith(root+'/product/')?destination:root);
     } catch {
       navigate('/consumer-dashboard');
     } finally {
@@ -227,7 +225,7 @@ export const OnboardingPage: React.FC = () => {
                   <div className="flex items-center justify-between bg-white border border-[#CBD2D8] rounded-xl px-4 py-2.5">
                     <span className="font-mono font-black text-base text-[#E06518]" dir="ltr">
                       {showPassword
-                        ? latestCredentials?.initialPassword || currentUser?.mobile || '09121234567'
+                        ? latestCredentials?.initialPassword || currentUser?.mobile || ''
                         : '•••••••••••'}
                     </span>
                     <div className="flex items-center gap-2">

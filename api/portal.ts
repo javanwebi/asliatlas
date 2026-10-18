@@ -12,6 +12,7 @@ interface Database {
 const CUSTOMER_KEY = "atlas_admin_customers_v1";
 const keys = [
   CUSTOMER_KEY,
+  "atlas_admin_inquiries_v1",
   "atlas_legacy_customers_v1",
   "atlas_customers_approval_v2",
   "atlas_price_lists_v2",
@@ -214,6 +215,27 @@ async function session(
 function portal(user: Row) {
   return user.approvedB2B === true ? "high_volume" : "consumer";
 }
+function canPurchase(db: Database, user: Row) {
+  const p = portal(user);
+  const base = db.values.atlas_portal_layout_configs_v1?.[p];
+  const override = db.values.atlas_portal_customer_overrides_v1?.find(
+    (r: Row) => r.portal === p && r.customerId === user.id,
+  );
+  const permissions = { ...base?.permissions, ...override?.permissions };
+  if (permissions.allowQuickSkuOrder === false) return false;
+  const menus = override?.menus || base?.menus;
+  return (
+    !menus ||
+    menus.some(
+      (m: Row) =>
+        m.enabled &&
+        ["purchase_list", "quick_buy", "orders", "orders_pricelist"].includes(
+          m.id,
+        ) &&
+        !override?.disabledMenuIds?.includes(m.id),
+    )
+  );
+}
 function scopedState(db: Database, user: Row) {
   const result: Record<string, any> = { [CUSTOMER_KEY]: [safeUser(user)] };
   const p = portal(user);
@@ -237,7 +259,9 @@ function scopedState(db: Database, user: Row) {
   for (const key of keys) {
     const value = db.values[key];
     if (value === undefined) continue;
-    if (key === CUSTOMER_KEY || key === "atlas_legacy_customers_v1")
+    if (key === "atlas_admin_inquiries_v1")
+      result[key] = value.filter((r: Row) => r.customerId === user.id);
+    else if (key === CUSTOMER_KEY || key === "atlas_legacy_customers_v1")
       result[key] = [safeUser(user)];
     else if (key === "atlas_portal_layout_configs_v1")
       result[key] = { [p]: value[p] };
@@ -513,6 +537,51 @@ export default async function handler(
             : 1,
       });
     }
+    if (body.action === "inquiry") {
+      if (!auth.user) fail(401, "برای استعلام وارد حساب شوید.");
+      if (!canPurchase(db, auth.user!))
+        fail(403, "این دسترسی برای حساب شما فعال نیست.");
+      const code = String(body.code || "").trim();
+      const quantity = Number(body.quantity);
+      const notes = String(body.notes || "").slice(0, 2000);
+      if (
+        !code ||
+        code.length > 100 ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 9999
+      )
+        fail(400, "کد و تعداد معتبر وارد کنید.");
+      const id = "INQ-" + crypto.randomUUID();
+      const inquiry = {
+        id,
+        inquiryNumber: id,
+        customerId: auth.user!.id,
+        customerName: auth.user!.fullName,
+        companyName: auth.user!.companyName,
+        phone: auth.user!.phone,
+        productCode: code,
+        productName: String(body.productName || code).slice(0, 200),
+        requestedQty: quantity,
+        notes,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        items: [
+          {
+            productCode: code,
+            productName: String(body.productName || code).slice(0, 200),
+            quantity,
+            notes,
+          },
+        ],
+      };
+      db.values.atlas_admin_inquiries_v1 = [
+        inquiry,
+        ...(db.values.atlas_admin_inquiries_v1 || []),
+      ];
+      await writeDb(db, revision);
+      return send(201, { success: true, inquiry, revision: db.revision });
+    }
     if (body.action === "profile") {
       if (!auth.user) fail(401, "ابتدا وارد حساب شوید.");
       const patch = body.payload || {};
@@ -661,4 +730,15 @@ export async function requirePortalAdmin(
       }),
     );
   }
+}
+
+/** Resolves a signed session against the current persisted user and revocation version. */
+export async function getPortalIdentity(req: IncomingMessage) {
+  const db = await readDb();
+  const identity = await session(req, db);
+  return {
+    ...identity,
+    canReadCommerce:
+      identity.admin || (!!identity.user && canPurchase(db, identity.user)),
+  };
 }

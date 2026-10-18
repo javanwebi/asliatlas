@@ -1,5 +1,6 @@
 // Browser storage is a rendering cache. Authorization and durable data live in /api/portal.
 export const PORTAL_CACHE_KEYS = [
+  "atlas_admin_inquiries_v1",
   "atlas_admin_customers_v1",
   "atlas_legacy_customers_v1",
   "atlas_customers_approval_v2",
